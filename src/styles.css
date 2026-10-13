@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit', 'DM Sans', ui-sans-serif, sans-serif;
+
+  --color-canvas: #12141a;
+  --color-canvas-elevated: #1a1d26;
+  --color-surface: #22262f;
+  --color-surface-hover: #2a2e3a;
+  --color-border: #343947;
+  --color-border-subtle: #2a2e3a;
+
+  --color-ink: #f3f1ec;
+  --color-ink-muted: #9aa0ae;
+  --color-ink-faint: #6b7280;
+
+  --color-accent: #e8a54b;
+  --color-accent-soft: #e8a54b33;
+  --color-accent-strong: #f0b85f;
+
+  --color-success: #5ecf8e;
+  --color-danger: #ef6b6b;
+  --color-info: #6ea8fe;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.root {
+  isolation: isolate;
+  min-height: 100dvh;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+/* Soft ambient backdrop */
+body::before {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #e8a54b14, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #3d4a6b18, transparent 50%);
+  z-index: -1;
+}

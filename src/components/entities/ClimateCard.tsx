@@ -1,0 +1,163 @@
+import { useClimate } from 'hass-react'
+import { Minus, Plus, Thermometer } from 'lucide-react'
+import { entityName } from '#/lib/entityName'
+import { cn } from '#/lib/cn'
+import { Button } from '#/components/ui/button'
+import { Slider } from '#/components/ui/slider'
+import { Toggle } from '#/components/ui/toggle'
+import { notify } from '#/components/ui/toast'
+
+const modes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'fan_only'] as const
+
+export function ClimateCard({
+  entityId,
+  compact = false,
+}: {
+  entityId: string
+  compact?: boolean
+}) {
+  const climate = useClimate(entityId)
+  const name = entityName(entityId, climate.attributes.friendly_name)
+  const unavailable = climate.isUnavailable
+  const target = climate.targetTemperature ?? climate.minTemp
+  const current = climate.currentTemperature
+
+  async function setTemp(next: number) {
+    try {
+      await climate.setTemperature(next)
+    } catch (e) {
+      notify('Temp failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
+  async function setMode(mode: string) {
+    try {
+      await climate.setMode(mode)
+    } catch (e) {
+      notify('Mode failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
+  const supported = climate.supportedModes.length
+    ? climate.supportedModes
+    : [...modes]
+
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'rounded-3xl border border-border-subtle bg-surface p-4',
+          unavailable && 'opacity-40',
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-2xl bg-accent-soft text-accent">
+              <Thermometer className="size-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-ink">{name}</p>
+              <p className="text-xs text-ink-muted capitalize">{climate.mode}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-2xl font-semibold tabular-nums text-ink">
+              {current != null ? `${Math.round(current)}°` : '—'}
+            </p>
+            <p className="text-xs text-ink-muted tabular-nums">
+              Target {target != null ? `${Math.round(target)}°` : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-[1.75rem] border border-border-subtle bg-surface p-5',
+        unavailable && 'opacity-40',
+      )}
+    >
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.14em] text-ink-muted uppercase">
+            Thermostat
+          </p>
+          <h3 className="mt-1 font-display text-xl font-semibold text-ink">{name}</h3>
+        </div>
+        <span className="grid size-11 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <Thermometer className="size-5" />
+        </span>
+      </div>
+
+      <div className="mb-6 flex items-end justify-center gap-6">
+        <div className="text-center">
+          <p className="text-xs text-ink-muted">Inside</p>
+          <p className="font-display text-5xl font-semibold tabular-nums tracking-tight text-ink">
+            {current != null ? Math.round(current) : '—'}
+            <span className="text-2xl text-ink-muted">°</span>
+          </p>
+        </div>
+        <div className="mb-2 h-12 w-px bg-border" />
+        <div className="text-center">
+          <p className="text-xs text-ink-muted">Target</p>
+          <p className="font-display text-4xl font-semibold tabular-nums text-accent">
+            {target != null ? Math.round(target) : '—'}
+            <span className="text-xl">°</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-5 flex items-center justify-center gap-3">
+        <Button
+          size="icon"
+          variant="secondary"
+          disabled={unavailable}
+          onClick={() => void setTemp((target ?? 68) - 1)}
+        >
+          <Minus className="size-5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
+          disabled={unavailable}
+          onClick={() => void setTemp((target ?? 68) + 1)}
+        >
+          <Plus className="size-5" />
+        </Button>
+      </div>
+
+      {climate.supportsTargetTemperature ? (
+        <div className="mb-5 space-y-2">
+          <Slider
+            aria-label="Target temperature"
+            min={climate.minTemp}
+            max={climate.maxTemp}
+            step={1}
+            disabled={unavailable}
+            value={target ?? climate.minTemp}
+            onValueCommitted={(value) => {
+              void setTemp(Array.isArray(value) ? value[0] : value)
+            }}
+          />
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {supported.map((mode) => (
+          <Toggle
+            key={mode}
+            pressed={climate.mode === mode}
+            disabled={unavailable}
+            onPressedChange={() => void setMode(mode)}
+            className="capitalize"
+          >
+            {mode.replace('_', ' ')}
+          </Toggle>
+        ))}
+      </div>
+    </div>
+  )
+}
