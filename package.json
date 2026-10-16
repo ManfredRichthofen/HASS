@@ -15,7 +15,7 @@
     "deploy": "bun run build && wrangler deploy",
     "tauri": "tauri",
     "android:dev": "tauri android dev",
-    "android:build": "tauri android build",
+    "android:build": "tauri android build --apk --target aarch64",
     "android:patch": "node scripts/patch-android-location.mjs"
   },
   "dependencies": {
