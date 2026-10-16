@@ -34,10 +34,9 @@ jobs:
       - name: Install NDK
         run: sdkmanager "ndk;27.0.11902837"
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: lts/*
-          cache: npm
+          bun-version: latest
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -48,10 +47,10 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Patch Android location plugin
-        run: npm run android:patch
+        run: bun run android:patch
 
       - name: Setup Android signing
         if: env.ANDROID_KEY_BASE64 != ''
@@ -68,6 +67,7 @@ jobs:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.11902837
         with:
           mobile: android
+          tauriScript: bun run tauri
           args: --apk
           tagName: app-v__VERSION__
           releaseName: 'Casa v__VERSION__'

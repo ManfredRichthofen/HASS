@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
+import { Settings } from 'lucide-react'
 import { useCurrentUser } from 'hass-react'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { EntityGrid } from '#/components/entities/EntityGrid'
@@ -25,12 +26,19 @@ function HomePage() {
       <Page>
         <m.header
           variants={staggerItem}
-          className="pt-[max(0.25rem,env(safe-area-inset-top))]"
+          className="flex items-center justify-between gap-3 pt-[max(0.25rem,env(safe-area-inset-top))]"
         >
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem] md:text-3xl">
             {greeting}
             {user?.name ? `, ${user.name.split(' ')[0]}` : ''}
           </h1>
+          <Link
+            to="/more"
+            aria-label="Settings and more"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition hover:text-ink"
+          >
+            <Settings className="size-5" />
+          </Link>
         </m.header>
 
         <m.div

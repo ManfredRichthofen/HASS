@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 process.env.CASA_TAURI_BUILD = '1'
 
 const result = spawnSync(
-  'npx',
+  'bunx',
   ['vite', 'build', '--mode', 'tauri'],
   {
     stdio: 'inherit',

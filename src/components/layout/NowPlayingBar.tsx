@@ -29,14 +29,14 @@ export function NowPlayingBar() {
     <AnimatePresence initial={false}>
       {visible ? (
         <>
-          <div aria-hidden className="h-[4.75rem]" />
+          <div aria-hidden className="h-[5rem]" />
           <m.div
             key="now-playing"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={soft}
-            className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-2xl px-3"
+            className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-2xl px-3"
           >
             <div className="flex items-center gap-1.5 rounded-[1.375rem] border border-white/10 bg-[#242d42]/90 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl">
               <Link

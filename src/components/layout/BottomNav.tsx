@@ -4,7 +4,7 @@ import {
   LayoutGrid,
   Thermometer,
   Music2,
-  Ellipsis,
+  Shield,
 } from 'lucide-react'
 import { cn } from '#/lib/cn'
 import { LayoutGroup, m, indicator } from '#/lib/motion'
@@ -14,7 +14,7 @@ const items = [
   { to: '/rooms', label: 'Rooms', icon: LayoutGrid, match: 'prefix' as const },
   { to: '/climate', label: 'Climate', icon: Thermometer, match: 'prefix' as const },
   { to: '/media', label: 'Media', icon: Music2, match: 'prefix' as const },
-  { to: '/more', label: 'More', icon: Ellipsis, match: 'prefix' as const },
+  { to: '/security', label: 'Security', icon: Shield, match: 'prefix' as const },
 ]
 
 export function BottomNav() {
@@ -23,12 +23,12 @@ export function BottomNav() {
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-canvas-elevated/95 backdrop-blur-xl',
-        'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+        'fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-canvas-elevated',
+        'pb-[max(1rem,env(safe-area-inset-bottom))] pt-2',
       )}
     >
       <LayoutGroup>
-        <div className="mx-auto flex w-full max-w-2xl items-stretch justify-between px-1.5 pt-1 sm:px-3">
+        <div className="mx-auto flex w-full max-w-2xl items-stretch justify-between px-2 sm:px-3">
           {items.map(({ to, label, icon: Icon, match }) => {
             const active =
               match === 'exact'
@@ -40,11 +40,11 @@ export function BottomNav() {
                 key={to}
                 to={to}
                 className={cn(
-                  'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[10px] font-medium transition sm:text-[11px]',
+                  'relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-colors',
                   active ? 'text-accent-strong' : 'text-ink-muted hover:text-ink',
                 )}
               >
-                <span className="relative grid h-[1.875rem] w-14 place-items-center">
+                <span className="relative grid h-[1.875rem] w-[3.25rem] place-items-center">
                   {active ? (
                     <m.span
                       layoutId="nav-indicator"
