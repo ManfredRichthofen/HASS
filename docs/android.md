@@ -29,9 +29,10 @@ rustup target list --installed   # should include aarch64-linux-android
 
 ```powershell
 npm install
-bun run android:patch   # re-apply location sources/ProGuard after `tauri android init`
-bun run android:dev
+bun run android:dev     # runs android:patch first (ProGuard + Kotlin)
 ```
+
+`android:build` also runs `android:patch` automatically so release APKs keep `LocationTrackingPlugin` (R8 would otherwise strip it and the app exits on launch).
 
 On first run, grant **Location → Allow all the time**.
 
@@ -44,13 +45,12 @@ Uses Fused Location PendingIntents + WorkManager (no foreground service notifica
 3. Minimize / lock the phone — Home Assistant `device_tracker.casa_web_*` should keep updating.
 4. Assign that tracker to a Person in HA for presence.
 
-Release APKs must keep `LocationTrackingPlugin` for reflective Tauri registration — `android:patch` writes the ProGuard rules that prevent R8 from stripping it (startup crash otherwise).
-
 ## Release / sideload APK
 
 ```powershell
 npm run android:build
-# or debug:
+# or debug (patch first if you skip the npm script):
+bun run android:patch
 npx tauri android build --debug
 ```
 

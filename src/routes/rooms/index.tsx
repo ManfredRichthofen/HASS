@@ -13,6 +13,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import {
+  areaDeviceCount,
+  areaLightIds,
+  areaTempId,
   entities,
   isRoomLight,
   primaryAreas,
@@ -48,14 +51,16 @@ function Temp({ entityId }: { entityId: string }) {
 
 function RoomCard({ area }: { area: AreaConfig }) {
   const { callService } = useServiceCall()
-  const lightIds = area.lights.filter(isRoomLight)
+  const lightIds = areaLightIds(area)
   const lights = useEntityGroup([...lightIds])
   const on = lights.filter((l) => l.state === 'on').length
   const hasLights = lightIds.length > 0
   const isOn = on > 0
   const Icon = roomIcons[area.id] ?? LayoutGrid
-  const tempId = area.sensors.find((id) => id.includes('temperature'))
-  const deviceCount = area.lights.length + area.fans.length + area.media.length
+  const tempId = areaTempId(area)
+  const deviceCount = areaDeviceCount(area)
+  const hasClimate =
+    (area.climateReadings?.length ?? 0) > 0 || area.sensors.length > 0
 
   async function togglePower() {
     try {
@@ -67,13 +72,16 @@ function RoomCard({ area }: { area: AreaConfig }) {
     }
   }
 
+  const sensorOnly = deviceCount === 0 && hasClimate
   const status = hasLights
     ? lightIds.length > 1 && isOn
       ? `${on} of ${lightIds.length} on`
       : isOn
         ? 'Light on'
         : 'Lights off'
-    : `${deviceCount} device${deviceCount === 1 ? '' : 's'}`
+    : sensorOnly
+      ? 'Sensors'
+      : `${deviceCount} device${deviceCount === 1 ? '' : 's'}`
 
   return (
     <m.div

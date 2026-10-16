@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
-use tauri::{
-    plugin::{Builder, PluginHandle, TauriPlugin},
-    AppHandle, Manager,
-};
+use tauri::AppHandle;
+
+#[cfg(target_os = "android")]
+use tauri::Manager;
+#[cfg(target_os = "android")]
+use tauri::plugin::{Builder, PluginHandle, TauriPlugin};
 
 #[cfg(target_os = "android")]
 struct LocationTrackingState(PluginHandle<tauri::Wry>);
@@ -26,7 +28,9 @@ pub fn location_tracking_start(
     {
         let state = app
             .try_state::<LocationTrackingState>()
-            .ok_or_else(|| "Location tracking is not available".to_string())?;
+            .ok_or_else(|| {
+                "Location tracking is not available (plugin failed to load)".to_string()
+            })?;
         state
             .0
             .run_mobile_plugin("start", credentials)
@@ -45,7 +49,9 @@ pub fn location_tracking_stop(app: AppHandle) -> Result<(), String> {
     {
         let state = app
             .try_state::<LocationTrackingState>()
-            .ok_or_else(|| "Location tracking is not available".to_string())?;
+            .ok_or_else(|| {
+                "Location tracking is not available (plugin failed to load)".to_string()
+            })?;
         state
             .0
             .run_mobile_plugin("stop", ())
@@ -67,7 +73,9 @@ pub fn location_tracking_update_credentials(
     {
         let state = app
             .try_state::<LocationTrackingState>()
-            .ok_or_else(|| "Location tracking is not available".to_string())?;
+            .ok_or_else(|| {
+                "Location tracking is not available (plugin failed to load)".to_string()
+            })?;
         state
             .0
             .run_mobile_plugin("updateCredentials", credentials)
@@ -80,19 +88,21 @@ pub fn location_tracking_update_credentials(
     }
 }
 
-/// Registers the Android Kotlin plugin and stores its handle for command forwarding.
+/// Registers the Android Kotlin plugin. Failures are logged so the app still launches;
+/// start/stop commands then return a clear error instead of aborting process init.
+#[cfg(target_os = "android")]
 pub fn init() -> TauriPlugin<tauri::Wry> {
     Builder::new("location-tracking")
         .setup(|app, api| {
-            #[cfg(target_os = "android")]
-            {
-                let handle =
-                    api.register_android_plugin("com.casa.dashboard", "LocationTrackingPlugin")?;
-                app.manage(LocationTrackingState(handle));
-            }
-            #[cfg(not(target_os = "android"))]
-            {
-                let _ = (app, api);
+            match api.register_android_plugin("com.casa.dashboard", "LocationTrackingPlugin") {
+                Ok(handle) => {
+                    app.manage(LocationTrackingState(handle));
+                }
+                Err(e) => {
+                    log::error!(
+                        "Failed to register LocationTrackingPlugin (background location disabled): {e}"
+                    );
+                }
             }
             Ok(())
         })

@@ -35,52 +35,90 @@ class TrackingCredentials {
 @TauriPlugin
 class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) {
   companion object {
-    private const val PERMISSION_REQUEST = 4815
+    private const val PERMISSION_REQUEST_FOREGROUND = 4815
+    private const val PERMISSION_REQUEST_BACKGROUND = 4816
   }
 
   @Command
   fun start(invoke: Invoke) {
-    val args = invoke.parseArgs(TrackingCredentials::class.java)
-    LocationCredentialStore.save(
-      activity.applicationContext,
-      args.haUrl,
-      args.accessToken,
-      args.refreshToken,
-      args.clientId,
-      args.deviceId,
-    )
-
-    if (!hasLocationPermission()) {
-      requestLocationPermissions()
-      invoke.reject("Location permission required. Grant Allow all the time, then try again.")
+    val args = try {
+      invoke.parseArgs(TrackingCredentials::class.java)
+    } catch (e: Exception) {
+      invoke.reject("Invalid tracking credentials: ${e.message}")
       return
     }
 
-    registerLocationUpdates()
-    enqueuePeriodic()
-    invoke.resolve()
+    try {
+      LocationCredentialStore.save(
+        activity.applicationContext,
+        args.haUrl,
+        args.accessToken,
+        args.refreshToken,
+        args.clientId,
+        args.deviceId,
+      )
+    } catch (e: Exception) {
+      invoke.reject("Failed to store credentials: ${e.message}")
+      return
+    }
+
+    if (!hasForegroundLocationPermission()) {
+      requestForegroundLocationPermissions()
+      invoke.reject("Location permission required. Grant precise location, then try again.")
+      return
+    }
+
+    if (!hasBackgroundLocationPermission()) {
+      requestBackgroundLocationPermission()
+      invoke.reject("Background location required. Set Location to Allow all the time, then try again.")
+      return
+    }
+
+    try {
+      registerLocationUpdates()
+      enqueuePeriodic()
+      invoke.resolve()
+    } catch (e: SecurityException) {
+      invoke.reject("Location permission was denied by the system. Check Android settings.")
+    } catch (e: Exception) {
+      invoke.reject("Failed to start location tracking: ${e.message}")
+    }
   }
 
   @Command
   fun stop(invoke: Invoke) {
-    unregisterLocationUpdates()
-    WorkManager.getInstance(activity.applicationContext)
-      .cancelAllWorkByTag(LocationWorker.WORK_TAG)
-    invoke.resolve()
+    try {
+      unregisterLocationUpdates()
+      WorkManager.getInstance(activity.applicationContext)
+        .cancelAllWorkByTag(LocationWorker.WORK_TAG)
+      invoke.resolve()
+    } catch (e: Exception) {
+      invoke.reject("Failed to stop location tracking: ${e.message}")
+    }
   }
 
   @Command
   fun updateCredentials(invoke: Invoke) {
-    val args = invoke.parseArgs(TrackingCredentials::class.java)
-    LocationCredentialStore.save(
-      activity.applicationContext,
-      args.haUrl,
-      args.accessToken,
-      args.refreshToken,
-      args.clientId,
-      args.deviceId,
-    )
-    invoke.resolve()
+    val args = try {
+      invoke.parseArgs(TrackingCredentials::class.java)
+    } catch (e: Exception) {
+      invoke.reject("Invalid tracking credentials: ${e.message}")
+      return
+    }
+
+    try {
+      LocationCredentialStore.save(
+        activity.applicationContext,
+        args.haUrl,
+        args.accessToken,
+        args.refreshToken,
+        args.clientId,
+        args.deviceId,
+      )
+      invoke.resolve()
+    } catch (e: Exception) {
+      invoke.reject("Failed to update credentials: ${e.message}")
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -101,10 +139,8 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
       .setMinUpdateDistanceMeters(50f)
       .setWaitForAccurateLocation(false)
       .build()
-    try {
-      LocationServices.getFusedLocationProviderClient(activity.applicationContext)
-        .requestLocationUpdates(request, buildPendingIntent())
-    } catch (_: SecurityException) { }
+    LocationServices.getFusedLocationProviderClient(activity.applicationContext)
+      .requestLocationUpdates(request, buildPendingIntent())
   }
 
   private fun unregisterLocationUpdates() {
@@ -129,34 +165,39 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
       )
   }
 
-  private fun hasLocationPermission(): Boolean {
-    val fine = ContextCompat.checkSelfPermission(
+  private fun hasForegroundLocationPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(
       activity,
       Manifest.permission.ACCESS_FINE_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
-    if (!fine) return false
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      ContextCompat.checkSelfPermission(
-        activity,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-      ) == PackageManager.PERMISSION_GRANTED
-    } else {
-      true
-    }
   }
 
-  private fun requestLocationPermissions() {
-    val permissions = mutableListOf(
-      Manifest.permission.ACCESS_FINE_LOCATION,
-      Manifest.permission.ACCESS_COARSE_LOCATION,
-    )
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-    }
+  private fun hasBackgroundLocationPermission(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
+    return ContextCompat.checkSelfPermission(
+      activity,
+      Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+  }
+
+  /** Android Q+: request fine/coarse first; background must be a separate step. */
+  private fun requestForegroundLocationPermissions() {
     ActivityCompat.requestPermissions(
       activity,
-      permissions.toTypedArray(),
-      PERMISSION_REQUEST,
+      arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+      ),
+      PERMISSION_REQUEST_FOREGROUND,
+    )
+  }
+
+  private fun requestBackgroundLocationPermission() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+    ActivityCompat.requestPermissions(
+      activity,
+      arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+      PERMISSION_REQUEST_BACKGROUND,
     )
   }
 }

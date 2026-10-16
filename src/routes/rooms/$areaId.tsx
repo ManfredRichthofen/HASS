@@ -4,11 +4,13 @@ import { Lightbulb, Power } from 'lucide-react'
 import { cn } from '#/lib/cn'
 import { m, snappy } from '#/lib/motion'
 import { notify } from '#/components/ui/toast'
-import { getArea, isRoomLight } from '#/config/dashboard'
+import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
 import { ApplianceRow } from '#/components/entities/ApplianceRow'
+import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
 import { SwitchRow } from '#/components/entities/SwitchRow'
 import { entityName } from '#/lib/entityName'
 import { EntityGrid } from '#/components/entities/EntityGrid'
+import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
 import { MediaCard } from '#/components/entities/MediaCard'
@@ -88,12 +90,21 @@ function RoomDetailPage() {
     )
   }
 
-  const roomLights = area.lights.filter(isRoomLight)
+  const roomLights = areaLightIds(area)
+  const standaloneLights = area.lights.filter(isRoomLight)
+  const climateReadings = area.climateReadings ?? []
+  const fanLights = area.fanLights ?? []
+  const fanDevices = area.fanDevices ?? []
+  const hasFans =
+    area.fans.length > 0 || fanDevices.length > 0 || fanLights.length > 0
   const empty =
     roomLights.length +
       area.fans.length +
+      fanDevices.length +
+      fanLights.length +
       area.media.length +
       area.sensors.length +
+      climateReadings.length +
       (area.appliances?.length ?? 0) +
       (area.switches?.length ?? 0) ===
     0
@@ -113,9 +124,12 @@ function RoomDetailPage() {
         </p>
       ) : null}
 
-      {area.sensors.length > 0 ? (
+      {climateReadings.length > 0 || area.sensors.length > 0 ? (
         <Section title="Climate">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {climateReadings.map((reading) => (
+              <ClimateReadingCard key={reading.tempId} {...reading} />
+            ))}
             {area.sensors.map((id) => (
               <SensorChip key={id} entityId={id} />
             ))}
@@ -125,23 +139,47 @@ function RoomDetailPage() {
 
       {roomLights.length > 1 ? <AllLightsCard ids={roomLights} /> : null}
 
-      {roomLights.length > 0 ? (
+      {standaloneLights.length > 0 ? (
         <Section title="Lights">
           <EntityGrid>
-            {roomLights.map((id) => (
+            {standaloneLights.map((id) => (
               <LightTile key={id} entityId={id} />
             ))}
           </EntityGrid>
         </Section>
       ) : null}
 
-      {area.fans.length > 0 ? (
-        <Section title="Fans">
-          <EntityGrid>
-            {area.fans.map((id) => (
-              <FanTile key={id} entityId={id} />
-            ))}
-          </EntityGrid>
+      {hasFans ? (
+        <Section
+          title={
+            fanLights.length && !area.fans.length && !fanDevices.length
+              ? 'Ceiling'
+              : 'Fans'
+          }
+        >
+          {fanLights.length > 0 ? (
+            <div className="mb-2.5 grid gap-2.5 sm:gap-3 md:grid-cols-2">
+              {fanLights.map((kit) => (
+                <FanLightTile key={kit.fanId} {...kit} />
+              ))}
+            </div>
+          ) : null}
+          {fanDevices.length > 0 || area.fans.length > 0 ? (
+            <EntityGrid>
+              {fanDevices.map((device) => (
+                <FanTile
+                  key={device.fanId}
+                  entityId={device.fanId}
+                  label={device.label}
+                  tempId={device.tempId}
+                  humidityId={device.humidityId}
+                />
+              ))}
+              {area.fans.map((id) => (
+                <FanTile key={id} entityId={id} />
+              ))}
+            </EntityGrid>
+          ) : null}
         </Section>
       ) : null}
 

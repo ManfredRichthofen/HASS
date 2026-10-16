@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type PointerEvent } from 'react'
-import { useFan } from 'hass-react'
+import { useFan, useSensor } from 'hass-react'
 import { ArrowDownUp, Fan, SlidersHorizontal, Wind } from 'lucide-react'
 import { entityName } from '#/lib/entityName'
 import { cn } from '#/lib/cn'
@@ -33,20 +33,71 @@ function spinDuration(pct: number) {
   return `${3.6 - (clamped / 100) * 2.8}s`
 }
 
-export function FanTile({
+function SensorReading({
   entityId,
+  kind,
 }: {
   entityId: string
+  kind: 'temp' | 'humidity'
+}) {
+  const sensor = useSensor(entityId)
+  if (sensor.isUnavailable || sensor.numericValue == null) return null
+  const value =
+    kind === 'temp'
+      ? `${Math.round(sensor.numericValue * 10) / 10}°`
+      : `${Math.round(sensor.numericValue)}%`
+  return <span>{value}</span>
+}
+
+function SensorHint({
+  tempId,
+  humidityId,
+  onCard,
+}: {
+  tempId?: string
+  humidityId?: string
+  onCard?: boolean
+}) {
+  if (!tempId && !humidityId) return null
+
+  return (
+    <span
+      className={cn(
+        'mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs',
+        onCard ? 'text-white/70' : 'text-ink-muted',
+      )}
+    >
+      {tempId ? <SensorReading entityId={tempId} kind="temp" /> : null}
+      {tempId && humidityId ? <span aria-hidden>·</span> : null}
+      {humidityId ? (
+        <SensorReading entityId={humidityId} kind="humidity" />
+      ) : null}
+    </span>
+  )
+}
+
+export function FanTile({
+  entityId,
+  label,
+  tempId,
+  humidityId,
+}: {
+  entityId: string
+  label?: string
+  /** Same-device climate sensors shown on this card. */
+  tempId?: string
+  humidityId?: string
   compact?: boolean
 }) {
   const fan = useFan(entityId)
   const [open, setOpen] = useState(false)
   const [speed, setSpeed] = useState(Math.max(0, Math.round(fan.percentage) || 0))
-  const name = entityName(entityId, fan.attributes.friendly_name)
+  const name = label ?? entityName(entityId, fan.attributes.friendly_name)
   const unavailable = fan.isUnavailable
   const canSpeed = fan.supportsSetSpeed
   const presets = fan.availablePresetModes.filter(Boolean)
   const showInline = canSpeed && fan.isOn && !unavailable
+  const hasSensors = Boolean(tempId || humidityId)
   const activePreset = useMemo(
     () => (canSpeed ? nearestPreset(speed) : null),
     [canSpeed, speed],
@@ -153,6 +204,13 @@ export function FanTile({
               >
                 {status}
               </span>
+              {hasSensors ? (
+                <SensorHint
+                  tempId={tempId}
+                  humidityId={humidityId}
+                  onCard={fan.isOn}
+                />
+              ) : null}
             </span>
           </m.button>
 

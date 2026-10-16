@@ -24,7 +24,7 @@ type LocationContextValue = {
 
 const LocationContext = createContext<LocationContextValue | null>(null)
 
-/** Keeps geolocation watch / FGS alive for the whole authenticated session. */
+/** Keeps foreground geolocation watch + background WorkManager armed for the session. */
 export function LocationProvider({ children }: { children: ReactNode }) {
   const location = useDeviceLocation()
   return (

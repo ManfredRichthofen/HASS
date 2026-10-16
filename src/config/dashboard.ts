@@ -10,14 +10,46 @@ export type AreaId =
   | 'master_bath'
   | 'guest_bedroom'
 
+/** Temp (+ humidity / occupancy) from one physical sensor on a single card. */
+export type ClimateReading = {
+  label: string
+  tempId: string
+  humidityId?: string
+  occupancyId?: string
+}
+
+/** Ceiling fan + light kit — both entities on one card. */
+export type FanLightKit = {
+  label: string
+  lightId: string
+  fanId: string
+}
+
+/** Fan that shares a chassis with climate sensors (thermostat, evaporative cooler). */
+export type FanDevice = {
+  label: string
+  fanId: string
+  tempId?: string
+  humidityId?: string
+}
+
 export interface AreaConfig {
   id: AreaId
   name: string
+  /** Standalone lights (not part of a fanLights kit). */
   lights: string[]
+  /** Standalone fans (not part of fanLights / fanDevices). */
   fans: string[]
   media: string[]
+  /** Standalone unpaired sensors — prefer climateReadings / fanDevices. */
   sensors: string[]
   occupancy?: string
+  /** Paired climate sensors for one device. */
+  climateReadings?: ClimateReading[]
+  /** Fan + light kits (same physical fixture). */
+  fanLights?: FanLightKit[]
+  /** Fans with on-device climate sensors. */
+  fanDevices?: FanDevice[]
   /** Appliances with a power switch + cycle status sensor. */
   appliances?: { label: string; powerId: string; statusId: string }[]
   /** Extra on/off switches (irrigation zones etc.). */
@@ -35,9 +67,18 @@ export const areas: AreaConfig[] = [
       'light.entry',
       'light.living_room_led',
     ],
-    fans: ['fan.mts300'],
+    fans: [],
+    // Thermostat fan + its temp/humidity on one card.
+    fanDevices: [
+      {
+        label: 'Living room fan',
+        fanId: 'fan.mts300',
+        tempId: 'sensor.mts300_temperature',
+        humidityId: 'sensor.mts300_humidity',
+      },
+    ],
     media: ['media_player.living_room'],
-    sensors: ['sensor.mts300_temperature', 'sensor.mts300_humidity'],
+    sensors: [],
     occupancy: 'binary_sensor.inovelli_vzm32_sn_occupancy',
   },
   {
@@ -62,14 +103,26 @@ export const areas: AreaConfig[] = [
   {
     id: 'bedroom',
     name: 'Bedroom',
-    // Ceiling light kit only — paddle/controller LEDs and fan-speed-as-light stay out.
-    lights: ['light.bedroom_ceiling_light'],
-    fans: ['fan.bedroom_ceiling_fan'],
+    // Ceiling kit is fanLights — paddle/controller LEDs stay out.
+    lights: [],
+    fans: [],
+    fanLights: [
+      {
+        label: 'Ceiling',
+        lightId: 'light.bedroom_ceiling_light',
+        fanId: 'fan.bedroom_ceiling_fan',
+      },
+    ],
     // HA area is Living Room; friendly name is Bedroom TV — keep it with Bedroom.
     media: ['media_player.living_room_tv'],
-    sensors: [
-      'sensor.presence_multi_sensor_fp300_temperature',
-      'sensor.presence_multi_sensor_fp300_humidity',
+    sensors: [],
+    climateReadings: [
+      {
+        label: 'Bedroom',
+        tempId: 'sensor.presence_multi_sensor_fp300_temperature',
+        humidityId: 'sensor.presence_multi_sensor_fp300_humidity',
+        occupancyId: 'binary_sensor.presence_multi_sensor_fp300_occupancy',
+      },
     ],
     occupancy: 'binary_sensor.presence_multi_sensor_fp300_occupancy',
   },
@@ -79,9 +132,14 @@ export const areas: AreaConfig[] = [
     lights: [],
     fans: [],
     media: [],
-    sensors: [
-      'sensor.office_climate_sensor_temperature',
-      'sensor.office_climate_sensor_humidity',
+    sensors: [],
+    climateReadings: [
+      {
+        label: 'Office',
+        tempId: 'sensor.office_climate_sensor_temperature',
+        humidityId: 'sensor.office_climate_sensor_humidity',
+        occupancyId: 'binary_sensor.casa_room_office_active',
+      },
     ],
     occupancy: 'binary_sensor.casa_room_office_active',
   },
@@ -89,12 +147,18 @@ export const areas: AreaConfig[] = [
     id: 'garage',
     name: 'Garage',
     lights: [],
-    fans: ['fan.afg_smt_pro_2_0'],
-    media: [],
-    sensors: [
-      'sensor.afg_smt_pro_2_0_temperature',
-      'sensor.afg_smt_pro_2_0_humidity',
+    fans: [],
+    // AFG cooler: fan + onboard climate on one card.
+    fanDevices: [
+      {
+        label: 'Garage fan',
+        fanId: 'fan.afg_smt_pro_2_0',
+        tempId: 'sensor.afg_smt_pro_2_0_temperature',
+        humidityId: 'sensor.afg_smt_pro_2_0_humidity',
+      },
     ],
+    media: [],
+    sensors: [],
   },
   {
     id: 'laundry',
@@ -123,7 +187,10 @@ export const areas: AreaConfig[] = [
     lights: [],
     fans: [],
     media: [],
-    sensors: ['sensor.outdoor_temperature'],
+    sensors: [],
+    climateReadings: [
+      { label: 'Outside', tempId: 'sensor.outdoor_temperature' },
+    ],
     switches: [
       'switch.sprinkler_controller_front_lawn',
       'switch.sprinkler_controller_back_yard',
@@ -157,6 +224,31 @@ export const areas: AreaConfig[] = [
   },
 ]
 
+/** House-wide climate reading cards (Climate page). */
+export const houseClimateReadings: ClimateReading[] = [
+  {
+    label: 'Living room',
+    tempId: 'sensor.mts300_temperature',
+    humidityId: 'sensor.mts300_humidity',
+  },
+  {
+    label: 'Bedroom',
+    tempId: 'sensor.presence_multi_sensor_fp300_temperature',
+    humidityId: 'sensor.presence_multi_sensor_fp300_humidity',
+  },
+  {
+    label: 'Office',
+    tempId: 'sensor.office_climate_sensor_temperature',
+    humidityId: 'sensor.office_climate_sensor_humidity',
+  },
+  {
+    label: 'Garage',
+    tempId: 'sensor.afg_smt_pro_2_0_temperature',
+    humidityId: 'sensor.afg_smt_pro_2_0_humidity',
+  },
+  { label: 'Outside', tempId: 'sensor.outdoor_temperature' },
+]
+
 export const entities = {
   climate: 'climate.mts300',
   weather: 'weather.forecast_home',
@@ -165,9 +257,8 @@ export const entities = {
   vacuum: 'vacuum.x40_ultra',
   /** Dreame map cameras — first available wins at runtime via discovery. */
   vacuumMapCameras: [
-    'camera.x40_ultra_map_data',
     'camera.x40_ultra_map',
-    'camera.x40_ultra_current_map',
+    'camera.x40_ultra_map_1',
   ] as const,
   vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
   vacuumCleanGenius: 'select.x40_ultra_cleangenius',
@@ -196,7 +287,10 @@ export const entities = {
   security: {
     doorContact: 'binary_sensor.level_lock_pro_door',
     leaks: [
-      { id: 'binary_sensor.dishwasher_leak_sensor', label: 'Dishwasher' },
+      {
+        id: 'binary_sensor.kitchen_dishwasher_leak_sensor',
+        label: 'Dishwasher',
+      },
       { id: 'binary_sensor.washer_leak_sensor', label: 'Washer' },
     ],
   },
@@ -401,6 +495,36 @@ export function isRoomLight(entityId: string): boolean {
   if (entityId.includes('browser_mod')) return false
   if (/fan.?speed/i.test(entityId)) return false
   return (entities.allLightsOff as readonly string[]).includes(entityId)
+}
+
+/** First temperature entity for a room summary card. */
+export function areaTempId(area: AreaConfig): string | undefined {
+  return (
+    area.climateReadings?.[0]?.tempId ??
+    area.fanDevices?.[0]?.tempId ??
+    area.sensors.find((id) => id.includes('temperature'))
+  )
+}
+
+/** Count of controllable / notable devices for room list status. */
+export function areaDeviceCount(area: AreaConfig): number {
+  return (
+    area.lights.filter(isRoomLight).length +
+    (area.fanLights?.length ?? 0) +
+    area.fans.length +
+    (area.fanDevices?.length ?? 0) +
+    area.media.length +
+    (area.appliances?.length ?? 0) +
+    (area.switches?.length ?? 0)
+  )
+}
+
+/** All light entity IDs in a room, including fan/light kits. */
+export function areaLightIds(area: AreaConfig): string[] {
+  return [
+    ...area.lights,
+    ...(area.fanLights ?? []).map((kit) => kit.lightId),
+  ].filter(isRoomLight)
 }
 
 export function getArea(id: string): AreaConfig | undefined {

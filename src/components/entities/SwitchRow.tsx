@@ -31,7 +31,9 @@ export function SwitchRow({
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-ink">{name}</p>
-        <p className="text-xs text-ink-muted">{sw.isOn ? 'On' : 'Off'}</p>
+        <p className="text-xs text-ink-muted">
+          {sw.isUnavailable ? 'Unavailable' : sw.isOn ? 'On' : 'Off'}
+        </p>
       </div>
       {showToggle ? (
         <Switch

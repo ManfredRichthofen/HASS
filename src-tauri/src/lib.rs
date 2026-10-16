@@ -3,13 +3,17 @@ mod location_tracking;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[allow(unused_mut)]
-    let mut builder = tauri::Builder::default()
-        .plugin(location_tracking::init())
-        .invoke_handler(tauri::generate_handler![
-            location_tracking::location_tracking_start,
-            location_tracking::location_tracking_stop,
-            location_tracking::location_tracking_update_credentials,
-        ]);
+    let mut builder = tauri::Builder::default().invoke_handler(tauri::generate_handler![
+        location_tracking::location_tracking_start,
+        location_tracking::location_tracking_stop,
+        location_tracking::location_tracking_update_credentials,
+    ]);
+
+    // Background HA location sharing — Android Kotlin plugin only.
+    #[cfg(target_os = "android")]
+    {
+        builder = builder.plugin(location_tracking::init());
+    }
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
     {

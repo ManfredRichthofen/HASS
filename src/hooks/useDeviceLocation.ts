@@ -15,7 +15,9 @@ import {
 import {
   startNativeLocationTracking,
   stopNativeLocationTracking,
+  updateNativeLocationCredentials,
 } from '#/lib/nativeLocation'
+import { readHaAuth } from '#/lib/haAuthStorage'
 
 export type LocationPermission = PermissionState | 'unsupported' | 'unknown'
 
@@ -375,7 +377,7 @@ export function useDeviceLocation() {
     }
   }, [connected, enabled, getWebPosition, native, reportToHa])
 
-  // Native: foreground watch for live UI; WorkManager handles background.
+  // Native: re-arm WorkManager after process death, then foreground watch for UI.
   useEffect(() => {
     if (!native || !enabled || !connected) return
 
@@ -385,6 +387,9 @@ export function useDeviceLocation() {
     void (async () => {
       try {
         await ensureNativePermissions()
+        await startNativeLocationTracking()
+        if (cancelled) return
+
         const geo = await loadTauriGeo()
         watchId = await geo.watchPosition(
           { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
@@ -418,6 +423,26 @@ export function useDeviceLocation() {
       }
     }
   }, [connected, enabled, ensureNativePermissions, native, reportToHa])
+
+  // Keep encrypted prefs in sync when HA tokens refresh while sharing is on.
+  useEffect(() => {
+    if (!native || !enabled) return
+
+    const sync = () => {
+      if (!readHaAuth()?.access_token) return
+      void updateNativeLocationCredentials().catch(() => {
+        /* ignore — next start will rewrite */
+      })
+    }
+
+    sync()
+    window.addEventListener('storage', sync)
+    const interval = window.setInterval(sync, 60_000)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.clearInterval(interval)
+    }
+  }, [enabled, native])
 
   return {
     enabled,

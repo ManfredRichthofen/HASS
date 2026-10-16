@@ -15,6 +15,7 @@ export type UpdateCheckResult =
     }
   | { status: 'error'; message: string }
 
+/** Tauri Android WebView UA always includes Android; desktop shells do not. */
 function isAndroid(): boolean {
   if (typeof navigator === 'undefined') return false
   return /android/i.test(navigator.userAgent)

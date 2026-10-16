@@ -14,8 +14,8 @@
     "preview": "vite preview",
     "deploy": "bun run build && wrangler deploy",
     "tauri": "tauri",
-    "android:dev": "tauri android dev",
-    "android:build": "tauri android build --apk --target aarch64",
+    "android:dev": "node scripts/patch-android-location.mjs && tauri android dev",
+    "android:build": "node scripts/patch-android-location.mjs && tauri android build --apk --target aarch64",
     "android:patch": "node scripts/patch-android-location.mjs"
   },
   "dependencies": {

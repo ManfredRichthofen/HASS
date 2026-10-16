@@ -27,7 +27,7 @@ function buildCredentials(): NativeTrackingCredentials {
   }
 }
 
-/** Enqueues the WorkManager periodic location job. */
+/** Starts Fused Location + WorkManager background sharing. */
 export async function startNativeLocationTracking(): Promise<void> {
   if (!isTauri()) throw new Error('Native tracking requires the Casa Android app')
   const credentials = buildCredentials()
@@ -37,4 +37,11 @@ export async function startNativeLocationTracking(): Promise<void> {
 export async function stopNativeLocationTracking(): Promise<void> {
   if (!isTauri()) return
   await invoke('location_tracking_stop')
+}
+
+/** Refresh HA tokens stored for the background worker (call when auth changes). */
+export async function updateNativeLocationCredentials(): Promise<void> {
+  if (!isTauri()) return
+  const credentials = buildCredentials()
+  await invoke('location_tracking_update_credentials', { credentials })
 }

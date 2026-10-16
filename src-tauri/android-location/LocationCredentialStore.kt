@@ -1,6 +1,7 @@
 package com.casa.dashboard
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -20,14 +21,18 @@ object LocationCredentialStore {
     val deviceId: String,
   )
 
-  private fun prefs(context: Context) =
-    EncryptedSharedPreferences.create(
+  private fun prefs(context: Context): SharedPreferences {
+    val masterKey = MasterKey.Builder(context)
+      .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+      .build()
+    return EncryptedSharedPreferences.create(
       context,
       PREFS,
-      MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+      masterKey,
       EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
       EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
+  }
 
   fun save(
     context: Context,
@@ -47,20 +52,32 @@ object LocationCredentialStore {
   }
 
   fun load(context: Context): Credentials? {
-    val p = prefs(context)
-    val haUrl = p.getString(KEY_HA_URL, null) ?: return null
-    val access = p.getString(KEY_ACCESS, null) ?: return null
-    val refresh = p.getString(KEY_REFRESH, null) ?: return null
-    val client = p.getString(KEY_CLIENT, null) ?: return null
-    val device = p.getString(KEY_DEVICE, null) ?: return null
-    return Credentials(haUrl, access, refresh, client, device)
+    return try {
+      val p = prefs(context)
+      val haUrl = p.getString(KEY_HA_URL, null) ?: return null
+      val access = p.getString(KEY_ACCESS, null) ?: return null
+      val refresh = p.getString(KEY_REFRESH, null) ?: return null
+      val client = p.getString(KEY_CLIENT, null) ?: return null
+      val device = p.getString(KEY_DEVICE, null) ?: return null
+      Credentials(haUrl, access, refresh, client, device)
+    } catch (_: Exception) {
+      null
+    }
   }
 
   fun updateAccessToken(context: Context, accessToken: String) {
-    prefs(context).edit().putString(KEY_ACCESS, accessToken).apply()
+    try {
+      prefs(context).edit().putString(KEY_ACCESS, accessToken).apply()
+    } catch (_: Exception) {
+      /* ignore — next start will rewrite credentials */
+    }
   }
 
   fun clear(context: Context) {
-    prefs(context).edit().clear().apply()
+    try {
+      prefs(context).edit().clear().apply()
+    } catch (_: Exception) {
+      /* ignore */
+    }
   }
 }

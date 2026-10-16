@@ -23,9 +23,14 @@ export function MediaCard({
   const player = useMediaPlayer(entityId)
   const name = entityName(entityId, player.attributes.friendly_name)
   const unavailable = player.isUnavailable
-  const title = player.mediaTitle ?? (player.isOff ? 'Off' : 'Nothing playing')
-  const artist = player.mediaArtist
   const isActive = player.isPlaying || player.isPaused
+  // Music Assistant / Sonos keep last track in attributes while idle — don't show it as current.
+  const title = isActive
+    ? (player.mediaTitle ?? 'Nothing playing')
+    : player.isOff
+      ? 'Off'
+      : 'Nothing playing'
+  const artist = isActive ? player.mediaArtist : undefined
 
   async function run(action: () => Promise<void>, label: string) {
     try {
