@@ -82,7 +82,7 @@ export function HomeStatusCard() {
             interactive
           />
         </Link>
-        <Link to="/more" className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <Link to="/security" className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
           <StatusCell
             label="Door"
             value={lock.isUnavailable ? '—' : locked ? 'Locked' : 'Open'}

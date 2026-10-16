@@ -33,7 +33,7 @@ function HomePage() {
             {user?.name ? `, ${user.name.split(' ')[0]}` : ''}
           </h1>
           <Link
-            to="/more"
+            to="/settings"
             aria-label="Settings and more"
             className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition hover:text-ink"
           >

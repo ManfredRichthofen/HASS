@@ -33,7 +33,7 @@ export function HouseModeGrid() {
             className={cn(
               'touch-target flex items-center justify-center rounded-xl border px-3 text-sm font-semibold transition',
               selected
-                ? 'border-accent/40 bg-accent-soft text-accent'
+                ? 'border-transparent bg-accent text-white'
                 : 'border-border-subtle bg-surface text-ink hover:bg-surface-hover',
             )}
           >

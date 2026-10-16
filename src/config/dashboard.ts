@@ -18,6 +18,10 @@ export interface AreaConfig {
   media: string[]
   sensors: string[]
   occupancy?: string
+  /** Appliances with a power switch + cycle status sensor. */
+  appliances?: { label: string; powerId: string; statusId: string }[]
+  /** Extra on/off switches (irrigation zones etc.). */
+  switches?: string[]
 }
 
 export const areas: AreaConfig[] = [
@@ -47,6 +51,13 @@ export const areas: AreaConfig[] = [
     fans: [],
     media: ['media_player.kitchen'],
     sensors: [],
+    appliances: [
+      {
+        label: 'Dishwasher',
+        powerId: 'switch.dishwasher_power',
+        statusId: 'sensor.dishwasher_operation_state',
+      },
+    ],
   },
   {
     id: 'bedroom',
@@ -94,6 +105,18 @@ export const areas: AreaConfig[] = [
       'sensor.washer_current_status',
       'sensor.washtower_current_status',
     ],
+    appliances: [
+      {
+        label: 'Washer',
+        powerId: 'switch.washer_power',
+        statusId: 'sensor.washer_current_status',
+      },
+      {
+        label: 'WashTower',
+        powerId: 'switch.washtower_power',
+        statusId: 'sensor.washtower_current_status',
+      },
+    ],
   },
   {
     id: 'outside',
@@ -102,6 +125,12 @@ export const areas: AreaConfig[] = [
     fans: [],
     media: [],
     sensors: ['sensor.outdoor_temperature'],
+    switches: [
+      'switch.sprinkler_controller_front_lawn',
+      'switch.sprinkler_controller_back_yard',
+      'switch.sprinkler_controller_front_small',
+      'switch.sprinkler_controller_rain_delay',
+    ],
   },
   {
     id: 'bathroom',
@@ -163,6 +192,14 @@ export const entities = {
       'light.doughnut_lamp',
     ],
     fans: ['fan.mts300'],
+  },
+  /** Security page: door contact + leak sensors (hidden automatically if unavailable). */
+  security: {
+    doorContact: 'binary_sensor.level_lock_pro_door',
+    leaks: [
+      { id: 'binary_sensor.dishwasher_leak_sensor', label: 'Dishwasher' },
+      { id: 'binary_sensor.washer_leak_sensor', label: 'Washer' },
+    ],
   },
   houseMode: 'input_select.house_mode',
   houseModeAuto: 'input_boolean.house_mode_auto',

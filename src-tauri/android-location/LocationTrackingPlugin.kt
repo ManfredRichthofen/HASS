@@ -2,6 +2,8 @@ package com.casa.dashboard
 
 import android.Manifest
 import android.app.Activity
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -16,6 +18,9 @@ import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import java.util.concurrent.TimeUnit
 
 @InvokeArg
@@ -31,7 +36,6 @@ class TrackingCredentials {
 class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) {
   companion object {
     private const val PERMISSION_REQUEST = 4815
-    private const val WORK_TAG = "casa_location"
   }
 
   @Command
@@ -52,24 +56,16 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
       return
     }
 
-    val request = PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
-      .addTag(WORK_TAG)
-      .setConstraints(
-        Constraints.Builder()
-          .setRequiredNetworkType(NetworkType.CONNECTED)
-          .build()
-      )
-      .build()
-
-    WorkManager.getInstance(activity.applicationContext)
-      .enqueueUniquePeriodicWork(WORK_TAG, ExistingPeriodicWorkPolicy.KEEP, request)
-
+    registerLocationUpdates()
+    enqueuePeriodic()
     invoke.resolve()
   }
 
   @Command
   fun stop(invoke: Invoke) {
-    WorkManager.getInstance(activity.applicationContext).cancelAllWorkByTag(WORK_TAG)
+    unregisterLocationUpdates()
+    WorkManager.getInstance(activity.applicationContext)
+      .cancelAllWorkByTag(LocationWorker.WORK_TAG)
     invoke.resolve()
   }
 
@@ -87,13 +83,58 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
     invoke.resolve()
   }
 
+  // ---------------------------------------------------------------------------
+
+  private fun buildPendingIntent(): PendingIntent {
+    val intent = Intent(activity.applicationContext, LocationUpdateReceiver::class.java)
+    return PendingIntent.getBroadcast(
+      activity.applicationContext,
+      0,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+    )
+  }
+
+  private fun registerLocationUpdates() {
+    val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 60_000L)
+      .setMinUpdateIntervalMillis(30_000L)
+      .setMinUpdateDistanceMeters(50f)
+      .setWaitForAccurateLocation(false)
+      .build()
+    try {
+      LocationServices.getFusedLocationProviderClient(activity.applicationContext)
+        .requestLocationUpdates(request, buildPendingIntent())
+    } catch (_: SecurityException) { }
+  }
+
+  private fun unregisterLocationUpdates() {
+    LocationServices.getFusedLocationProviderClient(activity.applicationContext)
+      .removeLocationUpdates(buildPendingIntent())
+  }
+
+  private fun enqueuePeriodic() {
+    val request = PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+      .addTag(LocationWorker.WORK_TAG)
+      .setConstraints(
+        Constraints.Builder()
+          .setRequiredNetworkType(NetworkType.CONNECTED)
+          .build()
+      )
+      .build()
+    WorkManager.getInstance(activity.applicationContext)
+      .enqueueUniquePeriodicWork(
+        LocationWorker.WORK_TAG,
+        ExistingPeriodicWorkPolicy.KEEP,
+        request,
+      )
+  }
+
   private fun hasLocationPermission(): Boolean {
     val fine = ContextCompat.checkSelfPermission(
       activity,
       Manifest.permission.ACCESS_FINE_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
     if (!fine) return false
-
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       ContextCompat.checkSelfPermission(
         activity,

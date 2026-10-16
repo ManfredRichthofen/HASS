@@ -14,7 +14,7 @@ export function PageHeader({
   title: string
   subtitle?: ReactNode
   action?: ReactNode
-  backTo?: '/rooms' | '/' | '/climate' | '/media' | '/more'
+  backTo?: '/rooms' | '/' | '/climate' | '/media' | '/security' | '/settings'
   backLabel?: string
   className?: string
 }) {

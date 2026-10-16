@@ -20,16 +20,35 @@ import kotlin.coroutines.resume
 class LocationWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params) {
 
+    companion object {
+        const val KEY_LAT = "lat"
+        const val KEY_LON = "lon"
+        const val KEY_ACCURACY = "accuracy"
+        const val WORK_TAG = "casa_location"
+    }
+
     override suspend fun doWork(): Result {
         val creds = LocationCredentialStore.load(applicationContext) ?: return Result.success()
-        val location = getLocation() ?: return Result.success()
-        if (location.accuracy > 500f) return Result.success()
+
+        val lat = inputData.getDouble(KEY_LAT, Double.NaN)
+        val lon = inputData.getDouble(KEY_LON, Double.NaN)
+        val accuracy = inputData.getFloat(KEY_ACCURACY, -1f)
+
+        val (finalLat, finalLon, finalAccuracy) = if (!lat.isNaN() && !lon.isNaN()) {
+            // Coordinates supplied by LocationUpdateReceiver — no GPS fetch needed.
+            Triple(lat, lon, if (accuracy >= 0f) accuracy else null)
+        } else {
+            // Periodic heartbeat — fetch a fresh fix.
+            val location = getLocation() ?: return Result.success()
+            if (location.accuracy > 500f) return Result.success()
+            Triple(location.latitude, location.longitude, location.accuracy as Float?)
+        }
 
         val battery = readBatteryPercent()
-        if (!postSee(creds, location, battery)) {
+        if (!postSee(creds, finalLat, finalLon, finalAccuracy, battery)) {
             val refreshed = refreshToken(creds) ?: return Result.retry()
             LocationCredentialStore.updateAccessToken(applicationContext, refreshed)
-            if (!postSee(creds.copy(accessToken = refreshed), location, battery)) {
+            if (!postSee(creds.copy(accessToken = refreshed), finalLat, finalLon, finalAccuracy, battery)) {
                 return Result.retry()
             }
         }
@@ -53,13 +72,15 @@ class LocationWorker(context: Context, params: WorkerParameters) :
 
     private fun postSee(
         creds: LocationCredentialStore.Credentials,
-        location: Location,
+        lat: Double,
+        lon: Double,
+        accuracy: Float?,
         battery: Int?,
     ): Boolean {
         val body = JSONObject().apply {
             put("dev_id", creds.deviceId)
-            put("gps", JSONArray().put(location.latitude).put(location.longitude))
-            put("gps_accuracy", location.accuracy.toInt())
+            put("gps", JSONArray().put(lat).put(lon))
+            if (accuracy != null) put("gps_accuracy", accuracy.toInt())
             put("host_name", "Casa Android")
             if (battery != null) put("battery", battery)
         }

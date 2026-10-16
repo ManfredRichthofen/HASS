@@ -5,6 +5,9 @@ import { cn } from '#/lib/cn'
 import { m, snappy } from '#/lib/motion'
 import { notify } from '#/components/ui/toast'
 import { getArea, isRoomLight } from '#/config/dashboard'
+import { ApplianceRow } from '#/components/entities/ApplianceRow'
+import { SwitchRow } from '#/components/entities/SwitchRow'
+import { entityName } from '#/lib/entityName'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
@@ -90,7 +93,9 @@ function RoomDetailPage() {
     roomLights.length +
       area.fans.length +
       area.media.length +
-      area.sensors.length ===
+      area.sensors.length +
+      (area.appliances?.length ?? 0) +
+      (area.switches?.length ?? 0) ===
     0
 
   return (
@@ -137,6 +142,26 @@ function RoomDetailPage() {
               <FanTile key={id} entityId={id} />
             ))}
           </EntityGrid>
+        </Section>
+      ) : null}
+
+      {area.appliances?.length ? (
+        <Section title="Appliances">
+          <div className="grid gap-2.5 md:grid-cols-2">
+            {area.appliances.map((a) => (
+              <ApplianceRow key={a.powerId} {...a} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {area.switches?.length ? (
+        <Section title="Irrigation">
+          <div className="grid gap-2.5 md:grid-cols-2">
+            {area.switches.map((id) => (
+              <SwitchRow key={id} entityId={id} label={entityName(id)} />
+            ))}
+          </div>
         </Section>
       ) : null}
 
