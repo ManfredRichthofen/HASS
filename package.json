@@ -44,7 +44,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.64.0",
     "@tanstack/devtools-vite": "0.8.5",
-    "@tanstack/router-cli": "^1.167.44",
+    "@tanstack/router-cli": "^1.167.45",
     "@tauri-apps/cli": "^2.12.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
