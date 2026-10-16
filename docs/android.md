@@ -29,19 +29,22 @@ rustup target list --installed   # should include aarch64-linux-android
 
 ```powershell
 npm install
-npm run android:patch   # re-apply location service after `tauri android init`
-npm run android:dev
+bun run android:patch   # re-apply location sources/ProGuard after `tauri android init`
+bun run android:dev
 ```
 
-On first run, grant **Location → Allow all the time** and **Notifications**.
+On first run, grant **Location → Allow all the time**.
 
 ## Background location
 
+Uses Fused Location PendingIntents + WorkManager (no foreground service notification).
+
 1. Sign in to Home Assistant in the app.
-2. Open **More → This device → Share location**.
-3. Confirm a persistent “Casa is sharing location” notification.
-4. Minimize / lock the phone — Home Assistant `device_tracker.casa_web_*` should keep updating.
-5. Assign that tracker to a Person in HA for presence.
+2. Open **Settings → This device → Share location**.
+3. Minimize / lock the phone — Home Assistant `device_tracker.casa_web_*` should keep updating.
+4. Assign that tracker to a Person in HA for presence.
+
+Release APKs must keep `LocationTrackingPlugin` for reflective Tauri registration — `android:patch` writes the ProGuard rules that prevent R8 from stripping it (startup crash otherwise).
 
 ## Release / sideload APK
 
@@ -68,5 +71,5 @@ Add a release keystore later for Play / durable sideload.
 If you re-run `npx tauri android init`, restore location code:
 
 ```powershell
-npm run android:patch
+bun run android:patch
 ```

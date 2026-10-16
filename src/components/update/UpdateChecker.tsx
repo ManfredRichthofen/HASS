@@ -22,7 +22,7 @@ export function UpdateChecker() {
       }
       notify(
         `Casa ${result.version} is available`,
-        'Open More → App updates to install',
+        'Open Settings → App updates to install',
       )
     })()
 

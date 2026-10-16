@@ -1,8 +1,10 @@
 /**
- * Re-applies Casa location service after `tauri android init`.
- * Copies Kotlin sources + patches manifest/Gradle deps (idempotent).
+ * Re-applies Casa location tracking after `tauri android init`.
+ * Copies Kotlin sources + patches manifest/Gradle/ProGuard (idempotent).
+ *
+ * Uses FusedLocation PendingIntent + WorkManager (no foreground service).
  */
-import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, unlinkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -17,6 +19,7 @@ const manifestPath = join(
   'src-tauri/gen/android/app/src/main/AndroidManifest.xml',
 )
 const gradlePath = join(root, 'src-tauri/gen/android/app/build.gradle.kts')
+const proguardPath = join(root, 'src-tauri/gen/android/app/proguard-rules.pro')
 
 if (!existsSync(manifestPath)) {
   console.error('Android project not found. Run: npx tauri android init')
@@ -24,11 +27,15 @@ if (!existsSync(manifestPath)) {
 }
 
 mkdirSync(javaDir, { recursive: true })
-for (const file of [
-  'LocationForegroundService.kt',
+
+const kotlinSources = [
   'LocationTrackingPlugin.kt',
   'LocationCredentialStore.kt',
-]) {
+  'LocationWorker.kt',
+  'LocationUpdateReceiver.kt',
+]
+
+for (const file of kotlinSources) {
   const from = join(sourceDir, file)
   if (!existsSync(from)) {
     console.error(`Missing source: ${from}`)
@@ -37,14 +44,17 @@ for (const file of [
   copyFileSync(from, join(javaDir, file))
 }
 
+// Remove obsolete FGS stub left over from the previous location implementation.
+for (const dir of [javaDir, sourceDir]) {
+  const stale = join(dir, 'LocationForegroundService.kt')
+  if (existsSync(stale)) unlinkSync(stale)
+}
+
 let manifest = readFileSync(manifestPath, 'utf8')
 const permissions = [
   'android.permission.ACCESS_COARSE_LOCATION',
   'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_BACKGROUND_LOCATION',
-  'android.permission.FOREGROUND_SERVICE',
-  'android.permission.FOREGROUND_SERVICE_LOCATION',
-  'android.permission.POST_NOTIFICATIONS',
 ]
 
 for (const perm of permissions) {
@@ -63,16 +73,34 @@ if (!manifest.includes('android.hardware.location.gps')) {
   )
 }
 
-if (!manifest.includes('LocationForegroundService')) {
+// Drop obsolete foreground-service declaration if present.
+manifest = manifest.replace(
+  /\s*<service[\s\S]*?android:name="\.LocationForegroundService"[\s\S]*?\/>/g,
+  '',
+)
+for (const perm of [
+  'android.permission.FOREGROUND_SERVICE',
+  'android.permission.FOREGROUND_SERVICE_LOCATION',
+  'android.permission.POST_NOTIFICATIONS',
+]) {
+  manifest = manifest.replace(
+    new RegExp(
+      `\\s*<uses-permission android:name="${perm.replace(/\./g, '\\.')}" />`,
+      'g',
+    ),
+    '',
+  )
+}
+
+if (!manifest.includes('LocationUpdateReceiver')) {
   manifest = manifest.replace(
     '</activity>',
     `</activity>
 
-        <service
-            android:name=".LocationForegroundService"
+        <receiver
+            android:name=".LocationUpdateReceiver"
             android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location" />`,
+            android:exported="false" />`,
   )
 }
 
@@ -82,6 +110,7 @@ let gradle = readFileSync(gradlePath, 'utf8')
 const deps = [
   'implementation("com.google.android.gms:play-services-location:21.3.0")',
   'implementation("androidx.security:security-crypto:1.1.0-alpha06")',
+  'implementation("androidx.work:work-runtime-ktx:2.10.0")',
 ]
 for (const dep of deps) {
   if (!gradle.includes(dep)) {
@@ -93,4 +122,25 @@ for (const dep of deps) {
 }
 writeFileSync(gradlePath, gradle)
 
-console.log('Patched Android location sources, manifest, and Gradle deps')
+const proguardRules = `# Casa location plugin is registered reflectively from Rust
+# (register_android_plugin("com.casa.dashboard", "LocationTrackingPlugin")).
+# Without these keeps, R8 strips/renames the class and release builds crash on launch.
+
+-keep @app.tauri.annotation.TauriPlugin class * { *; }
+-keep class * extends app.tauri.plugin.Plugin { *; }
+
+-keep class com.casa.dashboard.LocationTrackingPlugin { *; }
+-keep class com.casa.dashboard.LocationWorker { *; }
+-keep class com.casa.dashboard.LocationUpdateReceiver { *; }
+-keep class com.casa.dashboard.LocationCredentialStore { *; }
+-keep class com.casa.dashboard.TrackingCredentials { *; }
+`
+
+if (
+  !existsSync(proguardPath) ||
+  !readFileSync(proguardPath, 'utf8').includes('LocationTrackingPlugin')
+) {
+  writeFileSync(proguardPath, proguardRules)
+}
+
+console.log('Patched Android location sources, manifest, Gradle deps, and ProGuard keeps')
