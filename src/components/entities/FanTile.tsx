@@ -35,7 +35,6 @@ function spinDuration(pct: number) {
 
 export function FanTile({
   entityId,
-  compact = false,
 }: {
   entityId: string
   compact?: boolean
@@ -111,7 +110,7 @@ export function FanTile({
           'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
           fan.isOn
-            ? 'border-info/40 bg-info/10'
+            ? 'bg-on border-transparent'
             : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
@@ -128,7 +127,9 @@ export function FanTile({
             <span
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-xl',
-                fan.isOn ? 'bg-info/20 text-info' : 'bg-canvas text-ink-muted',
+                fan.isOn
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[#252e40] text-ink-muted',
               )}
             >
               <Fan
@@ -144,7 +145,14 @@ export function FanTile({
               <span className="block text-sm font-semibold tracking-tight text-ink">
                 {name}
               </span>
-              <span className="mt-0.5 block text-xs text-ink-muted">{status}</span>
+              <span
+                className={cn(
+                  'mt-0.5 block text-xs',
+                  fan.isOn ? 'text-white/80' : 'text-ink-muted',
+                )}
+              >
+                {status}
+              </span>
             </span>
           </m.button>
 
@@ -153,7 +161,7 @@ export function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-canvas/60 hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-white/10 hover:text-ink"
           >
             <SlidersHorizontal className="size-4" />
           </button>
@@ -185,8 +193,8 @@ export function FanTile({
                         className={cn(
                           'touch-target flex-1 rounded-xl border px-2 text-xs font-semibold transition',
                           selected
-                            ? 'border-info/40 bg-info/20 text-info'
-                            : 'border-border-subtle bg-canvas/50 text-ink-muted hover:text-ink',
+                            ? 'border-white/60 bg-white/25 text-white'
+                            : 'border-transparent bg-white/10 text-white/80 hover:text-white',
                         )}
                       >
                         {preset.label}
@@ -196,13 +204,14 @@ export function FanTile({
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-ink-muted">
+                  <div className="flex items-center justify-between text-[11px] text-white/80">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
                     </span>
-                    <span className="tabular-nums text-ink">{speed}%</span>
+                    <span className="tabular-nums text-white">{speed}%</span>
                   </div>
                   <Slider
+                    onCard
                     aria-label={`${name} speed`}
                     min={0}
                     max={100}

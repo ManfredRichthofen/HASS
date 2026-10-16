@@ -1,65 +1,183 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useBinarySensor, useSensor } from 'hass-react'
-import { ChevronRight } from 'lucide-react'
-import { primaryAreas, type AreaConfig } from '#/config/dashboard'
+import { useEntityGroup, useSensor, useServiceCall } from 'hass-react'
+import {
+  BedDouble,
+  CookingPot,
+  LayoutGrid,
+  Monitor,
+  Power,
+  Sofa,
+  TreePine,
+  Warehouse,
+  WashingMachine,
+  type LucideIcon,
+} from 'lucide-react'
+import {
+  entities,
+  isRoomLight,
+  primaryAreas,
+  type AreaConfig,
+} from '#/config/dashboard'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
+import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
+import { m, snappy, staggerContainer, staggerItem } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/')({ component: RoomsPage })
 
-function OccupancyHint({ entityId }: { entityId: string }) {
-  const occupancy = useBinarySensor(entityId)
-  if (occupancy.isUnavailable) return null
-  return (
-    <span>{occupancy.state === 'on' ? ' · Occupied' : ' · Empty'}</span>
-  )
+const roomIcons: Record<string, LucideIcon> = {
+  living_room: Sofa,
+  kitchen: CookingPot,
+  bedroom: BedDouble,
+  office: Monitor,
+  garage: Warehouse,
+  laundry: WashingMachine,
+  outside: TreePine,
 }
 
-function TempHint({ entityId }: { entityId: string }) {
+const allLights = (entities.allLightsOff as readonly string[]).filter(
+  isRoomLight,
+)
+
+function Temp({ entityId }: { entityId: string }) {
   const temp = useSensor(entityId)
   if (temp.isUnavailable || temp.numericValue == null) return null
   return <span>{` · ${Math.round(temp.numericValue)}°`}</span>
 }
 
 function RoomCard({ area }: { area: AreaConfig }) {
-  const deviceCount =
-    area.lights.length + area.fans.length + area.media.length
+  const { callService } = useServiceCall()
+  const lightIds = area.lights.filter(isRoomLight)
+  const lights = useEntityGroup([...lightIds])
+  const on = lights.filter((l) => l.state === 'on').length
+  const hasLights = lightIds.length > 0
+  const isOn = on > 0
+  const Icon = roomIcons[area.id] ?? LayoutGrid
   const tempId = area.sensors.find((id) => id.includes('temperature'))
+  const deviceCount = area.lights.length + area.fans.length + area.media.length
+
+  async function togglePower() {
+    try {
+      await callService('light', isOn ? 'turn_off' : 'turn_on', {
+        entity_id: lightIds,
+      })
+    } catch (e) {
+      notify('Lights failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
+  const status = hasLights
+    ? lightIds.length > 1 && isOn
+      ? `${on} of ${lightIds.length} on`
+      : isOn
+        ? 'Light on'
+        : 'Lights off'
+    : `${deviceCount} device${deviceCount === 1 ? '' : 's'}`
 
   return (
-    <Link
-      to="/rooms/$areaId"
-      params={{ areaId: area.id }}
+    <m.div
+      variants={staggerItem}
+      whileTap={{ scale: 0.97 }}
+      transition={snappy}
       className={cn(
-        'flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-3.5 transition sm:min-h-16 sm:py-4',
-        'hover:border-accent/30 hover:bg-surface-hover active:scale-[0.99]',
+        'relative flex min-h-[9.75rem] flex-col justify-between rounded-3xl border p-4 transition-colors duration-300',
+        isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
       )}
     >
+      <Link
+        to="/rooms/$areaId"
+        params={{ areaId: area.id }}
+        aria-label={`Open ${area.name}`}
+        className="absolute inset-0 z-[1] rounded-3xl"
+      />
+      <span
+        className={cn(
+          'grid size-11 place-items-center rounded-2xl transition-colors duration-300',
+          isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+        )}
+      >
+        <Icon className="size-6" />
+      </span>
+      {hasLights ? (
+        <button
+          type="button"
+          onClick={() => void togglePower()}
+          aria-label={`${isOn ? 'Turn off' : 'Turn on'} ${area.name} lights`}
+          className={cn(
+            'absolute top-2.5 right-2.5 z-[2] grid size-11 place-items-center rounded-full transition',
+            isOn
+              ? 'bg-white/20 text-white'
+              : 'bg-white/5 text-ink-muted hover:text-ink',
+          )}
+        >
+          <Power className="size-5" />
+        </button>
+      ) : null}
       <div className="min-w-0">
-        <p className="truncate font-display text-base font-semibold text-ink sm:text-lg">
+        <p className="truncate font-display text-[1.0625rem] font-bold tracking-tight">
           {area.name}
         </p>
-        <p className="mt-0.5 truncate text-xs text-ink-muted">
-          {deviceCount} device{deviceCount === 1 ? '' : 's'}
-          {area.occupancy ? <OccupancyHint entityId={area.occupancy} /> : null}
-          {tempId ? <TempHint entityId={tempId} /> : null}
+        <p
+          className={cn(
+            'truncate text-xs',
+            isOn ? 'text-white/80' : 'text-ink-muted',
+          )}
+        >
+          {status}
+          {tempId ? <Temp entityId={tempId} /> : null}
         </p>
       </div>
-      <ChevronRight className="size-5 shrink-0 text-ink-faint" />
-    </Link>
+    </m.div>
+  )
+}
+
+function AllLightsOff() {
+  const { callService } = useServiceCall()
+  const lights = useEntityGroup([...allLights])
+  const on = lights.filter((l) => l.state === 'on').length
+
+  async function turnOff() {
+    try {
+      await callService('light', 'turn_off', { entity_id: allLights })
+    } catch (e) {
+      notify('Lights failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
+  return (
+    <m.button
+      variants={staggerItem}
+      type="button"
+      disabled={on === 0}
+      onClick={() => void turnOff()}
+      whileTap={{ scale: 0.98 }}
+      transition={snappy}
+      className={cn(
+        'flex min-h-13 w-full items-center justify-center gap-2.5 rounded-2xl text-[0.9375rem] font-bold transition',
+        on === 0
+          ? 'bg-surface text-ink-faint'
+          : 'bg-surface text-ink hover:bg-surface-hover',
+      )}
+    >
+      <Power className="size-5" />
+      {on === 0 ? 'All lights are off' : `Turn off all lights (${on} on)`}
+    </m.button>
   )
 }
 
 function RoomsPage() {
   return (
-    <Page>
-      <PageHeader title="Rooms" subtitle="Browse by area" />
-      <div className="grid gap-2 sm:gap-2.5 md:grid-cols-2">
-        {primaryAreas.map((area) => (
-          <RoomCard key={area.id} area={area} />
-        ))}
-      </div>
-    </Page>
+    <m.div initial="initial" animate="animate" variants={staggerContainer}>
+      <Page>
+        <PageHeader title="Rooms" subtitle="Tap a room to open it" />
+        <AllLightsOff />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {primaryAreas.map((area) => (
+            <RoomCard key={area.id} area={area} />
+          ))}
+        </div>
+      </Page>
+    </m.div>
   )
 }

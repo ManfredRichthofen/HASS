@@ -4,28 +4,30 @@
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Outfit', 'DM Sans', ui-sans-serif, sans-serif;
 
-  --color-canvas: #0e1116;
-  --color-canvas-elevated: #151921;
-  --color-surface: #1c222c;
-  --color-surface-hover: #252c38;
-  --color-border: #2e3644;
-  --color-border-subtle: #242b36;
+  --color-canvas: #0b0f17;
+  --color-canvas-elevated: #10151f;
+  --color-surface: #151b27;
+  --color-surface-hover: #1d2433;
+  --color-border: #2a3447;
+  --color-border-subtle: #1c2433;
 
-  --color-ink: #eef1f5;
-  --color-ink-muted: #8b93a3;
-  --color-ink-faint: #5c6575;
+  --color-ink: #f2f4f7;
+  --color-ink-muted: #8f9bb3;
+  --color-ink-faint: #8591aa;
 
-  /* Cool teal — primary actions, nav, selected chips */
-  --color-accent: #4db8a8;
-  --color-accent-soft: #4db8a833;
-  --color-accent-strong: #63c9ba;
+  /* Indigo — primary actions, nav, selected chips, anything "on" */
+  --color-accent: #5967f5;
+  --color-accent-soft: #6c7bff33;
+  --color-accent-strong: #9aa5ff;
 
-  /* Warm amber — lights on only */
-  --color-light: #e8a54b;
-  --color-light-soft: #e8a54b33;
+  /* "On" state for lights and scenes (shares the indigo family) */
+  --color-light: #9aa5ff;
+  --color-light-soft: #6c7bff26;
+  --color-on-from: #6f7dff;
+  --color-on-to: #4b57f2;
 
-  --color-success: #5ecf8e;
-  --color-danger: #ef6b6b;
+  --color-success: #3ddba7;
+  --color-danger: #ff8a5b;
   --color-info: #6ea8fe;
 
   --spacing-touch: 2.75rem;
@@ -74,9 +76,16 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 45% at 0% -5%, #4db8a812, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 0% -5%, #5967f514, transparent 55%),
     radial-gradient(ellipse 50% 35% at 100% 5%, #6ea8fe0c, transparent 50%);
   z-index: -1;
+}
+
+/* Solid indigo fill for "on" cards (lights, active toggles) */
+@utility bg-on {
+  background-image: linear-gradient(145deg, var(--color-on-from), var(--color-on-to));
+  box-shadow: 0 10px 26px #5b6cff59;
+  color: #fff;
 }
 
 @utility touch-target {

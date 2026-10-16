@@ -47,16 +47,16 @@ export function LightTile({ entityId }: { entityId: string }) {
 
   const iconBg =
     light.isOn && canColor && light.rgbColor
-      ? `rgba(${light.rgbColor[0]}, ${light.rgbColor[1]}, ${light.rgbColor[2]}, 0.2)`
-      : light.isOn
-        ? 'rgba(232, 165, 75, 0.25)'
-        : 'rgba(14, 17, 22, 1)'
-  const iconColor =
-    light.isOn && canColor && light.rgbColor
       ? rgbCss(light.rgbColor)!
       : light.isOn
-        ? '#e8a54b'
-        : '#8b93a3'
+        ? 'rgba(255, 255, 255, 0.2)'
+        : 'rgba(37, 46, 64, 1)'
+  const iconColor =
+    light.isOn && canColor && light.rgbColor
+      ? '#0b0f17'
+      : light.isOn
+        ? '#ffffff'
+        : '#8f9bb3'
 
   useEffect(() => {
     setBrightnessPct(Math.max(1, Math.round(light.brightnessPercent) || 1))
@@ -99,7 +99,7 @@ export function LightTile({ entityId }: { entityId: string }) {
           'relative flex flex-col justify-between rounded-2xl border p-3.5',
           showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.25rem]',
           light.isOn
-            ? 'border-light/35 bg-light-soft shadow-[inset_0_0_0_1px_#e8a54b22]'
+            ? 'bg-on border-transparent'
             : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
@@ -124,7 +124,12 @@ export function LightTile({ entityId }: { entityId: string }) {
               <span className="line-clamp-2 block text-sm font-semibold text-ink">
                 {name}
               </span>
-              <span className="mt-0.5 block text-xs text-ink-muted">
+              <span
+                className={cn(
+                  'mt-0.5 block text-xs',
+                  light.isOn ? 'text-white/80' : 'text-ink-muted',
+                )}
+              >
                 {unavailable
                   ? 'Unavailable'
                   : light.isOn
@@ -144,13 +149,13 @@ export function LightTile({ entityId }: { entityId: string }) {
               onClick={() => setOpen(true)}
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition',
-                'hover:bg-canvas/60 hover:text-ink',
+                'hover:bg-white/10 hover:text-ink',
                 (!light.isOn || unavailable) && 'opacity-50',
               )}
             >
               {canColor && light.isOn && light.rgbColor ? (
                 <span
-                  className="size-6 rounded-full border border-border shadow-inner"
+                  className="size-6 rounded-full border-2 border-white/90 shadow-md"
                   style={{ background: rgbCss(light.rgbColor) }}
                 />
               ) : (
@@ -179,6 +184,7 @@ export function LightTile({ entityId }: { entityId: string }) {
             >
               <div className="mt-2">
                 <Slider
+                  onCard
                   aria-label={`${name} brightness`}
                   min={1}
                   max={100}

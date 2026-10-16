@@ -17,7 +17,9 @@ export function Section({
       {(title || action) && (
         <div className="mb-2.5 flex items-center justify-between gap-2 md:mb-3">
           {title ? (
-            <h2 className="text-sm font-semibold text-ink-muted">{title}</h2>
+            <h2 className="text-xs font-bold tracking-[0.08em] text-ink-faint uppercase">
+              {title}
+            </h2>
           ) : (
             <span />
           )}

@@ -71,7 +71,7 @@ export function SceneStrip({
             className={cn(
               'touch-target inline-flex items-center justify-center gap-1.5 rounded-xl border px-2.5 text-sm font-semibold transition sm:gap-2 sm:px-3',
               selected || active
-                ? 'border-light/45 bg-light-soft text-light'
+                ? 'border-transparent bg-accent text-white'
                 : 'border-border-subtle bg-surface text-ink hover:bg-surface-hover',
               busyId != null && !active && 'opacity-50',
             )}

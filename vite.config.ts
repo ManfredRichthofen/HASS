@@ -58,7 +58,8 @@ export default defineConfig(({ mode }) => {
     build: {
       // Android System WebView is Chromium-based.
       target: isTauri ? 'chrome105' : undefined,
-      minify: process.env.TAURI_ENV_DEBUG ? false : 'esbuild',
+      // Vite 8 defaults to Oxc; 'esbuild' is deprecated and breaks on es2026.
+      minify: process.env.TAURI_ENV_DEBUG ? false : 'oxc',
       sourcemap: Boolean(process.env.TAURI_ENV_DEBUG),
     },
   }

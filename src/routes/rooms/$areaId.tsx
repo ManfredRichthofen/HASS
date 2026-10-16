@@ -1,4 +1,9 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { useEntityGroup, useServiceCall } from 'hass-react'
+import { Lightbulb, Power } from 'lucide-react'
+import { cn } from '#/lib/cn'
+import { m, snappy } from '#/lib/motion'
+import { notify } from '#/components/ui/toast'
 import { getArea, isRoomLight } from '#/config/dashboard'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanTile } from '#/components/entities/FanTile'
@@ -12,6 +17,58 @@ import { Section } from '#/components/layout/Section'
 export const Route = createFileRoute('/rooms/$areaId')({
   component: RoomDetailPage,
 })
+
+/** One-tap master switch for every light in the room. */
+function AllLightsCard({ ids }: { ids: string[] }) {
+  const { callService } = useServiceCall()
+  const lights = useEntityGroup([...ids])
+  const on = lights.filter((l) => l.state === 'on').length
+  const isOn = on > 0
+
+  async function toggle() {
+    try {
+      await callService('light', isOn ? 'turn_off' : 'turn_on', {
+        entity_id: ids,
+      })
+    } catch (e) {
+      notify('Lights failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
+  return (
+    <m.button
+      type="button"
+      onClick={() => void toggle()}
+      whileTap={{ scale: 0.98 }}
+      transition={snappy}
+      className={cn(
+        'flex min-h-16 w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition-colors duration-300',
+        isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
+      )}
+    >
+      <span
+        className={cn(
+          'grid size-11 shrink-0 place-items-center rounded-2xl',
+          isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+        )}
+      >
+        <Lightbulb className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-bold">All lights</span>
+        <span
+          className={cn(
+            'block text-xs',
+            isOn ? 'text-white/80' : 'text-ink-muted',
+          )}
+        >
+          {isOn ? `${on} of ${ids.length} on` : 'All off'}
+        </span>
+      </span>
+      <Power className={cn('size-5', isOn ? 'text-white' : 'text-ink-muted')} />
+    </m.button>
+  )
+}
 
 function RoomDetailPage() {
   const { areaId } = Route.useParams()
@@ -40,7 +97,7 @@ function RoomDetailPage() {
     <Page>
       <PageHeader
         title={area.name}
-        subtitle="Controls & sensors"
+        subtitle="Lights, fans and media"
         backTo="/rooms"
         backLabel="Rooms"
       />
@@ -53,13 +110,15 @@ function RoomDetailPage() {
 
       {area.sensors.length > 0 ? (
         <Section title="Climate">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
             {area.sensors.map((id) => (
               <SensorChip key={id} entityId={id} />
             ))}
           </div>
         </Section>
       ) : null}
+
+      {roomLights.length > 1 ? <AllLightsCard ids={roomLights} /> : null}
 
       {roomLights.length > 0 ? (
         <Section title="Lights">

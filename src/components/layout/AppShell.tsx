@@ -4,6 +4,7 @@ import { haUrl } from '#/config/ha'
 import { LocationProvider } from '#/components/location/LocationProvider'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { BottomNav } from '#/components/layout/BottomNav'
+import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
 import { ToastProvider } from '#/components/ui/toast'
 import {
   AnimatePresence,
@@ -96,11 +97,12 @@ export function AppShell() {
     <ToastProvider>
       <MotionConfig reducedMotion="user">
         <LazyMotion features={domAnimation} strict>
-          <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col lg:max-w-4xl">
+          <div className="mx-auto flex min-h-dvh w-full max-w-[88rem] flex-col">
             <AuthGate>
-              <main className="flex-1 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-4 md:px-6">
+              <main className="flex-1 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-4 md:px-8 lg:px-10">
                 <AnimatedOutlet />
               </main>
+              <NowPlayingBar />
               <BottomNav />
             </AuthGate>
           </div>

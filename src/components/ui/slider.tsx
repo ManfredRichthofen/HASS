@@ -20,8 +20,13 @@ export function Slider({
   onValueChange,
   onValueCommitted,
   'aria-label': ariaLabel = 'Value',
+  onCard = false,
   ...props
-}: SliderRootProps & { 'aria-label'?: string }) {
+}: SliderRootProps & {
+  'aria-label'?: string
+  /** Render for use on a filled indigo ("on") card. */
+  onCard?: boolean
+}) {
   const controlled = value !== undefined
   const [local, setLocal] = useState(() =>
     controlled ? asNumber(value) : asNumber(defaultValue ?? 0),
@@ -55,11 +60,24 @@ export function Slider({
       }}
     >
       <BaseSlider.Control className="flex w-full touch-none py-4">
-        <BaseSlider.Track className="relative h-2 w-full grow rounded-full bg-border">
-          <BaseSlider.Indicator className="absolute h-full rounded-full bg-accent transition-none" />
+        <BaseSlider.Track
+          className={cn(
+            'relative h-2 w-full grow rounded-full',
+            onCard ? 'bg-white/25' : 'bg-border',
+          )}
+        >
+          <BaseSlider.Indicator
+            className={cn(
+              'absolute h-full rounded-full transition-none',
+              onCard ? 'bg-white' : 'bg-accent',
+            )}
+          />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
-            className="size-6 rounded-full border-2 border-accent bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className={cn(
+              'size-6 rounded-full border-2 bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+              onCard ? 'border-white' : 'border-accent',
+            )}
           />
         </BaseSlider.Track>
       </BaseSlider.Control>

@@ -28,7 +28,7 @@ export function PageHeader({
       {backTo ? (
         <Link
           to={backTo}
-          className="mb-2 inline-flex min-h-10 items-center gap-1.5 text-sm text-ink-muted transition hover:text-accent"
+          className="mb-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-muted transition hover:text-accent-strong"
         >
           <ArrowLeft className="size-4" />
           {backLabel}
