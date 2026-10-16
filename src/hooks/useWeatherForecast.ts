@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useServiceCall } from 'hass-react'
+import { useQuery } from '@tanstack/react-query'
+import { useHAConnection, useServiceCall } from 'hass-react'
 import { entities } from '#/config/dashboard'
 
 export interface ForecastDay {
@@ -11,51 +11,48 @@ export interface ForecastDay {
   humidity?: number
 }
 
+type ForecastResponse =
+  | {
+      response?: Record<string, { forecast?: ForecastDay[] }>
+      service_response?: Record<string, { forecast?: ForecastDay[] }>
+    }
+  | Record<string, { forecast?: ForecastDay[] }>
+
+function parseForecast(response: ForecastResponse, days: number): ForecastDay[] {
+  const map =
+    (response as { response?: Record<string, { forecast?: ForecastDay[] }> })
+      ?.response ??
+    (response as { service_response?: Record<string, { forecast?: ForecastDay[] }> })
+      ?.service_response ??
+    (response as Record<string, { forecast?: ForecastDay[] }>)
+
+  return (map?.[entities.weather]?.forecast ?? []).slice(0, days)
+}
+
 export function useWeatherForecast(days = 5) {
+  const { connected } = useHAConnection()
   const { callServiceWithResponse } = useServiceCall()
-  const [forecast, setForecast] = useState<ForecastDay[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-      try {
-        const response = await callServiceWithResponse<
-          | {
-              response?: Record<string, { forecast?: ForecastDay[] }>
-              service_response?: Record<string, { forecast?: ForecastDay[] }>
-            }
-          | Record<string, { forecast?: ForecastDay[] }>
-        >('weather', 'get_forecasts', {
+  const query = useQuery({
+    queryKey: ['weather-forecast', entities.weather, days],
+    enabled: connected,
+    staleTime: 10 * 60_000,
+    refetchInterval: 15 * 60_000,
+    queryFn: async () => {
+      const response = await callServiceWithResponse<ForecastResponse>(
+        'weather',
+        'get_forecasts',
+        {
           entity_id: entities.weather,
           type: 'daily',
-        })
+        },
+      )
+      return parseForecast(response, days)
+    },
+  })
 
-        const map =
-          (response as { response?: Record<string, { forecast?: ForecastDay[] }> })
-            ?.response ??
-          (response as { service_response?: Record<string, { forecast?: ForecastDay[] }> })
-            ?.service_response ??
-          (response as Record<string, { forecast?: ForecastDay[] }>)
-
-        const daysList = map?.[entities.weather]?.forecast ?? []
-        if (!cancelled) setForecast(daysList.slice(0, days))
-      } catch {
-        if (!cancelled) setForecast([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-    const timer = window.setInterval(() => void load(), 15 * 60 * 1000)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
-    }
-  }, [callServiceWithResponse, days])
-
-  return { forecast, loading }
+  return {
+    forecast: query.data ?? [],
+    loading: query.isLoading || query.isPending,
+  }
 }

@@ -1,0 +1,460 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useHAConnection, useServiceCall } from 'hass-react'
+import {
+  formatCoords,
+  getOrCreateLocationDeviceId,
+  isLocationSharingEnabled,
+  isTauri,
+  readBatteryPercent,
+  readLastLocationReport,
+  setLocationSharingEnabled,
+  shouldReportLocation,
+  writeLastLocationReport,
+  type LocationReportSnapshot,
+} from '#/lib/deviceLocation'
+import {
+  startNativeLocationTracking,
+  stopNativeLocationTracking,
+  syncNativeLocationCredentials,
+} from '#/lib/nativeLocation'
+
+export type LocationPermission = PermissionState | 'unsupported' | 'unknown'
+
+type GeoErrorCode = 'denied' | 'unavailable' | 'timeout' | 'unknown'
+
+type TauriGeolocation = typeof import('@tauri-apps/plugin-geolocation')
+
+function mapGeoError(error: GeolocationPositionError): {
+  code: GeoErrorCode
+  message: string
+} {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      return {
+        code: 'denied',
+        message: 'Location permission denied in the browser',
+      }
+    case error.POSITION_UNAVAILABLE:
+      return { code: 'unavailable', message: 'Position unavailable' }
+    case error.TIMEOUT:
+      return { code: 'timeout', message: 'Location request timed out' }
+    default:
+      return { code: 'unknown', message: error.message || 'Location error' }
+  }
+}
+
+function toSnapshot(
+  lat: number,
+  lon: number,
+  accuracy: number | null,
+  battery: number | null,
+): LocationReportSnapshot {
+  return {
+    at: Date.now(),
+    lat,
+    lon,
+    accuracy: accuracy != null ? Math.round(accuracy) : null,
+    battery,
+  }
+}
+
+async function loadTauriGeo(): Promise<TauriGeolocation> {
+  return import('@tauri-apps/plugin-geolocation')
+}
+
+export function useDeviceLocation() {
+  const { connected } = useHAConnection()
+  const { callService } = useServiceCall()
+  const native = isTauri()
+
+  const [enabled, setEnabledState] = useState(false)
+  const [permission, setPermission] = useState<LocationPermission>('unknown')
+  const [deviceId, setDeviceId] = useState('')
+  const [lastReport, setLastReport] = useState<LocationReportSnapshot | null>(
+    null,
+  )
+  const [reporting, setReporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [backgroundActive, setBackgroundActive] = useState(false)
+
+  const lastReportRef = useRef<LocationReportSnapshot | null>(null)
+  const reportingRef = useRef(false)
+
+  useEffect(() => {
+    setEnabledState(isLocationSharingEnabled())
+    setDeviceId(getOrCreateLocationDeviceId())
+    const last = readLastLocationReport()
+    lastReportRef.current = last
+    setLastReport(last)
+    setBackgroundActive(native && isLocationSharingEnabled())
+  }, [native])
+
+  useEffect(() => {
+    if (native) {
+      void loadTauriGeo()
+        .then((geo) => geo.checkPermissions())
+        .then((status) => {
+          setPermission(
+            status.location === 'granted'
+              ? 'granted'
+              : status.location === 'denied'
+                ? 'denied'
+                : 'prompt',
+          )
+        })
+        .catch(() => setPermission('unknown'))
+      return
+    }
+
+    if (!('permissions' in navigator) || !navigator.permissions?.query) {
+      setPermission('geolocation' in navigator ? 'unknown' : 'unsupported')
+      return
+    }
+
+    let cancelled = false
+    let status: PermissionStatus | undefined
+
+    const sync = (state: PermissionState) => {
+      if (!cancelled) setPermission(state)
+    }
+
+    void navigator.permissions
+      .query({ name: 'geolocation' as PermissionName })
+      .then((result) => {
+        status = result
+        sync(result.state)
+        result.onchange = () => sync(result.state)
+      })
+      .catch(() => {
+        if (!cancelled) setPermission('unknown')
+      })
+
+    return () => {
+      cancelled = true
+      if (status) status.onchange = null
+    }
+  }, [native])
+
+  const reportToHa = useCallback(
+    async (
+      lat: number,
+      lon: number,
+      accuracy: number | null,
+      force: boolean,
+    ) => {
+      if (!connected || reportingRef.current) return
+
+      if (
+        !shouldReportLocation(
+          { lat, lon, accuracy },
+          lastReportRef.current,
+          force,
+        )
+      ) {
+        return
+      }
+
+      reportingRef.current = true
+      setReporting(true)
+      setError(null)
+
+      try {
+        const battery = await readBatteryPercent()
+        const id = getOrCreateLocationDeviceId()
+        const serviceData: Record<string, unknown> = {
+          dev_id: id,
+          gps: [lat, lon],
+          host_name: native ? 'Casa Android' : 'Casa Web',
+        }
+        if (accuracy != null) serviceData.gps_accuracy = Math.round(accuracy)
+        if (battery != null) serviceData.battery = battery
+
+        await callService('device_tracker', 'see', serviceData)
+
+        const snapshot = toSnapshot(lat, lon, accuracy, battery)
+        lastReportRef.current = snapshot
+        writeLastLocationReport(snapshot)
+        setLastReport(snapshot)
+        setDeviceId(id)
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : 'Failed to report location to HA'
+        setError(message)
+        throw e
+      } finally {
+        reportingRef.current = false
+        setReporting(false)
+      }
+    },
+    [callService, connected, native],
+  )
+
+  const ensureNativePermissions = useCallback(async () => {
+    const geo = await loadTauriGeo()
+    let status = await geo.checkPermissions()
+    if (
+      status.location === 'prompt' ||
+      status.location === 'prompt-with-rationale'
+    ) {
+      status = await geo.requestPermissions(['location'])
+    }
+    if (status.location !== 'granted') {
+      setPermission('denied')
+      throw new Error(
+        'Location permission denied. In Android settings, set Location to Allow all the time.',
+      )
+    }
+    setPermission('granted')
+  }, [])
+
+  const getWebPosition = useCallback(
+    (force: boolean) =>
+      new Promise<void>((resolve, reject) => {
+        if (!('geolocation' in navigator)) {
+          const message = 'Geolocation is not supported in this browser'
+          setError(message)
+          setPermission('unsupported')
+          reject(new Error(message))
+          return
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            void reportToHa(
+              position.coords.latitude,
+              position.coords.longitude,
+              typeof position.coords.accuracy === 'number'
+                ? position.coords.accuracy
+                : null,
+              force,
+            )
+              .then(resolve)
+              .catch(reject)
+          },
+          (geoError) => {
+            const mapped = mapGeoError(geoError)
+            setError(mapped.message)
+            if (mapped.code === 'denied') setPermission('denied')
+            reject(new Error(mapped.message))
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: force ? 0 : 30_000,
+            timeout: 20_000,
+          },
+        )
+      }),
+    [reportToHa],
+  )
+
+  const getNativePosition = useCallback(
+    async (force: boolean) => {
+      await ensureNativePermissions()
+      const geo = await loadTauriGeo()
+      const pos = await geo.getCurrentPosition({
+        enableHighAccuracy: true,
+        maximumAge: force ? 0 : 30_000,
+        timeout: 20_000,
+      })
+      await reportToHa(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        pos.coords.accuracy ?? null,
+        force,
+      )
+    },
+    [ensureNativePermissions, reportToHa],
+  )
+
+  const getCurrentPosition = useCallback(
+    (force: boolean) =>
+      native ? getNativePosition(force) : getWebPosition(force),
+    [getNativePosition, getWebPosition, native],
+  )
+
+  const setEnabled = useCallback(
+    async (
+      next: boolean,
+    ): Promise<{ ok: true } | { ok: false; message: string }> => {
+      if (!next) {
+        setLocationSharingEnabled(false)
+        setEnabledState(false)
+        setBackgroundActive(false)
+        setError(null)
+        if (native) {
+          try {
+            await stopNativeLocationTracking()
+          } catch {
+            /* ignore */
+          }
+        }
+        return { ok: true }
+      }
+
+      try {
+        if (native) {
+          await ensureNativePermissions()
+          await startNativeLocationTracking()
+          setBackgroundActive(true)
+          try {
+            await getNativePosition(true)
+          } catch {
+            /* FGS still running; UI snapshot optional */
+          }
+        } else {
+          await getWebPosition(true)
+        }
+
+        setLocationSharingEnabled(true)
+        setEnabledState(true)
+        setPermission((prev) => (prev === 'denied' ? prev : 'granted'))
+        return { ok: true }
+      } catch (e) {
+        setLocationSharingEnabled(false)
+        setEnabledState(false)
+        setBackgroundActive(false)
+        if (native) {
+          try {
+            await stopNativeLocationTracking()
+          } catch {
+            /* ignore */
+          }
+        }
+        return {
+          ok: false,
+          message: e instanceof Error ? e.message : 'Location error',
+        }
+      }
+    },
+    [ensureNativePermissions, getNativePosition, getWebPosition, native],
+  )
+
+  const updateNow = useCallback(async () => {
+    if (native && enabled) {
+      try {
+        await syncNativeLocationCredentials()
+      } catch {
+        /* non-fatal */
+      }
+    }
+    await getCurrentPosition(true)
+  }, [enabled, getCurrentPosition, native])
+
+  // Web: continuous watch while enabled + connected.
+  useEffect(() => {
+    if (native || !enabled || !connected) return
+    if (!('geolocation' in navigator)) return
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        void reportToHa(
+          position.coords.latitude,
+          position.coords.longitude,
+          typeof position.coords.accuracy === 'number'
+            ? position.coords.accuracy
+            : null,
+          false,
+        ).catch(() => {
+          /* error state set in reportToHa */
+        })
+      },
+      (geoError) => {
+        const mapped = mapGeoError(geoError)
+        setError(mapped.message)
+        if (mapped.code === 'denied') {
+          setPermission('denied')
+          setLocationSharingEnabled(false)
+          setEnabledState(false)
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30_000,
+        timeout: 25_000,
+      },
+    )
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void getWebPosition(false).catch(() => {
+        /* ignore */
+      })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [connected, enabled, getWebPosition, native, reportToHa])
+
+  // Native: foreground watch for live UI; FGS handles background.
+  useEffect(() => {
+    if (!native || !enabled || !connected) return
+
+    let cancelled = false
+    let watchId: number | null = null
+
+    void (async () => {
+      try {
+        await ensureNativePermissions()
+        await syncNativeLocationCredentials()
+        const geo = await loadTauriGeo()
+        watchId = await geo.watchPosition(
+          { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
+          (pos) => {
+            if (cancelled || !pos) return
+            void reportToHa(
+              pos.coords.latitude,
+              pos.coords.longitude,
+              pos.coords.accuracy ?? null,
+              false,
+            ).catch(() => {
+              /* ignore */
+            })
+          },
+        )
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Native location error')
+        }
+      }
+    })()
+
+    const credentialTimer = window.setInterval(() => {
+      void syncNativeLocationCredentials().catch(() => {
+        /* ignore */
+      })
+    }, 10 * 60_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(credentialTimer)
+      if (watchId != null) {
+        void loadTauriGeo()
+          .then((geo) => geo.clearWatch(watchId!))
+          .catch(() => {
+            /* ignore */
+          })
+      }
+    }
+  }, [connected, enabled, ensureNativePermissions, native, reportToHa])
+
+  return {
+    enabled,
+    setEnabled,
+    permission,
+    deviceId,
+    entityId: deviceId ? `device_tracker.${deviceId}` : null,
+    lastReport,
+    lastCoords: lastReport
+      ? formatCoords(lastReport.lat, lastReport.lon)
+      : null,
+    reporting,
+    error,
+    updateNow,
+    supported: permission !== 'unsupported',
+    native,
+    backgroundActive,
+  }
+}

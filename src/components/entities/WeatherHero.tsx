@@ -23,15 +23,13 @@ export function WeatherHero() {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-[1.75rem] border border-border-subtle bg-gradient-to-br from-surface via-canvas-elevated to-surface p-4',
+        'relative overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4',
         weather.isUnavailable && 'opacity-50',
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold tracking-[0.14em] text-ink-muted uppercase">
-            Outside
-          </p>
+          <p className="text-sm text-ink-muted">Outside</p>
           <p className="mt-1 font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
             {temp != null && !Number.isNaN(temp) ? Math.round(temp) : '—'}
             <span className="text-xl text-ink-muted">°</span>

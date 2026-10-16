@@ -30,9 +30,6 @@ export const areas: AreaConfig[] = [
       'light.living_room_floor_light',
       'light.entry',
       'light.living_room_led',
-      'light.living_room_living_room_controller_light_1',
-      'light.living_room_living_room_controller_light_2',
-      'light.living_room_living_room_controller_light_3',
     ],
     fans: ['fan.mts300'],
     media: ['media_player.living_room', 'media_player.living_room_tv'],
@@ -54,11 +51,8 @@ export const areas: AreaConfig[] = [
   {
     id: 'bedroom',
     name: 'Bedroom',
-    lights: [
-      'light.bedroom_ceiling_light',
-      'light.bedroom_bedroom_switch_light_1',
-      'light.bedroom_bedroom_switch_light_2',
-    ],
+    // Ceiling light kit only — paddle/controller LEDs and fan-speed-as-light stay out.
+    lights: ['light.bedroom_ceiling_light'],
     fans: ['fan.bedroom_ceiling_fan'],
     media: [],
     sensors: [
@@ -141,6 +135,14 @@ export const entities = {
   outdoorTemp: 'sensor.outdoor_temperature',
   lock: 'lock.level_lock_pro',
   vacuum: 'vacuum.x40_ultra',
+  /** Dreame map cameras — first available wins at runtime via discovery. */
+  vacuumMapCameras: [
+    'camera.x40_ultra_map_data',
+    'camera.x40_ultra_map',
+    'camera.x40_ultra_current_map',
+  ] as const,
+  vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
+  vacuumCleanGenius: 'select.x40_ultra_cleangenius',
   mediaAll: 'media_player.all',
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
   mediaPlayers: [
@@ -330,6 +332,10 @@ export const entities = {
     { id: 'script.casa_secure_house', label: 'Secure' },
   ],
 
+  /**
+   * Real lighting loads only (`light.*`).
+   * Excludes switch/controller LEDs, fan-speed-as-light, browser_mod screens, etc.
+   */
   allLightsOff: [
     'light.inovelli_vzm32_sn',
     'light.doughnut_lamp',
@@ -340,13 +346,26 @@ export const entities = {
     'light.kitchen_under_cabinets',
     'light.kitchen_led',
     'light.bedroom_ceiling_light',
-    'light.bedroom_bedroom_switch_light_1',
-    'light.bedroom_bedroom_switch_light_2',
-    'light.living_room_living_room_controller_light_1',
-    'light.living_room_living_room_controller_light_2',
-    'light.living_room_living_room_controller_light_3',
   ],
 } as const
+
+/** light.* entities that are not room lighting loads. */
+export const nonLightingLightEntities = new Set([
+  'light.living_room_living_room_controller_light_1',
+  'light.living_room_living_room_controller_light_2',
+  'light.living_room_living_room_controller_light_3',
+  'light.bedroom_bedroom_switch_light_1',
+  'light.bedroom_bedroom_switch_light_2',
+])
+
+/** True only for curated room lighting loads in the light domain. */
+export function isRoomLight(entityId: string): boolean {
+  if (!entityId.startsWith('light.')) return false
+  if (nonLightingLightEntities.has(entityId)) return false
+  if (entityId.includes('browser_mod')) return false
+  if (/fan.?speed/i.test(entityId)) return false
+  return (entities.allLightsOff as readonly string[]).includes(entityId)
+}
 
 export function getArea(id: string): AreaConfig | undefined {
   return areas.find((area) => area.id === id)

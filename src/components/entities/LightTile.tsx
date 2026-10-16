@@ -3,6 +3,13 @@ import { useLight } from 'hass-react'
 import { Lightbulb } from 'lucide-react'
 import { entityName, simpleToggleLights } from '#/lib/entityName'
 import { cn } from '#/lib/cn'
+import {
+  AnimatePresence,
+  expandCollapse,
+  m,
+  snappy,
+  soft,
+} from '#/lib/motion'
 import { ColorPicker } from '#/components/entities/ColorPicker'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
@@ -15,6 +22,7 @@ function rgbCss(rgb?: [number, number, number] | null) {
 }
 
 export function LightTile({ entityId }: { entityId: string }) {
+  // useLight only accepts light.* — callers must not pass switch.* or other domains.
   const light = useLight(entityId)
   const [open, setOpen] = useState(false)
   const [brightnessPct, setBrightnessPct] = useState(
@@ -31,6 +39,24 @@ export function LightTile({ entityId }: { entityId: string }) {
       ))
   const canColor = !isSimple && light.supportsRgb
   const showInlineDimmer = canDim && light.isOn && !unavailable
+  const hasColorDrawer =
+    canColor ||
+    (light.supportsColorTemp &&
+      light.minColorTempKelvin != null &&
+      light.maxColorTempKelvin != null)
+
+  const iconBg =
+    light.isOn && canColor && light.rgbColor
+      ? `rgba(${light.rgbColor[0]}, ${light.rgbColor[1]}, ${light.rgbColor[2]}, 0.2)`
+      : light.isOn
+        ? 'rgba(232, 165, 75, 0.25)'
+        : 'rgba(14, 17, 22, 1)'
+  const iconColor =
+    light.isOn && canColor && light.rgbColor
+      ? rgbCss(light.rgbColor)!
+      : light.isOn
+        ? '#e8a54b'
+        : '#8b93a3'
 
   useEffect(() => {
     setBrightnessPct(Math.max(1, Math.round(light.brightnessPercent) || 1))
@@ -66,40 +92,35 @@ export function LightTile({ entityId }: { entityId: string }) {
 
   return (
     <>
-      <div
+      <m.div
+        layout
+        transition={soft}
         className={cn(
-          'relative flex flex-col justify-between rounded-3xl border p-4 transition',
-          showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.5rem]',
+          'relative flex flex-col justify-between rounded-2xl border p-3.5',
+          showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.25rem]',
           light.isOn
-            ? 'border-accent/35 bg-accent-soft shadow-[inset_0_0_0_1px_#e8a54b22]'
+            ? 'border-light/35 bg-light-soft shadow-[inset_0_0_0_1px_#e8a54b22]'
             : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
       >
         <div className="flex items-start justify-between gap-2">
-          <button
+          <m.button
             type="button"
             disabled={unavailable}
             onClick={() => void handleToggle()}
-            className="flex min-w-0 flex-1 items-start gap-3 text-left active:scale-[0.98]"
+            whileTap={{ scale: 0.98 }}
+            transition={snappy}
+            className="flex min-h-11 min-w-0 flex-1 items-start gap-3 text-left"
           >
-            <span
-              className={cn(
-                'grid size-10 shrink-0 place-items-center rounded-2xl',
-                light.isOn ? 'bg-accent/25 text-accent' : 'bg-canvas text-ink-muted',
-              )}
-              style={
-                light.isOn && canColor && light.rgbColor
-                  ? {
-                      backgroundColor: `${rgbCss(light.rgbColor)}33`,
-                      color: rgbCss(light.rgbColor),
-                    }
-                  : undefined
-              }
+            <m.span
+              className="grid size-11 shrink-0 place-items-center rounded-xl"
+              animate={{ backgroundColor: iconBg, color: iconColor }}
+              transition={soft}
             >
               <Lightbulb className="size-5" />
-            </span>
-            <span className="min-w-0 pt-0.5">
+            </m.span>
+            <span className="min-w-0 pt-1">
               <span className="line-clamp-2 block text-sm font-semibold text-ink">
                 {name}
               </span>
@@ -113,68 +134,76 @@ export function LightTile({ entityId }: { entityId: string }) {
                     : 'Off'}
               </span>
             </span>
-          </button>
+          </m.button>
 
-          {canColor ? (
-            <button
-              type="button"
-              disabled={unavailable || !light.isOn}
-              aria-label={`Color for ${name}`}
-              onClick={() => setOpen(true)}
-              className={cn(
-                'size-8 shrink-0 rounded-full border border-border shadow-inner',
-                (!light.isOn || unavailable) && 'opacity-40',
-              )}
-              style={{
-                background:
-                  light.isOn && light.rgbColor
-                    ? rgbCss(light.rgbColor)
-                    : 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
-              }}
-            />
-          ) : canDim ? (
+          {hasColorDrawer ? (
             <button
               type="button"
               disabled={unavailable}
-              aria-label={`Adjust ${name}`}
+              aria-label={`Color for ${name}`}
               onClick={() => setOpen(true)}
-              className="rounded-xl px-2 py-1 text-[11px] font-medium text-ink-muted hover:bg-canvas/50 hover:text-ink"
+              className={cn(
+                'grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition',
+                'hover:bg-canvas/60 hover:text-ink',
+                (!light.isOn || unavailable) && 'opacity-50',
+              )}
             >
-              Adjust
+              {canColor && light.isOn && light.rgbColor ? (
+                <span
+                  className="size-6 rounded-full border border-border shadow-inner"
+                  style={{ background: rgbCss(light.rgbColor) }}
+                />
+              ) : (
+                <span
+                  className="size-6 rounded-full border border-border"
+                  style={{
+                    background:
+                      'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                  }}
+                />
+              )}
             </button>
           ) : null}
         </div>
 
-        {showInlineDimmer ? (
-          <div
-            className="mt-3"
-            onPointerDown={stopSliderPointer}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Slider
-              aria-label={`${name} brightness`}
-              min={1}
-              max={100}
-              step={1}
-              value={brightnessPct}
-              onValueChange={(value) => {
-                setBrightnessPct(Array.isArray(value) ? value[0] : value)
-              }}
-              onValueCommitted={(value) => {
-                const next = Array.isArray(value) ? value[0] : value
-                setBrightnessPct(next)
-                void commitBrightness(next)
-              }}
-            />
-          </div>
-        ) : null}
-      </div>
+        <AnimatePresence initial={false}>
+          {showInlineDimmer ? (
+            <m.div
+              key="dimmer"
+              initial={expandCollapse.initial}
+              animate={expandCollapse.animate}
+              exit={expandCollapse.exit}
+              className="overflow-hidden"
+              onPointerDown={stopSliderPointer}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mt-2">
+                <Slider
+                  aria-label={`${name} brightness`}
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={brightnessPct}
+                  onValueChange={(value) => {
+                    setBrightnessPct(Array.isArray(value) ? value[0] : value)
+                  }}
+                  onValueCommitted={(value) => {
+                    const next = Array.isArray(value) ? value[0] : value
+                    setBrightnessPct(next)
+                    void commitBrightness(next)
+                  }}
+                />
+              </div>
+            </m.div>
+          ) : null}
+        </AnimatePresence>
+      </m.div>
 
-      {canDim || canColor ? (
+      {hasColorDrawer ? (
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerContent title={name}>
             <div className="space-y-6 py-2">
-              <div className="flex items-center justify-between">
+              <div className="flex min-h-11 items-center justify-between">
                 <span className="text-sm text-ink-muted">Power</span>
                 <Switch
                   checked={light.isOn}
@@ -182,31 +211,6 @@ export function LightTile({ entityId }: { entityId: string }) {
                   onCheckedChange={() => void handleToggle()}
                 />
               </div>
-
-              {canDim ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-ink-muted">Brightness</span>
-                    <span className="tabular-nums text-ink">{brightnessPct}%</span>
-                  </div>
-                  <Slider
-                    aria-label="Brightness"
-                    min={1}
-                    max={100}
-                    step={1}
-                    disabled={unavailable || !light.isOn}
-                    value={brightnessPct}
-                    onValueChange={(value) => {
-                      setBrightnessPct(Array.isArray(value) ? value[0] : value)
-                    }}
-                    onValueCommitted={(value) => {
-                      const next = Array.isArray(value) ? value[0] : value
-                      setBrightnessPct(next)
-                      void commitBrightness(next)
-                    }}
-                  />
-                </div>
-              ) : null}
 
               {canColor ? (
                 <ColorPicker

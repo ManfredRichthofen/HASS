@@ -3,16 +3,17 @@ import {
   Home,
   LayoutGrid,
   Thermometer,
-  Shield,
+  Music2,
   Ellipsis,
 } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { LayoutGroup, m, indicator } from '#/lib/motion'
 
 const items = [
   { to: '/', label: 'Home', icon: Home, match: 'exact' as const },
   { to: '/rooms', label: 'Rooms', icon: LayoutGrid, match: 'prefix' as const },
   { to: '/climate', label: 'Climate', icon: Thermometer, match: 'prefix' as const },
-  { to: '/security', label: 'Security', icon: Shield, match: 'prefix' as const },
+  { to: '/media', label: 'Media', icon: Music2, match: 'prefix' as const },
   { to: '/more', label: 'More', icon: Ellipsis, match: 'prefix' as const },
 ]
 
@@ -26,37 +27,40 @@ export function BottomNav() {
         'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
       )}
     >
-      <div className="mx-auto flex max-w-3xl items-stretch justify-between px-2 pt-1.5">
-        {items.map(({ to, label, icon: Icon, match }) => {
-          const active =
-            match === 'exact'
-              ? pathname === to
-              : pathname === to || pathname.startsWith(`${to}/`)
+      <LayoutGroup>
+        <div className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-1.5 pt-1 sm:px-3 lg:max-w-4xl">
+          {items.map(({ to, label, icon: Icon, match }) => {
+            const active =
+              match === 'exact'
+                ? pathname === to
+                : pathname === to || pathname.startsWith(`${to}/`)
 
-          return (
-            <Link
-              key={to}
-              to={to}
-              className={cn(
-                'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium transition',
-                active ? 'text-accent' : 'text-ink-muted hover:text-ink',
-              )}
-            >
-              <Icon
+            return (
+              <Link
+                key={to}
+                to={to}
                 className={cn(
-                  'size-5',
-                  active && 'drop-shadow-[0_0_8px_#e8a54b66]',
+                  'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[10px] font-medium transition sm:text-[11px]',
+                  active ? 'text-accent' : 'text-ink-muted hover:text-ink',
                 )}
-                strokeWidth={active ? 2.4 : 2}
-              />
-              <span>{label}</span>
-              {active ? (
-                <span className="absolute inset-x-5 -bottom-0.5 h-0.5 rounded-full bg-accent" />
-              ) : null}
-            </Link>
-          )
-        })}
-      </div>
+              >
+                <Icon
+                  className="size-5"
+                  strokeWidth={active ? 2.4 : 2}
+                />
+                <span className="truncate">{label}</span>
+                {active ? (
+                  <m.span
+                    layoutId="nav-indicator"
+                    className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-accent sm:inset-x-5"
+                    transition={indicator}
+                  />
+                ) : null}
+              </Link>
+            )
+          })}
+        </div>
+      </LayoutGroup>
     </nav>
   )
 }

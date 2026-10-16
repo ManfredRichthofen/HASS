@@ -46,18 +46,18 @@ export function ClimateCard({
     return (
       <div
         className={cn(
-          'rounded-3xl border border-border-subtle bg-surface p-4',
+          'rounded-2xl border border-border-subtle bg-surface p-4',
           unavailable && 'opacity-40',
         )}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-2xl bg-accent-soft text-accent">
+            <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
               <Thermometer className="size-5" />
             </span>
             <div>
               <p className="text-sm font-semibold text-ink">{name}</p>
-              <p className="text-xs text-ink-muted capitalize">{climate.mode}</p>
+              <p className="text-xs capitalize text-ink-muted">{climate.mode}</p>
             </div>
           </div>
           <div className="text-right">
@@ -76,36 +76,36 @@ export function ClimateCard({
   return (
     <div
       className={cn(
-        'rounded-[1.75rem] border border-border-subtle bg-surface p-5',
+        'rounded-2xl border border-border-subtle bg-surface p-4 sm:p-5',
         unavailable && 'opacity-40',
       )}
     >
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold tracking-[0.14em] text-ink-muted uppercase">
-            Thermostat
-          </p>
-          <h3 className="mt-1 font-display text-xl font-semibold text-ink">{name}</h3>
+      <div className="mb-5 flex items-start justify-between gap-3 sm:mb-6">
+        <div className="min-w-0">
+          <p className="text-sm text-ink-muted">Thermostat</p>
+          <h3 className="mt-0.5 truncate font-display text-lg font-semibold text-ink sm:text-xl">
+            {name}
+          </h3>
         </div>
-        <span className="grid size-11 place-items-center rounded-2xl bg-accent-soft text-accent">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
           <Thermometer className="size-5" />
         </span>
       </div>
 
-      <div className="mb-6 flex items-end justify-center gap-6">
+      <div className="mb-5 flex items-end justify-center gap-4 sm:mb-6 sm:gap-6">
         <div className="text-center">
           <p className="text-xs text-ink-muted">Inside</p>
-          <p className="font-display text-5xl font-semibold tabular-nums tracking-tight text-ink">
+          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight text-ink sm:text-5xl">
             {current != null ? Math.round(current) : '—'}
-            <span className="text-2xl text-ink-muted">°</span>
+            <span className="text-xl text-ink-muted sm:text-2xl">°</span>
           </p>
         </div>
-        <div className="mb-2 h-12 w-px bg-border" />
+        <div className="mb-2 h-10 w-px bg-border sm:h-12" />
         <div className="text-center">
           <p className="text-xs text-ink-muted">Target</p>
-          <p className="font-display text-4xl font-semibold tabular-nums text-accent">
+          <p className="font-display text-3xl font-semibold tabular-nums text-accent sm:text-4xl">
             {target != null ? Math.round(target) : '—'}
-            <span className="text-xl">°</span>
+            <span className="text-lg sm:text-xl">°</span>
           </p>
         </div>
       </div>
@@ -145,14 +145,14 @@ export function ClimateCard({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {supported.map((mode) => (
           <Toggle
             key={mode}
             pressed={climate.mode === mode}
             disabled={unavailable}
             onPressedChange={() => void setMode(mode)}
-            className="capitalize"
+            className="touch-target capitalize sm:flex-none"
           >
             {mode.replace('_', ' ')}
           </Toggle>

@@ -25,6 +25,7 @@ export function MediaCard({
   const unavailable = player.isUnavailable
   const title = player.mediaTitle ?? (player.isOff ? 'Off' : 'Nothing playing')
   const artist = player.mediaArtist
+  const isActive = player.isPlaying || player.isPaused
 
   async function run(action: () => Promise<void>, label: string) {
     try {
@@ -46,11 +47,11 @@ export function MediaCard({
           )
         }
         className={cn(
-          'flex w-full items-center gap-3 rounded-3xl border border-border-subtle bg-surface p-3 text-left transition hover:bg-surface-hover',
+          'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-3 text-left transition hover:bg-surface-hover',
           unavailable && 'opacity-40',
         )}
       >
-        <span className="grid size-11 place-items-center rounded-2xl bg-canvas text-accent">
+        <span className="grid size-11 place-items-center rounded-xl bg-canvas text-accent">
           {player.isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
@@ -64,14 +65,13 @@ export function MediaCard({
   return (
     <div
       className={cn(
-        'rounded-[1.75rem] border border-border-subtle bg-surface p-4',
+        'rounded-2xl border border-border-subtle bg-surface p-4',
+        isActive && 'border-success/30',
         unavailable && 'opacity-40',
       )}
     >
       <div className="mb-4">
-        <p className="text-xs font-semibold tracking-[0.14em] text-ink-muted uppercase">
-          {name}
-        </p>
+        <p className="text-sm font-medium text-ink-muted">{name}</p>
         <h3 className="mt-1 truncate font-display text-lg font-semibold text-ink">
           {title}
         </h3>
@@ -110,14 +110,15 @@ export function MediaCard({
         </Button>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          className="text-ink-muted hover:text-ink"
+          className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-canvas hover:text-ink"
           disabled={unavailable}
+          aria-label={player.isMuted ? 'Unmute' : 'Mute'}
           onClick={() => void run(() => player.toggleMute(), 'Mute failed')}
         >
-          {player.isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+          {player.isMuted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
         </button>
         <Slider
           aria-label="Volume"
@@ -134,4 +135,12 @@ export function MediaCard({
       </div>
     </div>
   )
+}
+
+/** Compact when idle; expands to full controls while playing/paused. */
+export function MediaPlayerRow({ entityId }: { entityId: string }) {
+  const player = useMediaPlayer(entityId)
+  const isActive = player.isPlaying || player.isPaused
+
+  return <MediaCard entityId={entityId} compact={!isActive} />
 }

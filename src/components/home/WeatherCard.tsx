@@ -31,45 +31,46 @@ export function WeatherCard() {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[1.75rem] border border-border-subtle bg-surface p-4',
+        'flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface p-3.5 sm:p-4',
         weather.isUnavailable && 'opacity-50',
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="capitalize text-sm font-medium text-ink">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium capitalize text-ink">
             {String(weather.condition ?? weather.state).replace(/-/g, ' ')}
           </p>
-          <p className="text-xs text-ink-muted">Forecast Home</p>
-          <p className="mt-2 font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
+          <p className="text-xs text-ink-muted">Outside</p>
+          <p className="mt-1.5 font-display text-3xl font-semibold tabular-nums tracking-tight text-ink sm:mt-2 sm:text-4xl">
             {temp != null && !Number.isNaN(temp) ? Math.round(temp) : '—'}
-            <span className="text-xl text-ink-muted">°F</span>
+            <span className="text-lg text-ink-muted sm:text-xl">°F</span>
           </p>
           {today ? (
             <p className="mt-1 text-xs text-ink-muted tabular-nums">
-              {Math.round(today.temperature)}° / {Math.round(today.templow ?? today.temperature)}°
+              H {Math.round(today.temperature)}° · L{' '}
+              {Math.round(today.templow ?? today.temperature)}°
             </p>
           ) : null}
         </div>
-        <Icon className="size-14 text-accent/85" strokeWidth={1.35} />
+        <Icon className="size-11 shrink-0 text-accent/80 sm:size-14" strokeWidth={1.35} />
       </div>
 
-      <div className="mt-4 grid grid-cols-5 gap-1.5 border-t border-border-subtle pt-3">
+      <div className="mt-auto grid grid-cols-5 gap-1 border-t border-border-subtle pt-3 sm:mt-4 sm:gap-1.5">
         {loading && forecast.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-canvas" />
+              <div key={i} className="h-14 animate-pulse rounded-xl bg-canvas sm:h-16" />
             ))
           : forecast.map((day) => {
               const DayIcon = weatherIcon(day.condition)
               return (
                 <div
                   key={day.datetime}
-                  className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5"
+                  className="flex flex-col items-center gap-0.5 rounded-xl px-0.5 py-1 sm:gap-1 sm:px-1 sm:py-1.5"
                 >
                   <span className="text-[10px] font-medium text-ink-muted">
                     {weekday(day.datetime)}
                   </span>
-                  <DayIcon className="size-4 text-ink-muted" />
+                  <DayIcon className="size-3.5 text-ink-muted sm:size-4" />
                   <span className="text-[11px] font-semibold tabular-nums text-ink">
                     {Math.round(day.temperature)}°
                   </span>

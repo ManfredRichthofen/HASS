@@ -54,12 +54,12 @@ export function Slider({
         onValueCommitted?.(next as never, eventDetails)
       }}
     >
-      <BaseSlider.Control className="flex w-full touch-none py-3">
-        <BaseSlider.Track className="relative h-1.5 w-full grow rounded-full bg-border">
+      <BaseSlider.Control className="flex w-full touch-none py-4">
+        <BaseSlider.Track className="relative h-2 w-full grow rounded-full bg-border">
           <BaseSlider.Indicator className="absolute h-full rounded-full bg-accent transition-none" />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
-            className="size-5 rounded-full border-2 border-accent bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="size-6 rounded-full border-2 border-accent bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           />
         </BaseSlider.Track>
       </BaseSlider.Control>

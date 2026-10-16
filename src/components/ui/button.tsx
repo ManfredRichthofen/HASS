@@ -18,10 +18,10 @@ const variants: Record<Variant, string> = {
 }
 
 const sizes: Record<Size, string> = {
-  sm: 'h-9 px-3 text-sm gap-1.5 rounded-xl',
-  md: 'h-11 px-4 text-sm gap-2 rounded-2xl',
-  lg: 'h-12 px-5 text-base gap-2 rounded-2xl',
-  icon: 'size-11 rounded-2xl inline-flex items-center justify-center',
+  sm: 'h-11 px-3.5 text-sm gap-1.5 rounded-xl',
+  md: 'h-11 px-4 text-sm gap-2 rounded-xl',
+  lg: 'h-12 px-5 text-base gap-2 rounded-xl',
+  icon: 'size-11 rounded-xl inline-flex items-center justify-center',
 }
 
 export function Button({

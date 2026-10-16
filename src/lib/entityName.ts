@@ -6,20 +6,14 @@ export const entityLabels: Record<string, string> = {
   'light.living_room_floor_light': 'Floor lamp',
   'light.entry': 'Entry',
   'light.living_room_led': 'LED strip',
-  'light.living_room_living_room_controller_light_1': 'Button 1',
-  'light.living_room_living_room_controller_light_2': 'Button 2',
-  'light.living_room_living_room_controller_light_3': 'Button 3',
 
   // Kitchen lights
   'light.kitchen_lights': 'Kitchen ceiling',
   'light.kitchen_under_cabinets': 'Kitchen counters',
   'light.kitchen_led': 'Kitchen LED',
 
-
   // Bedroom lights
   'light.bedroom_ceiling_light': 'Ceiling',
-  'light.bedroom_bedroom_switch_light_1': 'Switch 1',
-  'light.bedroom_bedroom_switch_light_2': 'Switch 2',
 
   // Fans
   'fan.mts300': 'Living room fan',
@@ -60,13 +54,8 @@ export const entityLabels: Record<string, string> = {
   'switch.sprinkler_controller_rain_delay': 'Rain delay',
 }
 
-/** Lights that are simple on/off indicators (no brightness drawer needed). */
+/** On/off-only lighting loads (no brightness/color drawer). */
 export const simpleToggleLights = new Set([
-  'light.living_room_living_room_controller_light_1',
-  'light.living_room_living_room_controller_light_2',
-  'light.living_room_living_room_controller_light_3',
-  'light.bedroom_bedroom_switch_light_1',
-  'light.bedroom_bedroom_switch_light_2',
   'light.living_room_led',
   'light.kitchen_led',
 ])
@@ -87,8 +76,6 @@ function cleanFriendlyName(name: string) {
   cleaned = cleaned.replace(/\b(Light|Fan|Switch|Sensor)\s+\1\b/gi, '$1')
   cleaned = cleaned.replace(/\bBedroom\s+Bedroom\b/gi, 'Bedroom')
   cleaned = cleaned.replace(/\bLiving Room\s+Living Room\b/gi, 'Living Room')
-  cleaned = cleaned.replace(/\bBedroom Switch Light\s*\((\d+)\)/gi, 'Switch $1')
-  cleaned = cleaned.replace(/\bLiving Room Controller Light\s*\((\d+)\)/gi, 'Button $1')
   cleaned = cleaned.replace(/\bX40 Ultra\s+X40 Ultra\b/gi, 'Robot vacuum')
   cleaned = cleaned.replace(/\bLevel Lock Pro\b/gi, 'Front door')
   cleaned = cleaned.replace(/\bAFG SMT PRO-2\.0\b/gi, 'Garage fan')

@@ -1,28 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Outfit', 'DM Sans', ui-sans-serif, sans-serif;
 
-  --color-canvas: #12141a;
-  --color-canvas-elevated: #1a1d26;
-  --color-surface: #22262f;
-  --color-surface-hover: #2a2e3a;
-  --color-border: #343947;
-  --color-border-subtle: #2a2e3a;
+  --color-canvas: #0e1116;
+  --color-canvas-elevated: #151921;
+  --color-surface: #1c222c;
+  --color-surface-hover: #252c38;
+  --color-border: #2e3644;
+  --color-border-subtle: #242b36;
 
-  --color-ink: #f3f1ec;
-  --color-ink-muted: #9aa0ae;
-  --color-ink-faint: #6b7280;
+  --color-ink: #eef1f5;
+  --color-ink-muted: #8b93a3;
+  --color-ink-faint: #5c6575;
 
-  --color-accent: #e8a54b;
-  --color-accent-soft: #e8a54b33;
-  --color-accent-strong: #f0b85f;
+  /* Cool teal — primary actions, nav, selected chips */
+  --color-accent: #4db8a8;
+  --color-accent-soft: #4db8a833;
+  --color-accent-strong: #63c9ba;
+
+  /* Warm amber — lights on only */
+  --color-light: #e8a54b;
+  --color-light-soft: #e8a54b33;
 
   --color-success: #5ecf8e;
   --color-danger: #ef6b6b;
   --color-info: #6ea8fe;
+
+  --spacing-touch: 2.75rem;
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
 }
 
 * {
@@ -59,14 +67,19 @@ body {
   color: var(--color-ink);
 }
 
-/* Soft ambient backdrop */
+/* Soft ambient backdrop — cool teal wash, no glow clutter */
 body::before {
   content: '';
   pointer-events: none;
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #e8a54b14, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #3d4a6b18, transparent 50%);
+    radial-gradient(ellipse 70% 45% at 0% -5%, #4db8a812, transparent 55%),
+    radial-gradient(ellipse 50% 35% at 100% 5%, #6ea8fe0c, transparent 50%);
   z-index: -1;
+}
+
+@utility touch-target {
+  min-height: var(--spacing-touch);
+  min-width: var(--spacing-touch);
 }

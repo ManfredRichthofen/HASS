@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState, type PointerEvent } from 'react'
 import { useFan } from 'hass-react'
-import { ArrowDownUp, Fan, Wind } from 'lucide-react'
+import { ArrowDownUp, Fan, SlidersHorizontal, Wind } from 'lucide-react'
 import { entityName } from '#/lib/entityName'
 import { cn } from '#/lib/cn'
+import {
+  AnimatePresence,
+  expandCollapse,
+  m,
+  snappy,
+  soft,
+} from '#/lib/motion'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
@@ -23,7 +30,6 @@ function nearestPreset(pct: number) {
 
 function spinDuration(pct: number) {
   const clamped = Math.max(8, Math.min(100, pct || 8))
-  // Faster spin at higher speeds (seconds per rotation)
   return `${3.6 - (clamped / 100) * 2.8}s`
 }
 
@@ -98,39 +104,35 @@ export function FanTile({
 
   return (
     <>
-      <div
+      <m.div
+        layout
+        transition={soft}
         className={cn(
-          'relative flex flex-col overflow-hidden rounded-[1.75rem] border transition',
-          compact ? 'p-4' : 'p-4',
-          showInline ? 'min-h-[11.5rem]' : 'min-h-[8.25rem]',
+          'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
+          showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
           fan.isOn
-            ? 'border-info/40 bg-gradient-to-br from-info/15 via-surface to-surface'
+            ? 'border-info/40 bg-info/10'
             : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
       >
-        {!compact && fan.isOn ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-6 -top-8 size-28 rounded-full border border-info/20"
-          />
-        ) : null}
-
-        <div className="relative flex items-start justify-between gap-3">
-          <button
+        <div className="relative flex items-start justify-between gap-2">
+          <m.button
             type="button"
             disabled={unavailable}
             onClick={() => void handleToggle()}
-            className="flex min-w-0 flex-1 items-start gap-3 text-left active:scale-[0.98]"
+            whileTap={{ scale: 0.98 }}
+            transition={snappy}
+            className="flex min-h-11 min-w-0 flex-1 items-start gap-3 text-left"
           >
             <span
               className={cn(
-                'grid size-12 shrink-0 place-items-center rounded-2xl',
+                'grid size-11 shrink-0 place-items-center rounded-xl',
                 fan.isOn ? 'bg-info/20 text-info' : 'bg-canvas text-ink-muted',
               )}
             >
               <Fan
-                className={cn('size-6', fan.isOn && 'animate-spin')}
+                className={cn('size-5', fan.isOn && 'animate-spin')}
                 style={
                   fan.isOn
                     ? { animationDuration: spinDuration(speed || 40) }
@@ -138,96 +140,118 @@ export function FanTile({
                 }
               />
             </span>
-            <span className="min-w-0 pt-0.5">
-              <span className="block font-display text-base font-semibold tracking-tight text-ink">
+            <span className="min-w-0 pt-1">
+              <span className="block text-sm font-semibold tracking-tight text-ink">
                 {name}
               </span>
               <span className="mt-0.5 block text-xs text-ink-muted">{status}</span>
             </span>
-          </button>
+          </m.button>
 
           <button
             type="button"
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="rounded-xl px-2.5 py-1.5 text-[11px] font-medium text-ink-muted hover:bg-canvas/60 hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-canvas/60 hover:text-ink"
           >
-            Controls
+            <SlidersHorizontal className="size-4" />
           </button>
         </div>
 
-        {showInline ? (
-          <div className="relative mt-4 space-y-3" onPointerDown={stopBubble}>
-            <div className="flex gap-1.5">
-              {speedPresets.map((preset) => {
-                const selected = activePreset?.value === preset.value
-                return (
+        <AnimatePresence initial={false}>
+          {showInline ? (
+            <m.div
+              key="fan-controls"
+              initial={expandCollapse.initial}
+              animate={expandCollapse.animate}
+              exit={expandCollapse.exit}
+              className="relative overflow-hidden"
+              onPointerDown={stopBubble}
+            >
+              <div className="mt-4 space-y-3">
+                <div className="flex gap-1.5">
+                  {speedPresets.map((preset) => {
+                    const selected = activePreset?.value === preset.value
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        disabled={unavailable}
+                        onClick={() => {
+                          setSpeed(preset.value)
+                          void commitSpeed(preset.value)
+                        }}
+                        className={cn(
+                          'touch-target flex-1 rounded-xl border px-2 text-xs font-semibold transition',
+                          selected
+                            ? 'border-info/40 bg-info/20 text-info'
+                            : 'border-border-subtle bg-canvas/50 text-ink-muted hover:text-ink',
+                        )}
+                      >
+                        {preset.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-ink-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <Wind className="size-3.5" /> Speed
+                    </span>
+                    <span className="tabular-nums text-ink">{speed}%</span>
+                  </div>
+                  <Slider
+                    aria-label={`${name} speed`}
+                    min={0}
+                    max={100}
+                    step={fan.attributes.percentage_step ?? 1}
+                    value={speed}
+                    onValueChange={(value) => {
+                      setSpeed(Array.isArray(value) ? value[0] : value)
+                    }}
+                    onValueCommitted={(value) => {
+                      const next = Array.isArray(value) ? value[0] : value
+                      setSpeed(next)
+                      void commitSpeed(next)
+                    }}
+                  />
+                </div>
+              </div>
+            </m.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {!fan.isOn && !unavailable && canSpeed ? (
+            <m.div
+              key="fan-presets-off"
+              initial={expandCollapse.initial}
+              animate={expandCollapse.animate}
+              exit={expandCollapse.exit}
+              className="relative overflow-hidden"
+              onPointerDown={stopBubble}
+            >
+              <div className="mt-4 flex gap-1.5">
+                {speedPresets.map((preset) => (
                   <button
                     key={preset.label}
                     type="button"
-                    disabled={unavailable}
                     onClick={() => {
                       setSpeed(preset.value)
                       void commitSpeed(preset.value)
                     }}
-                    className={cn(
-                      'flex-1 rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition',
-                      selected
-                        ? 'border-info/40 bg-info/20 text-info'
-                        : 'border-border-subtle bg-canvas/50 text-ink-muted hover:text-ink',
-                    )}
+                    className="touch-target flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-2 text-xs font-semibold text-ink-muted transition hover:border-info/30 hover:text-ink"
                   >
                     {preset.label}
                   </button>
-                )
-              })}
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] text-ink-muted">
-                <span className="inline-flex items-center gap-1">
-                  <Wind className="size-3.5" /> Speed
-                </span>
-                <span className="tabular-nums text-ink">{speed}%</span>
+                ))}
               </div>
-              <Slider
-                aria-label={`${name} speed`}
-                min={0}
-                max={100}
-                step={fan.attributes.percentage_step ?? 1}
-                value={speed}
-                onValueChange={(value) => {
-                  setSpeed(Array.isArray(value) ? value[0] : value)
-                }}
-                onValueCommitted={(value) => {
-                  const next = Array.isArray(value) ? value[0] : value
-                  setSpeed(next)
-                  void commitSpeed(next)
-                }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {!fan.isOn && !unavailable && canSpeed ? (
-          <div className="relative mt-4 flex gap-1.5" onPointerDown={stopBubble}>
-            {speedPresets.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => {
-                  setSpeed(preset.value)
-                  void commitSpeed(preset.value)
-                }}
-                className="flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-2 py-2 text-[11px] font-semibold text-ink-muted transition hover:border-info/30 hover:text-ink"
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+            </m.div>
+          ) : null}
+        </AnimatePresence>
+      </m.div>
 
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent title={name} description="Fan controls">

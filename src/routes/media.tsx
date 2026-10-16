@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { entities } from '#/config/dashboard'
-import { MediaCard } from '#/components/entities/MediaCard'
+import { MediaPlayerRow } from '#/components/entities/MediaCard'
 import { MusicSearch } from '#/components/entities/MusicSearch'
+import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 
@@ -16,20 +17,20 @@ const players = [
 
 function MediaPage() {
   return (
-    <div>
+    <Page>
       <PageHeader title="Media" subtitle="Search, play, and control" />
 
       <Section>
         <MusicSearch />
       </Section>
 
-      <Section title="Now playing">
-        <div className="grid gap-3 md:grid-cols-2">
+      <Section title="Players">
+        <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
           {players.map((id) => (
-            <MediaCard key={id} entityId={id} />
+            <MediaPlayerRow key={id} entityId={id} />
           ))}
         </div>
       </Section>
-    </div>
+    </Page>
   )
 }

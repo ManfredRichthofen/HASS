@@ -1,0 +1,8 @@
+[[permission]]
+identifier = "allow-location-tracking"
+description = "Allows starting and stopping Android background location sharing to Home Assistant."
+commands.allow = [
+  "location_tracking_start",
+  "location_tracking_stop",
+  "location_tracking_update_credentials"
+]

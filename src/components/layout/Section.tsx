@@ -13,13 +13,11 @@ export function Section({
   className?: string
 }) {
   return (
-    <section className={cn('mb-6', className)}>
+    <section className={cn('min-w-0', className)}>
       {(title || action) && (
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-2.5 flex items-center justify-between gap-2 md:mb-3">
           {title ? (
-            <h2 className="text-xs font-semibold tracking-[0.14em] text-ink-muted uppercase">
-              {title}
-            </h2>
+            <h2 className="text-sm font-semibold text-ink-muted">{title}</h2>
           ) : (
             <span />
           )}

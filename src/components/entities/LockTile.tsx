@@ -22,28 +22,28 @@ export function LockTile({ entityId }: { entityId: string }) {
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3 rounded-3xl border border-border-subtle bg-surface p-4',
+        'flex items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface p-4',
         unavailable && 'opacity-40',
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <span
           className={cn(
-            'grid size-11 place-items-center rounded-2xl',
+            'grid size-11 place-items-center rounded-xl',
             lock.isLocked ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger',
           )}
         >
           {lock.isLocked ? <Lock className="size-5" /> : <LockOpen className="size-5" />}
         </span>
-        <div>
-          <p className="text-sm font-semibold text-ink">{name}</p>
-          <p className="text-xs text-ink-muted capitalize">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-ink">{name}</p>
+          <p className="text-xs capitalize text-ink-muted">
             {unavailable ? 'Unavailable' : lock.state}
           </p>
         </div>
       </div>
       <Button
-        size="sm"
+        size="md"
         variant={lock.isLocked ? 'secondary' : 'accent'}
         disabled={unavailable}
         onClick={() => void toggle()}
