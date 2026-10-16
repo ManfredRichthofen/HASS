@@ -36,7 +36,7 @@ export const areas: AreaConfig[] = [
       'light.living_room_led',
     ],
     fans: ['fan.mts300'],
-    media: ['media_player.living_room', 'media_player.living_room_tv'],
+    media: ['media_player.living_room'],
     sensors: ['sensor.mts300_temperature', 'sensor.mts300_humidity'],
     occupancy: 'binary_sensor.inovelli_vzm32_sn_occupancy',
   },
@@ -65,7 +65,8 @@ export const areas: AreaConfig[] = [
     // Ceiling light kit only — paddle/controller LEDs and fan-speed-as-light stay out.
     lights: ['light.bedroom_ceiling_light'],
     fans: ['fan.bedroom_ceiling_fan'],
-    media: [],
+    // HA area is Living Room; friendly name is Bedroom TV — keep it with Bedroom.
+    media: ['media_player.living_room_tv'],
     sensors: [
       'sensor.presence_multi_sensor_fp300_temperature',
       'sensor.presence_multi_sensor_fp300_humidity',
@@ -101,10 +102,8 @@ export const areas: AreaConfig[] = [
     lights: [],
     fans: [],
     media: [],
-    sensors: [
-      'sensor.washer_current_status',
-      'sensor.washtower_current_status',
-    ],
+    // Status lives on ApplianceRow — don't also chip them under Climate.
+    sensors: [],
     appliances: [
       {
         label: 'Washer',
