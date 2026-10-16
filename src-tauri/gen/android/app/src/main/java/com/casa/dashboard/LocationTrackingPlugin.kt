@@ -2,16 +2,21 @@ package com.casa.dashboard
 
 import android.Manifest
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
+import java.util.concurrent.TimeUnit
 
 @InvokeArg
 class TrackingCredentials {
@@ -26,6 +31,7 @@ class TrackingCredentials {
 class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) {
   companion object {
     private const val PERMISSION_REQUEST = 4815
+    private const val WORK_TAG = "casa_location"
   }
 
   @Command
@@ -46,19 +52,24 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
       return
     }
 
-    val intent = Intent(activity, LocationForegroundService::class.java).apply {
-      action = LocationForegroundService.ACTION_START
-    }
-    ContextCompat.startForegroundService(activity, intent)
+    val request = PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+      .addTag(WORK_TAG)
+      .setConstraints(
+        Constraints.Builder()
+          .setRequiredNetworkType(NetworkType.CONNECTED)
+          .build()
+      )
+      .build()
+
+    WorkManager.getInstance(activity.applicationContext)
+      .enqueueUniquePeriodicWork(WORK_TAG, ExistingPeriodicWorkPolicy.KEEP, request)
+
     invoke.resolve()
   }
 
   @Command
   fun stop(invoke: Invoke) {
-    val intent = Intent(activity, LocationForegroundService::class.java).apply {
-      action = LocationForegroundService.ACTION_STOP
-    }
-    activity.startService(intent)
+    WorkManager.getInstance(activity.applicationContext).cancelAllWorkByTag(WORK_TAG)
     invoke.resolve()
   }
 
@@ -98,8 +109,8 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
       Manifest.permission.ACCESS_FINE_LOCATION,
       Manifest.permission.ACCESS_COARSE_LOCATION,
     )
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
     }
     ActivityCompat.requestPermissions(
       activity,
