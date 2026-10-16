@@ -20,7 +20,6 @@ type LocationContextValue = {
   updateNow: () => Promise<void>
   supported: boolean
   native: boolean
-  backgroundActive: boolean
 }
 
 const LocationContext = createContext<LocationContextValue | null>(null)

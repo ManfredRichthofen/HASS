@@ -18,7 +18,7 @@ export function LocationSettings() {
           </div>
           <p className="mt-1 text-xs text-ink-muted">
             {location.native
-              ? 'Uses Android background GPS with a persistent notification while sharing is on.'
+              ? 'Uses Android background GPS (WorkManager, ~15 min interval) and live updates while the app is open.'
               : 'Reports this browser to Home Assistant while Casa is open.'}{' '}
             Assign{' '}
             {location.entityId ? (
@@ -60,12 +60,6 @@ export function LocationSettings() {
               : location.permission
           }
         />
-        {location.native ? (
-          <Row
-            label="Background"
-            value={location.backgroundActive ? 'Active' : 'Off'}
-          />
-        ) : null}
         <Row
           label="Last report"
           value={
@@ -96,7 +90,7 @@ export function LocationSettings() {
       {location.native ? (
         <p className="text-xs text-ink-muted">
           Android: set Location to <span className="text-ink">Allow all the time</span>{' '}
-          and allow notifications so tracking continues when Casa is minimized.
+          so tracking continues when Casa is minimized.
         </p>
       ) : null}
 

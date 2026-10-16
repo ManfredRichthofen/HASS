@@ -15,7 +15,6 @@ import {
 import {
   startNativeLocationTracking,
   stopNativeLocationTracking,
-  syncNativeLocationCredentials,
 } from '#/lib/nativeLocation'
 
 export type LocationPermission = PermissionState | 'unsupported' | 'unknown'
@@ -75,7 +74,6 @@ export function useDeviceLocation() {
   )
   const [reporting, setReporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [backgroundActive, setBackgroundActive] = useState(false)
 
   const lastReportRef = useRef<LocationReportSnapshot | null>(null)
   const reportingRef = useRef(false)
@@ -86,8 +84,7 @@ export function useDeviceLocation() {
     const last = readLastLocationReport()
     lastReportRef.current = last
     setLastReport(last)
-    setBackgroundActive(native && isLocationSharingEnabled())
-  }, [native])
+  }, [])
 
   useEffect(() => {
     if (native) {
@@ -279,7 +276,6 @@ export function useDeviceLocation() {
       if (!next) {
         setLocationSharingEnabled(false)
         setEnabledState(false)
-        setBackgroundActive(false)
         setError(null)
         if (native) {
           try {
@@ -295,11 +291,10 @@ export function useDeviceLocation() {
         if (native) {
           await ensureNativePermissions()
           await startNativeLocationTracking()
-          setBackgroundActive(true)
           try {
             await getNativePosition(true)
           } catch {
-            /* FGS still running; UI snapshot optional */
+            /* worker still enqueued; UI snapshot optional */
           }
         } else {
           await getWebPosition(true)
@@ -312,7 +307,6 @@ export function useDeviceLocation() {
       } catch (e) {
         setLocationSharingEnabled(false)
         setEnabledState(false)
-        setBackgroundActive(false)
         if (native) {
           try {
             await stopNativeLocationTracking()
@@ -330,15 +324,8 @@ export function useDeviceLocation() {
   )
 
   const updateNow = useCallback(async () => {
-    if (native && enabled) {
-      try {
-        await syncNativeLocationCredentials()
-      } catch {
-        /* non-fatal */
-      }
-    }
     await getCurrentPosition(true)
-  }, [enabled, getCurrentPosition, native])
+  }, [getCurrentPosition])
 
   // Web: continuous watch while enabled + connected.
   useEffect(() => {
@@ -388,7 +375,7 @@ export function useDeviceLocation() {
     }
   }, [connected, enabled, getWebPosition, native, reportToHa])
 
-  // Native: foreground watch for live UI; FGS handles background.
+  // Native: foreground watch for live UI; WorkManager handles background.
   useEffect(() => {
     if (!native || !enabled || !connected) return
 
@@ -398,7 +385,6 @@ export function useDeviceLocation() {
     void (async () => {
       try {
         await ensureNativePermissions()
-        await syncNativeLocationCredentials()
         const geo = await loadTauriGeo()
         watchId = await geo.watchPosition(
           { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
@@ -421,15 +407,8 @@ export function useDeviceLocation() {
       }
     })()
 
-    const credentialTimer = window.setInterval(() => {
-      void syncNativeLocationCredentials().catch(() => {
-        /* ignore */
-      })
-    }, 10 * 60_000)
-
     return () => {
       cancelled = true
-      window.clearInterval(credentialTimer)
       if (watchId != null) {
         void loadTauriGeo()
           .then((geo) => geo.clearWatch(watchId!))
@@ -455,6 +434,5 @@ export function useDeviceLocation() {
     updateNow,
     supported: permission !== 'unsupported',
     native,
-    backgroundActive,
   }
 }
