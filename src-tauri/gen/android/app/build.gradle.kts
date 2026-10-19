@@ -18,7 +18,8 @@ android {
     compileSdk = 37
     namespace = "com.casa.dashboard"
     defaultConfig {
-        manifestPlaceholders["usesCleartextTraffic"] = "false"
+        // Home Assistant is commonly served over plain http on the LAN.
+        manifestPlaceholders["usesCleartextTraffic"] = "true"
         applicationId = "com.casa.dashboard"
         minSdk = 24
         targetSdk = 37
@@ -54,8 +55,11 @@ android {
         }
         getByName("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
+            // Unsigned APKs cannot be installed; fall back to the debug key for local sideloads.
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
             }
             optimization {
                enable = true

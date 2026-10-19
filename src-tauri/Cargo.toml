@@ -2,7 +2,7 @@
 name = "app"
 version = "0.1.0"
 description = "Casa Home Assistant dashboard"
-authors = ["you"]
+authors = ["Casa"]
 license = ""
 repository = "https://github.com/ManfredRichthofen/HASS"
 edition = "2024"
@@ -29,3 +29,10 @@ tauri-plugin-geolocation = "2"
 # zip feature disabled: crates.io yanked all zip ^4; NSIS updater artifacts still work.
 tauri-plugin-updater = { version = "2.14", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

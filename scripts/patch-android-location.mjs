@@ -69,7 +69,7 @@ for (const perm of permissions) {
 if (!manifest.includes('android.hardware.location.gps')) {
   manifest = manifest.replace(
     '<uses-permission android:name="android.permission.INTERNET" />',
-    `<uses-permission android:name="android.permission.INTERNET" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />`,
+    `<uses-permission android:name="android.permission.INTERNET" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />`,
   )
 }
 
