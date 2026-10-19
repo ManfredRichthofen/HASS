@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { type ReactNode, useState } from 'react'
 import { HAAppProvider } from '#/components/HAAppProvider'
 import { createQueryClient } from '#/lib/queryClient'
 

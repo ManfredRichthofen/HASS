@@ -1,25 +1,12 @@
 import { useMediaPlayer } from 'hass-react'
-import {
-  Pause,
-  Play,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-} from 'lucide-react'
-import { entityName } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
+import { Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
 
-export function MediaCard({
-  entityId,
-  compact = false,
-}: {
-  entityId: string
-  compact?: boolean
-}) {
+export function MediaCard({ entityId, compact = false }: { entityId: string; compact?: boolean }) {
   const player = useMediaPlayer(entityId)
   const name = entityName(entityId, player.attributes.friendly_name)
   const unavailable = player.isUnavailable
@@ -46,10 +33,7 @@ export function MediaCard({
         type="button"
         disabled={unavailable}
         onClick={() =>
-          void run(
-            () => (player.isPlaying ? player.pause() : player.play()),
-            'Playback failed',
-          )
+          void run(() => (player.isPlaying ? player.pause() : player.play()), 'Playback failed')
         }
         className={cn(
           'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-3 text-left transition hover:bg-surface-hover',
@@ -77,9 +61,7 @@ export function MediaCard({
     >
       <div className="mb-4">
         <p className="text-sm font-medium text-ink-muted">{name}</p>
-        <h3 className="mt-1 truncate font-display text-lg font-semibold text-ink">
-          {title}
-        </h3>
+        <h3 className="mt-1 truncate font-display text-lg font-semibold text-ink">{title}</h3>
         {artist ? <p className="truncate text-sm text-ink-muted">{artist}</p> : null}
       </div>
 
@@ -97,10 +79,7 @@ export function MediaCard({
           variant="accent"
           disabled={unavailable}
           onClick={() =>
-            void run(
-              () => (player.isPlaying ? player.pause() : player.play()),
-              'Playback failed',
-            )
+            void run(() => (player.isPlaying ? player.pause() : player.play()), 'Playback failed')
           }
         >
           {player.isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}

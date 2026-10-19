@@ -24,9 +24,7 @@ function LivingTempHistory() {
       {loading && points.length < 2 ? (
         <div className="h-[220px] animate-pulse rounded-xl bg-border/20" />
       ) : points.length < 2 ? (
-        <p className="py-16 text-center text-sm text-ink-muted">
-          Not enough history yet
-        </p>
+        <p className="py-16 text-center text-sm text-ink-muted">Not enough history yet</p>
       ) : (
         <TempHistoryChart
           points={points}
@@ -45,10 +43,7 @@ function ClimatePage() {
       <PageHeader title="Climate" subtitle="Comfort across the home" />
 
       <Section>
-        <ClimateCard
-          entityId={entities.climate}
-          fanId="fan.mts300"
-        />
+        <ClimateCard entityId={entities.climate} fanId="fan.mts300" />
       </Section>
 
       <Section title="History">

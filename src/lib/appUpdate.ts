@@ -32,8 +32,14 @@ async function getCurrentVersion(): Promise<string> {
 }
 
 function compareSemver(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map((n) => Number.parseInt(n, 10) || 0)
-  const pb = b.replace(/^v/, '').split('.').map((n) => Number.parseInt(n, 10) || 0)
+  const pa = a
+    .replace(/^v/, '')
+    .split('.')
+    .map((n) => Number.parseInt(n, 10) || 0)
+  const pb = b
+    .replace(/^v/, '')
+    .split('.')
+    .map((n) => Number.parseInt(n, 10) || 0)
   const len = Math.max(pa.length, pb.length)
   for (let i = 0; i < len; i++) {
     const d = (pa[i] ?? 0) - (pb[i] ?? 0)

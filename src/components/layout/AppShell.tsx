@@ -1,19 +1,12 @@
 import { Outlet, useRouterState } from '@tanstack/react-router'
-import { useAuth, useHAConnection } from 'hass-react'
-import { haUrl } from '#/config/ha'
-import { LocationProvider } from '#/components/location/LocationProvider'
-import { UpdateChecker } from '#/components/update/UpdateChecker'
+import { useHAConnection } from 'hass-react'
 import { BottomNav } from '#/components/layout/BottomNav'
 import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
+import { LocationProvider } from '#/components/location/LocationProvider'
 import { ToastProvider } from '#/components/ui/toast'
-import {
-  AnimatePresence,
-  LazyMotion,
-  MotionConfig,
-  domAnimation,
-  m,
-  pageFade,
-} from '#/lib/motion'
+import { UpdateChecker } from '#/components/update/UpdateChecker'
+import { haUrl } from '#/config/ha'
+import { AnimatePresence, domAnimation, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
 
 function ConnectingSplash({ label }: { label: string }) {
   return (
@@ -24,39 +17,85 @@ function ConnectingSplash({ label }: { label: string }) {
   )
 }
 
-function ConnectedShell({ children }: { children: React.ReactNode }) {
-  const url = haUrl!
-  const { connected, connecting, error, reconnect } = useHAConnection()
-  const { isAuthenticated, isLoading } = useAuth(url, 'oauth')
-
-  if (isLoading || connecting) {
-    return <ConnectingSplash label="Connecting to Home Assistant…" />
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-danger">Connection failed: {error.message}</p>
-        <button
-          type="button"
-          onClick={reconnect}
-          className="touch-target rounded-xl bg-accent px-4 text-sm font-semibold text-canvas"
-        >
-          Retry
-        </button>
+function ConnectionAction({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+}: {
+  title: string
+  detail?: string
+  actionLabel: string
+  onAction: () => void
+}) {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="size-10 animate-pulse rounded-full bg-accent/30" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-ink">{title}</p>
+        {detail ? <p className="text-sm text-ink-muted">{detail}</p> : null}
       </div>
+      <button
+        type="button"
+        onClick={onAction}
+        className="touch-target rounded-xl bg-accent px-4 text-sm font-semibold text-canvas"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  )
+}
+
+function ConnectedShell({ children }: { children: React.ReactNode }) {
+  const {
+    connected,
+    connecting,
+    error,
+    reconnect,
+    connectionState,
+    isAutoRetrying,
+    nextRetryIn,
+    lastConnectedAt,
+  } = useHAConnection()
+
+  if (connected) {
+    return (
+      <LocationProvider>
+        <UpdateChecker />
+        {children}
+      </LocationProvider>
     )
   }
 
-  if (!isAuthenticated || !connected) {
-    return <ConnectingSplash label="Redirecting to Home Assistant to sign in…" />
+  if (error || isAutoRetrying) {
+    const retrySeconds = typeof nextRetryIn === 'number' ? Math.ceil(nextRetryIn / 1000) : null
+    const detail = error
+      ? error.message
+      : retrySeconds != null
+        ? `Retrying in ${retrySeconds}s…`
+        : 'Retrying shortly…'
+
+    return (
+      <ConnectionAction
+        title={isAutoRetrying ? 'Reconnecting to Home Assistant…' : 'Connection failed'}
+        detail={detail}
+        actionLabel="Retry"
+        onAction={reconnect}
+      />
+    )
+  }
+
+  if (connecting || (connectionState === 'idle' && !lastConnectedAt)) {
+    return <ConnectingSplash label="Connecting to Home Assistant…" />
   }
 
   return (
-    <LocationProvider>
-      <UpdateChecker />
-      {children}
-    </LocationProvider>
+    <ConnectionAction
+      title="Sign in to Home Assistant"
+      detail="Connect this device to continue."
+      actionLabel="Sign in"
+      onAction={reconnect}
+    />
   )
 }
 

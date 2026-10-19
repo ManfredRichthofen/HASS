@@ -1,16 +1,10 @@
-import { useState } from 'react'
 import { useServiceCall } from 'hass-react'
-import {
-  Clapperboard,
-  Armchair,
-  LightbulbOff,
-  Sun,
-  type LucideIcon,
-} from 'lucide-react'
+import { Armchair, Clapperboard, LightbulbOff, type LucideIcon, Sun } from 'lucide-react'
+import { useState } from 'react'
+import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { m, snappy } from '#/lib/motion'
-import { notify } from '#/components/ui/toast'
 
 const icons: Record<string, LucideIcon> = {
   daylight: Sun,
@@ -21,11 +15,7 @@ const icons: Record<string, LucideIcon> = {
 
 type LightScene = (typeof entities.lightScenes)[number]
 
-export function SceneStrip({
-  scenes = entities.lightScenes,
-}: {
-  scenes?: readonly LightScene[]
-}) {
+export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonly LightScene[] }) {
   const { callService } = useServiceCall()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [lastId, setLastId] = useState<string | null>(null)
@@ -34,9 +24,7 @@ export function SceneStrip({
     setBusyId(scene.id)
     try {
       if (scene.kind === 'lights_off') {
-        const entityIds = (entities.allLightsOff as readonly string[]).filter(
-          isRoomLight,
-        )
+        const entityIds = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
         await callService('light', 'turn_off', {
           entity_id: [...entityIds],
         })

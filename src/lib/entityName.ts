@@ -55,10 +55,7 @@ export const entityLabels: Record<string, string> = {
 }
 
 /** On/off-only lighting loads (no brightness/color drawer). */
-export const simpleToggleLights = new Set([
-  'light.living_room_led',
-  'light.kitchen_led',
-])
+export const simpleToggleLights = new Set(['light.living_room_led', 'light.kitchen_led'])
 
 function titleCase(value: string) {
   return value
@@ -88,10 +85,7 @@ function cleanFriendlyName(name: string) {
   return cleaned.trim()
 }
 
-export function entityName(
-  entityId: string,
-  friendlyName?: string | null,
-): string {
+export function entityName(entityId: string, friendlyName?: string | null): string {
   if (entityLabels[entityId]) return entityLabels[entityId]
   if (friendlyName) return cleanFriendlyName(friendlyName)
 

@@ -1,23 +1,23 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEntityGroup, useServiceCall } from 'hass-react'
 import { Lightbulb, Power } from 'lucide-react'
-import { cn } from '#/lib/cn'
-import { m, snappy } from '#/lib/motion'
-import { notify } from '#/components/ui/toast'
-import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
 import { ApplianceRow } from '#/components/entities/ApplianceRow'
 import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
-import { SwitchRow } from '#/components/entities/SwitchRow'
-import { entityName } from '#/lib/entityName'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
 import { MediaCard } from '#/components/entities/MediaCard'
 import { SensorChip } from '#/components/entities/SensorChip'
+import { SwitchRow } from '#/components/entities/SwitchRow'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
+import { notify } from '#/components/ui/toast'
+import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
+import { m, snappy } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/$areaId')({
   component: RoomDetailPage,
@@ -61,12 +61,7 @@ function AllLightsCard({ ids }: { ids: string[] }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-base font-bold">All lights</span>
-        <span
-          className={cn(
-            'block text-xs',
-            isOn ? 'text-white/80' : 'text-ink-muted',
-          )}
-        >
+        <span className={cn('block text-xs', isOn ? 'text-white/80' : 'text-ink-muted')}>
           {isOn ? `${on} of ${ids.length} on` : 'All off'}
         </span>
       </span>
@@ -95,8 +90,7 @@ function RoomDetailPage() {
   const climateReadings = area.climateReadings ?? []
   const fanLights = area.fanLights ?? []
   const fanDevices = area.fanDevices ?? []
-  const hasFans =
-    area.fans.length > 0 || fanDevices.length > 0 || fanLights.length > 0
+  const hasFans = area.fans.length > 0 || fanDevices.length > 0 || fanLights.length > 0
   const empty =
     roomLights.length +
       area.fans.length +
@@ -151,11 +145,7 @@ function RoomDetailPage() {
 
       {hasFans ? (
         <Section
-          title={
-            fanLights.length && !area.fans.length && !fanDevices.length
-              ? 'Ceiling'
-              : 'Fans'
-          }
+          title={fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'}
         >
           {fanLights.length > 0 ? (
             <div className="mb-2.5 grid gap-2.5 sm:gap-3 md:grid-cols-2">

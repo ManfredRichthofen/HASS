@@ -6,15 +6,12 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent'
 type Size = 'sm' | 'md' | 'lg' | 'icon'
 
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-surface-hover text-ink border border-border hover:bg-border active:scale-[0.98]',
+  primary: 'bg-surface-hover text-ink border border-border hover:bg-border active:scale-[0.98]',
   secondary:
     'bg-surface text-ink border border-border-subtle hover:border-border hover:bg-surface-hover',
   ghost: 'bg-transparent text-ink-muted hover:bg-surface-hover hover:text-ink',
-  danger:
-    'bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25',
-  accent:
-    'bg-accent text-canvas font-semibold hover:bg-accent-strong active:scale-[0.98]',
+  danger: 'bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25',
+  accent: 'bg-accent text-canvas font-semibold hover:bg-accent-strong active:scale-[0.98]',
 }
 
 const sizes: Record<Size, string> = {

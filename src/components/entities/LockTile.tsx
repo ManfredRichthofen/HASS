@@ -1,9 +1,9 @@
 import { useLock } from 'hass-react'
 import { Lock, LockOpen } from 'lucide-react'
-import { entityName } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
 
 export function LockTile({ entityId }: { entityId: string }) {
   const lock = useLock(entityId)

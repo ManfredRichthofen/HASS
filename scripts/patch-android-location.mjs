@@ -4,20 +4,21 @@
  *
  * Uses FusedLocation PendingIntent + WorkManager (no foreground service).
  */
-import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, unlinkSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const javaDir = join(
-  root,
-  'src-tauri/gen/android/app/src/main/java/com/casa/dashboard',
-)
+const javaDir = join(root, 'src-tauri/gen/android/app/src/main/java/com/casa/dashboard')
 const sourceDir = join(root, 'src-tauri/android-location')
-const manifestPath = join(
-  root,
-  'src-tauri/gen/android/app/src/main/AndroidManifest.xml',
-)
+const manifestPath = join(root, 'src-tauri/gen/android/app/src/main/AndroidManifest.xml')
 const gradlePath = join(root, 'src-tauri/gen/android/app/build.gradle.kts')
 const proguardPath = join(root, 'src-tauri/gen/android/app/proguard-rules.pro')
 
@@ -84,10 +85,7 @@ for (const perm of [
   'android.permission.POST_NOTIFICATIONS',
 ]) {
   manifest = manifest.replace(
-    new RegExp(
-      `\\s*<uses-permission android:name="${perm.replace(/\./g, '\\.')}" />`,
-      'g',
-    ),
+    new RegExp(`\\s*<uses-permission android:name="${perm.replace(/\./g, '\\.')}" />`, 'g'),
     '',
   )
 }
@@ -134,11 +132,19 @@ const proguardRules = `# Casa location plugin is registered reflectively from Ru
 -keep class com.casa.dashboard.LocationUpdateReceiver { *; }
 -keep class com.casa.dashboard.LocationCredentialStore { *; }
 -keep class com.casa.dashboard.TrackingCredentials { *; }
+
+# WorkManager's Room database is instantiated reflectively; R8 strips its constructor otherwise
+# (crash in androidx.startup.InitializationProvider before any UI).
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class * extends androidx.work.Worker { <init>(...); }
+-keep class * extends androidx.work.CoroutineWorker { <init>(...); }
+-keep class * extends androidx.startup.Initializer { <init>(); }
 `
 
 if (
   !existsSync(proguardPath) ||
-  !readFileSync(proguardPath, 'utf8').includes('LocationTrackingPlugin')
+  !readFileSync(proguardPath, 'utf8').includes('WorkDatabase_Impl')
 ) {
   writeFileSync(proguardPath, proguardRules)
 }

@@ -49,9 +49,7 @@ export function DialogContent({
         ) : null}
         <div className="mt-4">{children}</div>
         <div className="mt-4 flex justify-end">
-          <BaseDialog.Close
-            className="inline-flex h-9 items-center rounded-xl border border-border-subtle bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-hover"
-          >
+          <BaseDialog.Close className="inline-flex h-9 items-center rounded-xl border border-border-subtle bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-hover">
             Close
           </BaseDialog.Close>
         </div>

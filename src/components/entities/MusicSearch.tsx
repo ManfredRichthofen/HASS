@@ -1,18 +1,18 @@
-import { useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useServiceCall } from 'hass-react'
 import { Loader2, Play, Search } from 'lucide-react'
-import {
-  mediaClassFilters,
-  mediaClassLabel,
-  mediaTargets,
-  parseSearchResults,
-  type MediaSearchItem,
-} from '#/lib/musicAssistant'
+import { useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
+import {
+  type MediaSearchItem,
+  mediaClassFilters,
+  mediaClassLabel,
+  mediaTargets,
+  parseSearchResults,
+} from '#/lib/musicAssistant'
 
 const ROW_ESTIMATE = 68
 
@@ -26,6 +26,7 @@ export function MusicSearch() {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+  const searchRequestId = useRef(0)
 
   const filtered = useMemo(() => {
     if (filter === 'all') return results
@@ -48,27 +49,23 @@ export function MusicSearch() {
     const q = query.trim()
     if (!q) return
 
+    const requestId = ++searchRequestId.current
     setSearching(true)
     setSearched(true)
     try {
-      const response = await callServiceWithResponse(
-        'media_player',
-        'search_media',
-        {
-          entity_id: target,
-          search_query: q,
-        },
-      )
+      const response = await callServiceWithResponse('media_player', 'search_media', {
+        entity_id: target,
+        search_query: q,
+      })
+      if (requestId !== searchRequestId.current) return
       setResults(parseSearchResults(response, target))
       listRef.current?.scrollTo({ top: 0 })
     } catch (e) {
+      if (requestId !== searchRequestId.current) return
       setResults([])
-      notify(
-        'Search failed',
-        e instanceof Error ? e.message : 'Music Assistant error',
-      )
+      notify('Search failed', e instanceof Error ? e.message : 'Music Assistant error')
     } finally {
-      setSearching(false)
+      if (requestId === searchRequestId.current) setSearching(false)
     }
   }
 
@@ -83,10 +80,7 @@ export function MusicSearch() {
       })
       notify('Playing', item.title)
     } catch (e) {
-      notify(
-        'Play failed',
-        e instanceof Error ? e.message : 'Could not start playback',
-      )
+      notify('Play failed', e instanceof Error ? e.message : 'Could not start playback')
     } finally {
       setPlayingId(null)
     }
@@ -96,15 +90,10 @@ export function MusicSearch() {
     <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-3.5 sm:space-y-4 sm:p-4">
       <div>
         <p className="text-sm text-ink-muted">Music Assistant</p>
-        <h3 className="mt-0.5 font-display text-lg font-semibold text-ink">
-          Search & play
-        </h3>
+        <h3 className="mt-0.5 font-display text-lg font-semibold text-ink">Search & play</h3>
       </div>
 
-      <form
-        onSubmit={(e) => void runSearch(e)}
-        className="flex flex-col gap-2 sm:flex-row"
-      >
+      <form onSubmit={(e) => void runSearch(e)} className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />
           <Input
@@ -164,13 +153,8 @@ export function MusicSearch() {
         </div>
       ) : null}
 
-      <div
-        ref={listRef}
-        className="max-h-[28rem] overflow-y-auto overscroll-contain"
-      >
-        {searching ? (
-          <p className="py-8 text-center text-sm text-ink-muted">Searching…</p>
-        ) : null}
+      <div ref={listRef} className="max-h-[28rem] overflow-y-auto overscroll-contain">
+        {searching ? <p className="py-8 text-center text-sm text-ink-muted">Searching…</p> : null}
 
         {!searching && searched && filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-ink-muted">
@@ -179,10 +163,7 @@ export function MusicSearch() {
         ) : null}
 
         {!searching && filtered.length > 0 ? (
-          <div
-            className="relative w-full"
-            style={{ height: virtualizer.getTotalSize() }}
-          >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = filtered[virtualRow.index]!
               return (
@@ -211,9 +192,7 @@ export function MusicSearch() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">
-                        {item.title}
-                      </p>
+                      <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
                       <p className="truncate text-xs capitalize text-ink-muted">
                         {mediaClassLabel(item.media_class)}
                       </p>

@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { cn } from '#/lib/cn'
 
 export function PageHeader({
@@ -19,12 +19,7 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <header
-      className={cn(
-        'pt-[max(0.25rem,env(safe-area-inset-top))]',
-        className,
-      )}
-    >
+    <header className={cn('pt-[max(0.25rem,env(safe-area-inset-top))]', className)}>
       {backTo ? (
         <Link
           to={backTo}
@@ -39,9 +34,7 @@ export function PageHeader({
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem] md:text-3xl">
             {title}
           </h1>
-          {subtitle ? (
-            <div className="mt-1 text-sm text-ink-muted">{subtitle}</div>
-          ) : null}
+          {subtitle ? <div className="mt-1 text-sm text-ink-muted">{subtitle}</div> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>

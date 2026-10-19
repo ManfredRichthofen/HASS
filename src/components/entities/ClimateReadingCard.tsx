@@ -1,13 +1,7 @@
 import { useBinarySensor, useSensor } from 'hass-react'
 import { cn } from '#/lib/cn'
 
-function ReadingValue({
-  entityId,
-  suffix,
-}: {
-  entityId: string
-  suffix?: string
-}) {
+function ReadingValue({ entityId, suffix }: { entityId: string; suffix?: string }) {
   const sensor = useSensor(entityId)
   if (sensor.isUnavailable) return <span>—</span>
   const value =
@@ -30,9 +24,7 @@ function OccupancyBadge({ entityId }: { entityId: string }) {
     <span
       className={cn(
         'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-        occupancy.isOn
-          ? 'bg-accent-soft text-accent'
-          : 'bg-canvas text-ink-faint',
+        occupancy.isOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
       )}
     >
       {occupancy.isOn ? 'Occupied' : 'Empty'}

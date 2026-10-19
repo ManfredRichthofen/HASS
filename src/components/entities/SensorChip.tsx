@@ -1,24 +1,17 @@
 import { useSensor } from 'hass-react'
-import { entityName } from '#/lib/entityName'
 import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
 
-export function SensorChip({
-  entityId,
-  label,
-}: {
-  entityId: string
-  label?: string
-}) {
+export function SensorChip({ entityId, label }: { entityId: string; label?: string }) {
   const sensor = useSensor(entityId)
-  const name =
-    label ?? entityName(entityId, sensor.attributes.friendly_name)
+  const name = label ?? entityName(entityId, sensor.attributes.friendly_name)
   const unit = sensor.unitOfMeasurement ?? ''
   const value =
     sensor.numericValue != null
       ? Number.isInteger(sensor.numericValue)
         ? sensor.numericValue
         : Math.round(sensor.numericValue * 10) / 10
-      : sensor.value ?? sensor.state
+      : (sensor.value ?? sensor.state)
 
   return (
     <div

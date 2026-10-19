@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
 import { useEntity, useServiceCall, useVacuum } from 'hass-react'
 import { Battery, Home, Map as MapIcon, Play, Square } from 'lucide-react'
-import { entities } from '#/config/dashboard'
+import { useMemo } from 'react'
 import { VacuumMap } from '#/components/entities/VacuumMap'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
+import { entities } from '#/config/dashboard'
 import { useVacuumDevice } from '#/hooks/useVacuumDevice'
 import { cn } from '#/lib/cn'
 
@@ -28,10 +28,7 @@ function modeLabel(value: string) {
   return value.replace(/_/g, ' ')
 }
 
-function findSelect(
-  selects: { entity_id: string; state: string }[],
-  suffixes: string[],
-) {
+function findSelect(selects: { entity_id: string; state: string }[], suffixes: string[]) {
   for (const suffix of suffixes) {
     const match = selects.find((s) => s.entity_id.endsWith(`_${suffix}`))
     if (match && match.state !== 'unavailable') return match.entity_id
@@ -39,13 +36,7 @@ function findSelect(
   return null
 }
 
-function ModeChips({
-  entityId,
-  title,
-}: {
-  entityId: string
-  title: string
-}) {
+function ModeChips({ entityId, title }: { entityId: string; title: string }) {
   const entity = useEntity<{ options?: string[] }>(entityId)
   const { callService } = useServiceCall()
   const options = entity.attributes.options ?? []
@@ -67,13 +58,10 @@ function ModeChips({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium tracking-wide text-ink-faint uppercase">
-        {title}
-      </p>
+      <p className="text-xs font-medium tracking-wide text-ink-faint uppercase">{title}</p>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => {
-          const selected =
-            current.trim().toLowerCase() === option.trim().toLowerCase()
+          const selected = current.trim().toLowerCase() === option.trim().toLowerCase()
           return (
             <button
               key={option}
@@ -112,15 +100,11 @@ export function VacuumSheet({ entityId }: { entityId: string }) {
           : (vacuum.status ?? vacuum.state)
 
   const cleaningModeId = useMemo(
-    () =>
-      findSelect(device.selects, ['cleaning_mode']) ??
-      entities.vacuumCleaningMode,
+    () => findSelect(device.selects, ['cleaning_mode']) ?? entities.vacuumCleaningMode,
     [device.selects],
   )
   const cleanGeniusId = useMemo(
-    () =>
-      findSelect(device.selects, ['cleangenius', 'clean_genius']) ??
-      entities.vacuumCleanGenius,
+    () => findSelect(device.selects, ['cleangenius', 'clean_genius']) ?? entities.vacuumCleanGenius,
     [device.selects],
   )
   const cleanGeniusModeId = useMemo(
@@ -156,9 +140,7 @@ export function VacuumSheet({ entityId }: { entityId: string }) {
       ) : (
         <div className="grid place-items-center gap-1 rounded-2xl bg-canvas py-12 text-ink-faint">
           <MapIcon className="size-6 opacity-40" />
-          <p className="text-xs">
-            {device.loading ? 'Loading map…' : 'No map camera'}
-          </p>
+          <p className="text-xs">{device.loading ? 'Loading map…' : 'No map camera'}</p>
         </div>
       )}
 
@@ -193,12 +175,8 @@ export function VacuumSheet({ entityId }: { entityId: string }) {
       </div>
 
       <div className="space-y-3.5">
-        {cleaningModeId ? (
-          <ModeChips entityId={cleaningModeId} title="Mode" />
-        ) : null}
-        {cleanGeniusId ? (
-          <ModeChips entityId={cleanGeniusId} title="CleanGenius" />
-        ) : null}
+        {cleaningModeId ? <ModeChips entityId={cleaningModeId} title="Mode" /> : null}
+        {cleanGeniusId ? <ModeChips entityId={cleanGeniusId} title="CleanGenius" /> : null}
         {cleanGeniusModeId ? (
           <ModeChips entityId={cleanGeniusModeId} title="CleanGenius level" />
         ) : null}

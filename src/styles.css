@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Outfit', 'DM Sans', ui-sans-serif, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "DM Sans", ui-sans-serif, sans-serif;
 
   --color-canvas: #0b0f17;
   --color-canvas-elevated: #10151f;
@@ -71,7 +71,7 @@ body {
 
 /* Soft ambient backdrop — cool teal wash, no glow clutter */
 body::before {
-  content: '';
+  content: "";
   pointer-events: none;
   position: fixed;
   inset: 0;

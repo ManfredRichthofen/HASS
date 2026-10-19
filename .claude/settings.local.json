@@ -1,8 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "mcp__claude_ai_Claude_Docs__guide",
-      "mcp__claude_ai_Claude_Docs__read"
-    ]
+    "allow": ["mcp__claude_ai_Claude_Docs__guide", "mcp__claude_ai_Claude_Docs__read"]
   }
 }

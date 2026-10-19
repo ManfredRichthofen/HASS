@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
+import { notify } from '#/components/ui/toast'
 import { checkForAppUpdate } from '#/lib/appUpdate'
 import { isTauri } from '#/lib/deviceLocation'
-import { notify } from '#/components/ui/toast'
 
 const NOTIFIED_KEY = 'casa.update.notified_version'
 
@@ -20,10 +20,7 @@ export function UpdateChecker() {
       } catch {
         /* private mode */
       }
-      notify(
-        `Casa ${result.version} is available`,
-        'Open Settings → App updates to install',
-      )
+      notify(`Casa ${result.version} is available`, 'Open Settings → App updates to install')
     })()
 
     return () => {

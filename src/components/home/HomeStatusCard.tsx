@@ -1,25 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import {
-  useBinarySensor,
-  useEntity,
-  useEntityGroup,
-  useLock,
-} from 'hass-react'
-import {
-  Lightbulb,
-  Lock,
-  LockOpen,
-  UserRound,
-  UserRoundX,
-  type LucideIcon,
-} from 'lucide-react'
+import { useBinarySensor, useEntity, useEntityGroup, useLock } from 'hass-react'
+import { Lightbulb, Lock, LockOpen, type LucideIcon, UserRound, UserRoundX } from 'lucide-react'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, soft } from '#/lib/motion'
 
-const watchedLights = (entities.allLightsOff as readonly string[]).filter(
-  isRoomLight,
-)
+const watchedLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
 
 export function HomeStatusCard() {
   const mode = useEntity<{ options?: string[] }>(entities.houseMode)
@@ -73,7 +59,10 @@ export function HomeStatusCard() {
           tone={someoneHome ? 'active' : 'muted'}
           icon={someoneHome ? UserRound : UserRoundX}
         />
-        <Link to="/rooms" className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <Link
+          to="/rooms"
+          className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
           <StatusCell
             label="Lights"
             value={lightsOn === 0 ? 'Off' : `${lightsOn} on`}
@@ -82,7 +71,10 @@ export function HomeStatusCard() {
             interactive
           />
         </Link>
-        <Link to="/security" className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <Link
+          to="/security"
+          className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
           <StatusCell
             label="Door"
             value={lock.isUnavailable ? '—' : locked ? 'Locked' : 'Open'}
@@ -125,7 +117,12 @@ function StatusCell({
         !interactive && 'opacity-90',
       )}
     >
-      <span className={cn('mb-1.5 grid size-8 place-items-center rounded-lg sm:mb-2 sm:size-9', tones[tone])}>
+      <span
+        className={cn(
+          'mb-1.5 grid size-8 place-items-center rounded-lg sm:mb-2 sm:size-9',
+          tones[tone],
+        )}
+      >
         <Icon className="size-3.5 sm:size-4" />
       </span>
       <p className="truncate text-[10px] font-medium text-ink-faint sm:text-[11px]">{label}</p>

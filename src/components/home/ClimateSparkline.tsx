@@ -1,14 +1,38 @@
 import { Link } from '@tanstack/react-router'
 import { useSensor } from 'hass-react'
 import { ChevronRight, Thermometer } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
 import { TempHistoryChart } from '#/components/charts/TempHistoryChart'
 import { entities } from '#/config/dashboard'
 import { useEntityHistory } from '#/hooks/useEntityHistory'
 import { cn } from '#/lib/cn'
 
+const SPARKLINE_MQ = '(min-width: 640px)'
+
+function subscribeSparklineVisible(onChange: () => void) {
+  const mql = window.matchMedia(SPARKLINE_MQ)
+  mql.addEventListener('change', onChange)
+  return () => mql.removeEventListener('change', onChange)
+}
+
+function getSparklineVisible() {
+  return window.matchMedia(SPARKLINE_MQ).matches
+}
+
+function getSparklineVisibleServer() {
+  return false
+}
+
 export function ClimateSparkline() {
+  const sparklineVisible = useSyncExternalStore(
+    subscribeSparklineVisible,
+    getSparklineVisible,
+    getSparklineVisibleServer,
+  )
   const temp = useSensor(entities.livingTemp)
-  const { points, loading } = useEntityHistory(entities.livingTemp, 24)
+  const { points, loading } = useEntityHistory(entities.livingTemp, 24, {
+    enabled: sparklineVisible,
+  })
   const current =
     temp.numericValue != null
       ? Math.round(temp.numericValue)

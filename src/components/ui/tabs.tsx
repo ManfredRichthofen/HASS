@@ -6,10 +6,7 @@ export function Tabs(props: ComponentProps<typeof BaseTabs.Root>) {
   return <BaseTabs.Root {...props} />
 }
 
-export function TabsList({
-  className,
-  ...props
-}: ComponentProps<typeof BaseTabs.List>) {
+export function TabsList({ className, ...props }: ComponentProps<typeof BaseTabs.List>) {
   return (
     <BaseTabs.List
       className={cn(
@@ -21,10 +18,7 @@ export function TabsList({
   )
 }
 
-export function TabsTab({
-  className,
-  ...props
-}: ComponentProps<typeof BaseTabs.Tab>) {
+export function TabsTab({ className, ...props }: ComponentProps<typeof BaseTabs.Tab>) {
   return (
     <BaseTabs.Tab
       className={cn(
@@ -38,9 +32,6 @@ export function TabsTab({
   )
 }
 
-export function TabsPanel({
-  className,
-  ...props
-}: ComponentProps<typeof BaseTabs.Panel>) {
+export function TabsPanel({ className, ...props }: ComponentProps<typeof BaseTabs.Panel>) {
   return <BaseTabs.Panel className={cn('outline-none', className)} {...props} />
 }

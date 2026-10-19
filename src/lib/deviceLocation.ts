@@ -4,10 +4,7 @@ const LAST_REPORT_KEY = 'casa.location.last_report'
 
 /** True when running inside the Tauri shell (Android / desktop). */
 export function isTauri(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
-  )
+  return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
 }
 
 /** Minimum seconds between HA updates while watching. */
@@ -87,12 +84,7 @@ export function writeLastLocationReport(snapshot: LocationReportSnapshot): void 
   }
 }
 
-export function haversineMeters(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180
   const R = 6371000
   const dLat = toRad(lat2 - lat1)
@@ -109,10 +101,7 @@ export function shouldReportLocation(
   force: boolean,
 ): boolean {
   if (force) return true
-  if (
-    next.accuracy != null &&
-    next.accuracy > LOCATION_MAX_ACCURACY_M
-  ) {
+  if (next.accuracy != null && next.accuracy > LOCATION_MAX_ACCURACY_M) {
     return false
   }
   if (!last) return true

@@ -1,7 +1,6 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { Settings } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCurrentUser } from 'hass-react'
-import { entities, isRoomLight } from '#/config/dashboard'
+import { Settings } from 'lucide-react'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { LightTile } from '#/components/entities/LightTile'
 import { SceneStrip } from '#/components/entities/SceneStrip'
@@ -11,6 +10,7 @@ import { QuickDeviceRow } from '#/components/home/QuickDeviceRow'
 import { WeatherCard } from '#/components/home/WeatherCard'
 import { Page } from '#/components/layout/Page'
 import { Section } from '#/components/layout/Section'
+import { entities, isRoomLight } from '#/config/dashboard'
 import { m, staggerContainer, staggerItem } from '#/lib/motion'
 
 export const Route = createFileRoute('/')({ component: HomePage })
@@ -18,8 +18,7 @@ export const Route = createFileRoute('/')({ component: HomePage })
 function HomePage() {
   const user = useCurrentUser()
   const hour = new Date().getHours()
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
     <m.div initial="initial" animate="animate" variants={staggerContainer}>
@@ -41,10 +40,7 @@ function HomePage() {
           </Link>
         </m.header>
 
-        <m.div
-          variants={staggerItem}
-          className="grid gap-3 md:grid-cols-2 md:gap-4"
-        >
+        <m.div variants={staggerItem} className="grid gap-3 md:grid-cols-2 md:gap-4">
           <HomeStatusCard />
           <WeatherCard />
         </m.div>

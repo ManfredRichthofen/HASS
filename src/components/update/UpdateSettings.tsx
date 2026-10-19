@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
-import {
-  checkForAppUpdate,
-  type UpdateCheckResult,
-} from '#/lib/appUpdate'
-import { isTauri } from '#/lib/deviceLocation'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
+import { checkForAppUpdate, type UpdateCheckResult } from '#/lib/appUpdate'
+import { isTauri } from '#/lib/deviceLocation'
 
 export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
   const [result, setResult] = useState<UpdateCheckResult | null>(null)
@@ -58,8 +55,8 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
           <p className="text-sm font-semibold text-ink">App updates</p>
           <p className="mt-1 text-xs text-ink-muted">
             Checks GitHub releases for Casa (
-            <code className="text-ink">ManfredRichthofen/HASS</code>). Desktop
-            installs update in-app; Android opens the latest APK release.
+            <code className="text-ink">ManfredRichthofen/HASS</code>). Desktop installs update
+            in-app; Android opens the latest APK release.
           </p>
         </div>
       </div>
@@ -94,12 +91,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
               void result
                 .install()
                 .then(() => notify('Installing update…'))
-                .catch((e) =>
-                  notify(
-                    'Update failed',
-                    e instanceof Error ? e.message : 'Error',
-                  ),
-                )
+                .catch((e) => notify('Update failed', e instanceof Error ? e.message : 'Error'))
                 .finally(() => setBusy(false))
             }}
           >

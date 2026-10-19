@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { haUrl } from '#/config/ha'
-import { getHaClientId, readHaAuth } from '#/lib/haAuthStorage'
 import { getOrCreateLocationDeviceId, isTauri } from '#/lib/deviceLocation'
+import { getHaClientId, readHaAuth } from '#/lib/haAuthStorage'
 
 export type NativeTrackingCredentials = {
   haUrl: string

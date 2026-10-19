@@ -30,13 +30,9 @@ function ToastList() {
     >
       {toast.title ? <Toast.Title className="font-medium">{toast.title}</Toast.Title> : null}
       {toast.description ? (
-        <Toast.Description className="text-ink-muted">
-          {toast.description}
-        </Toast.Description>
+        <Toast.Description className="text-ink-muted">{toast.description}</Toast.Description>
       ) : null}
-      <Toast.Close className="absolute top-2 right-2 text-ink-faint hover:text-ink">
-        ×
-      </Toast.Close>
+      <Toast.Close className="absolute top-2 right-2 text-ink-faint hover:text-ink">×</Toast.Close>
     </Toast.Root>
   ))
 }

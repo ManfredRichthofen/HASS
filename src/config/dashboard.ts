@@ -84,11 +84,7 @@ export const areas: AreaConfig[] = [
   {
     id: 'kitchen',
     name: 'Kitchen',
-    lights: [
-      'light.kitchen_lights',
-      'light.kitchen_under_cabinets',
-      'light.kitchen_led',
-    ],
+    lights: ['light.kitchen_lights', 'light.kitchen_under_cabinets', 'light.kitchen_led'],
     fans: [],
     media: ['media_player.kitchen'],
     sensors: [],
@@ -188,9 +184,7 @@ export const areas: AreaConfig[] = [
     fans: [],
     media: [],
     sensors: [],
-    climateReadings: [
-      { label: 'Outside', tempId: 'sensor.outdoor_temperature' },
-    ],
+    climateReadings: [{ label: 'Outside', tempId: 'sensor.outdoor_temperature' }],
     switches: [
       'switch.sprinkler_controller_front_lawn',
       'switch.sprinkler_controller_back_yard',
@@ -256,10 +250,7 @@ export const entities = {
   lock: 'lock.level_lock_pro',
   vacuum: 'vacuum.x40_ultra',
   /** Dreame map cameras — first available wins at runtime via discovery. */
-  vacuumMapCameras: [
-    'camera.x40_ultra_map',
-    'camera.x40_ultra_map_1',
-  ] as const,
+  vacuumMapCameras: ['camera.x40_ultra_map', 'camera.x40_ultra_map_1'] as const,
   vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
   vacuumCleanGenius: 'select.x40_ultra_cleangenius',
   mediaAll: 'media_player.all',
@@ -521,10 +512,7 @@ export function areaDeviceCount(area: AreaConfig): number {
 
 /** All light entity IDs in a room, including fan/light kits. */
 export function areaLightIds(area: AreaConfig): string[] {
-  return [
-    ...area.lights,
-    ...(area.fanLights ?? []).map((kit) => kit.lightId),
-  ].filter(isRoomLight)
+  return [...area.lights, ...(area.fanLights ?? []).map((kit) => kit.lightId)].filter(isRoomLight)
 }
 
 export function getArea(id: string): AreaConfig | undefined {
@@ -532,13 +520,5 @@ export function getArea(id: string): AreaConfig | undefined {
 }
 
 export const primaryAreas = areas.filter((area) =>
-  [
-    'living_room',
-    'kitchen',
-    'bedroom',
-    'office',
-    'garage',
-    'laundry',
-    'outside',
-  ].includes(area.id),
+  ['living_room', 'kitchen', 'bedroom', 'office', 'garage', 'laundry', 'outside'].includes(area.id),
 )

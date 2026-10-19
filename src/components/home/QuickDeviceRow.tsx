@@ -1,19 +1,13 @@
-import { useState, type MouseEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMediaPlayer, useVacuum } from 'hass-react'
-import {
-  ChevronRight,
-  Music2,
-  Pause,
-  Play,
-  RobotVacuum,
-} from 'lucide-react'
-import { entities } from '#/config/dashboard'
-import { cn } from '#/lib/cn'
-import { AnimatePresence, m, snappy, soft } from '#/lib/motion'
+import { ChevronRight, Music2, Pause, Play, RobotVacuum } from 'lucide-react'
+import { type MouseEvent, useState } from 'react'
 import { VacuumSheet } from '#/components/entities/VacuumSheet'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
+import { entities } from '#/config/dashboard'
+import { cn } from '#/lib/cn'
+import { AnimatePresence, m, snappy, soft } from '#/lib/motion'
 
 export function QuickDeviceRow() {
   const player = useMediaPlayer(entities.mediaAll)
@@ -22,8 +16,7 @@ export function QuickDeviceRow() {
 
   const isActive = player.isPlaying || player.isPaused
   const musicTitle = isActive
-    ? [player.mediaTitle, player.mediaArtist].filter(Boolean).join(' · ') ||
-      'Playing'
+    ? [player.mediaTitle, player.mediaArtist].filter(Boolean).join(' · ') || 'Playing'
     : 'Nothing playing. Tap to search.'
 
   const vacuumStatus = vacuum.isUnavailable
@@ -34,7 +27,7 @@ export function QuickDeviceRow() {
         ? 'Cleaning'
         : vacuum.isReturning
           ? 'Returning'
-          : vacuum.status ?? vacuum.state
+          : (vacuum.status ?? vacuum.state)
   const vacuumLabel =
     vacuum.batteryLevel != null && !vacuum.isUnavailable
       ? `${vacuumStatus} · ${vacuum.batteryLevel}%`
@@ -59,9 +52,7 @@ export function QuickDeviceRow() {
             borderColor: player.isPlaying
               ? 'rgba(94, 207, 142, 0.35)'
               : 'rgba(255, 255, 255, 0.08)',
-            backgroundColor: player.isPlaying
-              ? 'rgba(94, 207, 142, 0.05)'
-              : 'rgba(28, 34, 44, 1)',
+            backgroundColor: player.isPlaying ? 'rgba(94, 207, 142, 0.05)' : 'rgba(28, 34, 44, 1)',
           }}
           transition={soft}
           className="min-w-0 rounded-2xl border"
@@ -93,11 +84,7 @@ export function QuickDeviceRow() {
                   className="grid size-11 shrink-0 place-items-center rounded-xl bg-canvas text-ink"
                   aria-label={player.isPlaying ? 'Pause' : 'Play'}
                 >
-                  {player.isPlaying ? (
-                    <Pause className="size-4" />
-                  ) : (
-                    <Play className="size-4" />
-                  )}
+                  {player.isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
                 </m.button>
               ) : (
                 <m.span
@@ -124,9 +111,7 @@ export function QuickDeviceRow() {
             borderColor: vacuum.isCleaning
               ? 'rgba(96, 165, 250, 0.35)'
               : 'rgba(255, 255, 255, 0.08)',
-            backgroundColor: vacuum.isCleaning
-              ? 'rgba(96, 165, 250, 0.05)'
-              : 'rgba(28, 34, 44, 1)',
+            backgroundColor: vacuum.isCleaning ? 'rgba(96, 165, 250, 0.05)' : 'rgba(28, 34, 44, 1)',
           }}
           className="flex min-h-14 min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left disabled:opacity-40"
         >

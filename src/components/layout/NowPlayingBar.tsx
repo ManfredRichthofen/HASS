@@ -1,9 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useMediaPlayer } from 'hass-react'
 import { Music2, Pause, Play } from 'lucide-react'
+import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { AnimatePresence, m, snappy, soft } from '#/lib/motion'
-import { notify } from '#/components/ui/toast'
 
 /** Floating mini player that hovers above the bottom nav while music is active. */
 export function NowPlayingBar() {
@@ -52,12 +52,8 @@ export function NowPlayingBar() {
                   <Music2 className="size-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink">
-                    {title}
-                  </span>
-                  <span className="block truncate text-xs text-ink-muted">
-                    {subtitle}
-                  </span>
+                  <span className="block truncate text-sm font-semibold text-ink">{title}</span>
+                  <span className="block truncate text-xs text-ink-muted">{subtitle}</span>
                 </span>
               </Link>
               <m.button

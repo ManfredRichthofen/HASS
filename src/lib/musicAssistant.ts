@@ -32,10 +32,7 @@ export const mediaClassFilters = [
   { id: 'radio', label: 'Radio' },
 ] as const
 
-export function parseSearchResults(
-  response: unknown,
-  entityId: string,
-): MediaSearchItem[] {
+export function parseSearchResults(response: unknown, entityId: string): MediaSearchItem[] {
   const data = response as MediaSearchResponse
   const map = data?.response ?? data?.service_response ?? {}
   const bucket = map[entityId] ?? map[Object.keys(map)[0] ?? '']

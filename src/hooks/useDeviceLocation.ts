@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHAConnection, useServiceCall } from 'hass-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   formatCoords,
   getOrCreateLocationDeviceId,
   isLocationSharingEnabled,
   isTauri,
+  type LocationReportSnapshot,
   readBatteryPercent,
   readLastLocationReport,
   setLocationSharingEnabled,
   shouldReportLocation,
   writeLastLocationReport,
-  type LocationReportSnapshot,
 } from '#/lib/deviceLocation'
+import { readHaAuth } from '#/lib/haAuthStorage'
 import {
   startNativeLocationTracking,
   stopNativeLocationTracking,
   updateNativeLocationCredentials,
 } from '#/lib/nativeLocation'
-import { readHaAuth } from '#/lib/haAuthStorage'
 
 export type LocationPermission = PermissionState | 'unsupported' | 'unknown'
 
@@ -71,9 +71,7 @@ export function useDeviceLocation() {
   const [enabled, setEnabledState] = useState(false)
   const [permission, setPermission] = useState<LocationPermission>('unknown')
   const [deviceId, setDeviceId] = useState('')
-  const [lastReport, setLastReport] = useState<LocationReportSnapshot | null>(
-    null,
-  )
+  const [lastReport, setLastReport] = useState<LocationReportSnapshot | null>(null)
   const [reporting, setReporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -135,21 +133,10 @@ export function useDeviceLocation() {
   }, [native])
 
   const reportToHa = useCallback(
-    async (
-      lat: number,
-      lon: number,
-      accuracy: number | null,
-      force: boolean,
-    ) => {
+    async (lat: number, lon: number, accuracy: number | null, force: boolean) => {
       if (!connected || reportingRef.current) return
 
-      if (
-        !shouldReportLocation(
-          { lat, lon, accuracy },
-          lastReportRef.current,
-          force,
-        )
-      ) {
+      if (!shouldReportLocation({ lat, lon, accuracy }, lastReportRef.current, force)) {
         return
       }
 
@@ -176,8 +163,7 @@ export function useDeviceLocation() {
         setLastReport(snapshot)
         setDeviceId(id)
       } catch (e) {
-        const message =
-          e instanceof Error ? e.message : 'Failed to report location to HA'
+        const message = e instanceof Error ? e.message : 'Failed to report location to HA'
         setError(message)
         throw e
       } finally {
@@ -191,10 +177,7 @@ export function useDeviceLocation() {
   const ensureNativePermissions = useCallback(async () => {
     const geo = await loadTauriGeo()
     let status = await geo.checkPermissions()
-    if (
-      status.location === 'prompt' ||
-      status.location === 'prompt-with-rationale'
-    ) {
+    if (status.location === 'prompt' || status.location === 'prompt-with-rationale') {
       status = await geo.requestPermissions(['location'])
     }
     if (status.location !== 'granted') {
@@ -222,9 +205,7 @@ export function useDeviceLocation() {
             void reportToHa(
               position.coords.latitude,
               position.coords.longitude,
-              typeof position.coords.accuracy === 'number'
-                ? position.coords.accuracy
-                : null,
+              typeof position.coords.accuracy === 'number' ? position.coords.accuracy : null,
               force,
             )
               .then(resolve)
@@ -266,15 +247,12 @@ export function useDeviceLocation() {
   )
 
   const getCurrentPosition = useCallback(
-    (force: boolean) =>
-      native ? getNativePosition(force) : getWebPosition(force),
+    (force: boolean) => (native ? getNativePosition(force) : getWebPosition(force)),
     [getNativePosition, getWebPosition, native],
   )
 
   const setEnabled = useCallback(
-    async (
-      next: boolean,
-    ): Promise<{ ok: true } | { ok: false; message: string }> => {
+    async (next: boolean): Promise<{ ok: true } | { ok: false; message: string }> => {
       if (!next) {
         setLocationSharingEnabled(false)
         setEnabledState(false)
@@ -339,9 +317,7 @@ export function useDeviceLocation() {
         void reportToHa(
           position.coords.latitude,
           position.coords.longitude,
-          typeof position.coords.accuracy === 'number'
-            ? position.coords.accuracy
-            : null,
+          typeof position.coords.accuracy === 'number' ? position.coords.accuracy : null,
           false,
         ).catch(() => {
           /* error state set in reportToHa */
@@ -382,7 +358,7 @@ export function useDeviceLocation() {
     if (!native || !enabled || !connected) return
 
     let cancelled = false
-    let watchId: number | null = null
+    const watchIdRef = { current: null as number | null }
 
     void (async () => {
       try {
@@ -391,7 +367,7 @@ export function useDeviceLocation() {
         if (cancelled) return
 
         const geo = await loadTauriGeo()
-        watchId = await geo.watchPosition(
+        const watchId = await geo.watchPosition(
           { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
           (pos) => {
             if (cancelled || !pos) return
@@ -405,6 +381,15 @@ export function useDeviceLocation() {
             })
           },
         )
+
+        if (cancelled) {
+          void geo.clearWatch(watchId).catch(() => {
+            /* ignore */
+          })
+          return
+        }
+
+        watchIdRef.current = watchId
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Native location error')
@@ -414,9 +399,10 @@ export function useDeviceLocation() {
 
     return () => {
       cancelled = true
+      const watchId = watchIdRef.current
       if (watchId != null) {
         void loadTauriGeo()
-          .then((geo) => geo.clearWatch(watchId!))
+          .then((geo) => geo.clearWatch(watchId))
           .catch(() => {
             /* ignore */
           })
@@ -451,9 +437,7 @@ export function useDeviceLocation() {
     deviceId,
     entityId: deviceId ? `device_tracker.${deviceId}` : null,
     lastReport,
-    lastCoords: lastReport
-      ? formatCoords(lastReport.lat, lastReport.lon)
-      : null,
+    lastCoords: lastReport ? formatCoords(lastReport.lat, lastReport.lon) : null,
     reporting,
     error,
     updateNow,

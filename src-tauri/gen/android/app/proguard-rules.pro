@@ -10,3 +10,11 @@
 -keep class com.casa.dashboard.LocationUpdateReceiver { *; }
 -keep class com.casa.dashboard.LocationCredentialStore { *; }
 -keep class com.casa.dashboard.TrackingCredentials { *; }
+
+# WorkManager's Room database is instantiated reflectively; R8 strips its constructor otherwise
+# (crash in androidx.startup.InitializationProvider before any UI).
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class * extends androidx.work.Worker { <init>(...); }
+-keep class * extends androidx.work.CoroutineWorker { <init>(...); }
+-keep class * extends androidx.startup.Initializer { <init>(); }

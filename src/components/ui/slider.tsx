@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
 import { Slider as BaseSlider } from '@base-ui/react/slider'
 import type { ComponentProps } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '#/lib/cn'
 
 type SliderRootProps = ComponentProps<typeof BaseSlider.Root>
@@ -40,10 +40,7 @@ export function Slider({
 
   return (
     <BaseSlider.Root
-      className={cn(
-        'relative flex w-full touch-none select-none items-center',
-        className,
-      )}
+      className={cn('relative flex w-full touch-none select-none items-center', className)}
       {...props}
       value={controlled ? local : undefined}
       defaultValue={controlled ? undefined : defaultValue}

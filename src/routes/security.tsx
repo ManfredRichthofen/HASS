@@ -1,25 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  useBinarySensor,
-  useEntityGroup,
-  useLock,
-} from 'hass-react'
+import { useBinarySensor, useEntityGroup, useLock } from 'hass-react'
 import {
   DoorClosed,
   DoorOpen,
   Droplets,
+  type LucideIcon,
   ShieldAlert,
   ShieldCheck,
   UserRound,
   UserRoundX,
-  type LucideIcon,
 } from 'lucide-react'
-import { entities } from '#/config/dashboard'
 import { LockTile } from '#/components/entities/LockTile'
 import { HouseModeGrid } from '#/components/home/HouseModeGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
+import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { m, staggerContainer, staggerItem } from '#/lib/motion'
 
@@ -109,16 +105,10 @@ function SecurityPage() {
             )}
           >
             <span className="absolute inset-0 animate-ping rounded-2xl border-2 border-current opacity-20" />
-            {secure ? (
-              <ShieldCheck className="size-7" />
-            ) : (
-              <ShieldAlert className="size-7" />
-            )}
+            {secure ? <ShieldCheck className="size-7" /> : <ShieldAlert className="size-7" />}
           </span>
           <div className="min-w-0">
-            <p className="font-display text-xl font-bold tracking-tight">
-              {heroTitle}
-            </p>
+            <p className="font-display text-xl font-bold tracking-tight">{heroTitle}</p>
             <p className="text-sm text-ink-muted">{heroSub}</p>
           </div>
         </m.div>
@@ -171,13 +161,7 @@ function SecurityPage() {
             <StatusRow
               icon={someoneHome ? UserRound : UserRoundX}
               label="Someone home"
-              value={
-                occupancy.isUnavailable
-                  ? '—'
-                  : someoneHome
-                    ? 'Yes'
-                    : 'No one'
-              }
+              value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'No one'}
               tone={someoneHome ? 'ok' : 'muted'}
             />
           </Section>

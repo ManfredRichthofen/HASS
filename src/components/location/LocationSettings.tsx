@@ -1,9 +1,9 @@
 import { MapPin } from 'lucide-react'
 import { useLocationSharing } from '#/components/location/LocationProvider'
-import { formatRelativeTime } from '#/lib/deviceLocation'
 import { Button } from '#/components/ui/button'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { formatRelativeTime } from '#/lib/deviceLocation'
 
 export function LocationSettings() {
   const location = useLocationSharing()
@@ -38,11 +38,7 @@ export function LocationSettings() {
               notify('Location sharing off')
               return
             }
-            notify(
-              location.native
-                ? 'Starting background location…'
-                : 'Requesting location…',
-            )
+            notify(location.native ? 'Starting background location…' : 'Requesting location…')
             void location.setEnabled(true).then((result) => {
               if (result.ok) notify('Location sharing on')
               else notify('Could not enable location', result.message)
@@ -54,28 +50,16 @@ export function LocationSettings() {
       <div className="space-y-2 text-sm">
         <Row
           label="Permission"
-          value={
-            location.permission === 'unsupported'
-              ? 'Unsupported'
-              : location.permission
-          }
+          value={location.permission === 'unsupported' ? 'Unsupported' : location.permission}
         />
         <Row
           label="Last report"
-          value={
-            location.lastReport
-              ? formatRelativeTime(location.lastReport.at)
-              : '—'
-          }
+          value={location.lastReport ? formatRelativeTime(location.lastReport.at) : '—'}
         />
         <Row label="Coordinates" value={location.lastCoords ?? '—'} />
         <Row
           label="Accuracy"
-          value={
-            location.lastReport?.accuracy != null
-              ? `±${location.lastReport.accuracy} m`
-              : '—'
-          }
+          value={location.lastReport?.accuracy != null ? `±${location.lastReport.accuracy} m` : '—'}
         />
         {location.lastReport?.battery != null ? (
           <Row label="Battery" value={`${location.lastReport.battery}%`} />
@@ -83,14 +67,12 @@ export function LocationSettings() {
         <Row label="Entity" value={location.entityId ?? '—'} mono />
       </div>
 
-      {location.error ? (
-        <p className="text-xs text-danger">{location.error}</p>
-      ) : null}
+      {location.error ? <p className="text-xs text-danger">{location.error}</p> : null}
 
       {location.native ? (
         <p className="text-xs text-ink-muted">
-          Android: set Location to <span className="text-ink">Allow all the time</span>{' '}
-          so tracking continues when Casa is minimized.
+          Android: set Location to <span className="text-ink">Allow all the time</span> so tracking
+          continues when Casa is minimized.
         </p>
       ) : null}
 
@@ -103,10 +85,7 @@ export function LocationSettings() {
             .updateNow()
             .then(() => notify('Location sent to Home Assistant'))
             .catch((e) =>
-              notify(
-                'Location update failed',
-                e instanceof Error ? e.message : 'Error',
-              ),
+              notify('Location update failed', e instanceof Error ? e.message : 'Error'),
             )
         }}
       >
@@ -116,15 +95,7 @@ export function LocationSettings() {
   )
 }
 
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string
-  value: string
-  mono?: boolean
-}) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="shrink-0 text-ink-muted">{label}</span>

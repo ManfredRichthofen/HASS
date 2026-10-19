@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { entities } from '#/config/dashboard'
 import { MediaPlayerRow } from '#/components/entities/MediaCard'
 import { MusicSearch } from '#/components/entities/MusicSearch'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
+import { entities } from '#/config/dashboard'
 
 export const Route = createFileRoute('/media')({ component: MediaPage })
 

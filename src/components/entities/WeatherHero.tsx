@@ -1,5 +1,5 @@
 import { useSensor, useWeather } from 'hass-react'
-import { CloudRain, CloudSun, Sun, Cloud } from 'lucide-react'
+import { Cloud, CloudRain, CloudSun, Sun } from 'lucide-react'
 import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 

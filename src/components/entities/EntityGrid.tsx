@@ -1,13 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '#/lib/cn'
 
-export function EntityGrid({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
+export function EntityGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(

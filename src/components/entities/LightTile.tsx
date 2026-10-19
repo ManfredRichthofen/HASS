@@ -1,20 +1,14 @@
-import { useEffect, useState, type PointerEvent } from 'react'
 import { useLight } from 'hass-react'
 import { Lightbulb } from 'lucide-react'
-import { entityName, simpleToggleLights } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
-import {
-  AnimatePresence,
-  expandCollapse,
-  m,
-  snappy,
-  soft,
-} from '#/lib/motion'
+import { type PointerEvent, useEffect, useState } from 'react'
 import { ColorPicker } from '#/components/entities/ColorPicker'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
+import { entityName, simpleToggleLights } from '#/lib/entityName'
+import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
 
 function rgbCss(rgb?: [number, number, number] | null) {
   if (!rgb) return undefined
@@ -52,11 +46,7 @@ export function LightTile({ entityId }: { entityId: string }) {
         ? 'rgba(255, 255, 255, 0.2)'
         : 'rgba(37, 46, 64, 1)'
   const iconColor =
-    light.isOn && canColor && light.rgbColor
-      ? '#0b0f17'
-      : light.isOn
-        ? '#ffffff'
-        : '#8f9bb3'
+    light.isOn && canColor && light.rgbColor ? '#0b0f17' : light.isOn ? '#ffffff' : '#8f9bb3'
 
   useEffect(() => {
     setBrightnessPct(Math.max(1, Math.round(light.brightnessPercent) || 1))
@@ -98,9 +88,7 @@ export function LightTile({ entityId }: { entityId: string }) {
         className={cn(
           'relative flex flex-col justify-between rounded-2xl border p-3.5',
           showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.25rem]',
-          light.isOn
-            ? 'bg-on border-transparent'
-            : 'border-border-subtle bg-surface',
+          light.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
       >
@@ -121,9 +109,7 @@ export function LightTile({ entityId }: { entityId: string }) {
               <Lightbulb className="size-5" />
             </m.span>
             <span className="min-w-0 pt-1">
-              <span className="line-clamp-2 block text-sm font-semibold text-ink">
-                {name}
-              </span>
+              <span className="line-clamp-2 block text-sm font-semibold text-ink">{name}</span>
               <span
                 className={cn(
                   'mt-0.5 block text-xs',
@@ -162,8 +148,7 @@ export function LightTile({ entityId }: { entityId: string }) {
                 <span
                   className="size-6 rounded-full border border-border"
                   style={{
-                    background:
-                      'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                    background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
                   }}
                 />
               )}
@@ -232,9 +217,7 @@ export function LightTile({ entityId }: { entityId: string }) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-ink-muted">White temperature</span>
-                    <span className="tabular-nums text-ink">
-                      {light.colorTemp ?? '—'}K
-                    </span>
+                    <span className="tabular-nums text-ink">{light.colorTemp ?? '—'}K</span>
                   </div>
                   <Slider
                     aria-label="Color temperature"
@@ -244,18 +227,15 @@ export function LightTile({ entityId }: { entityId: string }) {
                     disabled={unavailable || !light.isOn}
                     value={
                       light.colorTemp ??
-                      Math.round(
-                        (light.minColorTempKelvin + light.maxColorTempKelvin) / 2,
-                      )
+                      Math.round((light.minColorTempKelvin + light.maxColorTempKelvin) / 2)
                     }
                     onValueCommitted={(value) => {
                       const next = Array.isArray(value) ? value[0] : value
-                      void light.setColorTemp(next).catch((e) =>
-                        notify(
-                          'Temp failed',
-                          e instanceof Error ? e.message : 'Error',
-                        ),
-                      )
+                      void light
+                        .setColorTemp(next)
+                        .catch((e) =>
+                          notify('Temp failed', e instanceof Error ? e.message : 'Error'),
+                        )
                     }}
                   />
                 </div>

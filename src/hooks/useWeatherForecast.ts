@@ -20,8 +20,7 @@ type ForecastResponse =
 
 function parseForecast(response: ForecastResponse, days: number): ForecastDay[] {
   const map =
-    (response as { response?: Record<string, { forecast?: ForecastDay[] }> })
-      ?.response ??
+    (response as { response?: Record<string, { forecast?: ForecastDay[] }> })?.response ??
     (response as { service_response?: Record<string, { forecast?: ForecastDay[] }> })
       ?.service_response ??
     (response as Record<string, { forecast?: ForecastDay[] }>)
@@ -39,20 +38,16 @@ export function useWeatherForecast(days = 5) {
     staleTime: 10 * 60_000,
     refetchInterval: 15 * 60_000,
     queryFn: async () => {
-      const response = await callServiceWithResponse<ForecastResponse>(
-        'weather',
-        'get_forecasts',
-        {
-          entity_id: entities.weather,
-          type: 'daily',
-        },
-      )
+      const response = await callServiceWithResponse<ForecastResponse>('weather', 'get_forecasts', {
+        entity_id: entities.weather,
+        type: 'daily',
+      })
       return parseForecast(response, days)
     },
   })
 
   return {
     forecast: query.data ?? [],
-    loading: query.isLoading || query.isPending,
+    loading: query.isLoading,
   }
 }

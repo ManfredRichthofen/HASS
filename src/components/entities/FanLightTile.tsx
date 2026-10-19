@@ -1,17 +1,11 @@
-import { useEffect, useMemo, useState, type PointerEvent } from 'react'
 import { useFan, useLight } from 'hass-react'
 import { Fan, Lightbulb, Wind } from 'lucide-react'
-import { cn } from '#/lib/cn'
-import {
-  AnimatePresence,
-  expandCollapse,
-  m,
-  snappy,
-  soft,
-} from '#/lib/motion'
+import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
+import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
 
 const speedPresets = [
   { label: 'Low', value: 33 },
@@ -47,10 +41,7 @@ export function FanLightTile({
   const canSpeed = fan.supportsSetSpeed
   const showFanControls = canSpeed && !fan.isUnavailable
   const showInline = showFanControls && fan.isOn
-  const activePreset = useMemo(
-    () => (canSpeed ? nearestPreset(speed) : null),
-    [canSpeed, speed],
-  )
+  const activePreset = useMemo(() => (canSpeed ? nearestPreset(speed) : null), [canSpeed, speed])
   const active = light.isOn || fan.isOn
 
   useEffect(() => {
@@ -107,9 +98,7 @@ export function FanLightTile({
       transition={soft}
       className={cn(
         'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
-        showInline || (!fan.isOn && showFanControls)
-          ? 'min-h-[12.5rem]'
-          : 'min-h-[8.5rem]',
+        showInline || (!fan.isOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
         active ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
         unavailable && 'opacity-40',
       )}
@@ -117,12 +106,7 @@ export function FanLightTile({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 pt-0.5">
           <p className="text-sm font-semibold tracking-tight text-ink">{label}</p>
-          <p
-            className={cn(
-              'mt-0.5 text-xs',
-              active ? 'text-white/80' : 'text-ink-muted',
-            )}
-          >
+          <p className={cn('mt-0.5 text-xs', active ? 'text-white/80' : 'text-ink-muted')}>
             Light {light.isOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
           </p>
         </div>
@@ -134,11 +118,7 @@ export function FanLightTile({
         >
           <Fan
             className={cn('size-5', fan.isOn && 'animate-spin')}
-            style={
-              fan.isOn
-                ? { animationDuration: spinDuration(speed || 40) }
-                : undefined
-            }
+            style={fan.isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
           />
         </span>
       </div>
@@ -161,10 +141,7 @@ export function FanLightTile({
             <Lightbulb className="size-3.5" />
             Light
           </span>
-          <span
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
+          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <Switch
               checked={light.isOn}
               disabled={light.isUnavailable}
@@ -190,10 +167,7 @@ export function FanLightTile({
             <Fan className="size-3.5" />
             Fan
           </span>
-          <span
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
+          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <Switch
               checked={fan.isOn}
               disabled={fan.isUnavailable}
@@ -216,8 +190,7 @@ export function FanLightTile({
             <div className="mt-3 space-y-2">
               <div className="flex gap-1.5">
                 {speedPresets.map((preset) => {
-                  const selected =
-                    fan.isOn && activePreset?.value === preset.value
+                  const selected = fan.isOn && activePreset?.value === preset.value
                   return (
                     <button
                       key={preset.label}

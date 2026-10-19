@@ -16,9 +16,7 @@ function downsample(points: HistoryPoint[], maxPoints: number): HistoryPoint[] {
   return sampled
 }
 
-function toPoints(
-  series: Array<{ state: string; last_changed: string }>,
-): HistoryPoint[] {
+function toPoints(series: Array<{ state: string; last_changed: string }>): HistoryPoint[] {
   return downsample(
     series
       .map((row) => ({
@@ -30,12 +28,13 @@ function toPoints(
   )
 }
 
-export function useEntityHistory(entityId: string, hours = 24) {
+export function useEntityHistory(entityId: string, hours = 24, options?: { enabled?: boolean }) {
   const { connection, connected } = useHAConnection()
+  const enabled = Boolean(connection && connected) && (options?.enabled ?? true)
 
   const query = useQuery({
     queryKey: ['entity-history', entityId, hours],
-    enabled: Boolean(connection && connected),
+    enabled,
     staleTime: 2 * 60_000,
     refetchInterval: 5 * 60_000,
     queryFn: async () => {
@@ -58,9 +57,7 @@ export function useEntityHistory(entityId: string, hours = 24) {
           no_attributes: true,
         })
 
-        const series = Array.isArray(result)
-          ? (result[0] ?? [])
-          : (result?.[entityId] ?? [])
+        const series = Array.isArray(result) ? (result[0] ?? []) : (result?.[entityId] ?? [])
 
         return toPoints(series)
       } catch {
@@ -81,6 +78,6 @@ export function useEntityHistory(entityId: string, hours = 24) {
 
   return {
     points: query.data ?? [],
-    loading: query.isLoading || query.isPending,
+    loading: query.isLoading,
   }
 }

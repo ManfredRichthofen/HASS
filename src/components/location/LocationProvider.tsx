@@ -1,15 +1,10 @@
-import { createContext, useContext, type ReactNode } from 'react'
-import {
-  useDeviceLocation,
-  type LocationPermission,
-} from '#/hooks/useDeviceLocation'
+import { createContext, type ReactNode, useContext } from 'react'
+import { type LocationPermission, useDeviceLocation } from '#/hooks/useDeviceLocation'
 import type { LocationReportSnapshot } from '#/lib/deviceLocation'
 
 type LocationContextValue = {
   enabled: boolean
-  setEnabled: (
-    enabled: boolean,
-  ) => Promise<{ ok: true } | { ok: false; message: string }>
+  setEnabled: (enabled: boolean) => Promise<{ ok: true } | { ok: false; message: string }>
   permission: LocationPermission
   deviceId: string
   entityId: string | null
@@ -27,11 +22,7 @@ const LocationContext = createContext<LocationContextValue | null>(null)
 /** Keeps foreground geolocation watch + background WorkManager armed for the session. */
 export function LocationProvider({ children }: { children: ReactNode }) {
   const location = useDeviceLocation()
-  return (
-    <LocationContext.Provider value={location}>
-      {children}
-    </LocationContext.Provider>
-  )
+  return <LocationContext.Provider value={location}>{children}</LocationContext.Provider>
 }
 
 export function useLocationSharing(): LocationContextValue {

@@ -1,7 +1,7 @@
 import { useSensor, useSwitch } from 'hass-react'
-import { cn } from '#/lib/cn'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
 
 /** Appliance power switch with its current cycle status underneath. */
 export function ApplianceRow({
@@ -34,9 +34,9 @@ export function ApplianceRow({
         checked={power.isOn}
         disabled={power.isUnavailable}
         onCheckedChange={() => {
-          void power.toggle().catch((e) =>
-            notify('Switch failed', e instanceof Error ? e.message : 'Error'),
-          )
+          void power
+            .toggle()
+            .catch((e) => notify('Switch failed', e instanceof Error ? e.message : 'Error'))
         }}
       />
     </div>

@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCurrentUser, useHAConnection } from 'hass-react'
-import { haUrl } from '#/config/ha'
-import { LocationSettings } from '#/components/location/LocationSettings'
-import { UpdateSettings } from '#/components/update/UpdateSettings'
-import { isTauri } from '#/lib/deviceLocation'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
+import { LocationSettings } from '#/components/location/LocationSettings'
 import { Button } from '#/components/ui/button'
+import { UpdateSettings } from '#/components/update/UpdateSettings'
+import { haUrl } from '#/config/ha'
+import { isTauri } from '#/lib/deviceLocation'
 
 export const Route = createFileRoute('/settings')({ component: SettingsPage })
 

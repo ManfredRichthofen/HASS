@@ -1,29 +1,29 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEntityGroup, useSensor, useServiceCall } from 'hass-react'
 import {
   BedDouble,
   CookingPot,
   LayoutGrid,
+  type LucideIcon,
   Monitor,
   Power,
   Sofa,
   TreePine,
   Warehouse,
   WashingMachine,
-  type LucideIcon,
 } from 'lucide-react'
+import { Page } from '#/components/layout/Page'
+import { PageHeader } from '#/components/layout/PageHeader'
+import { notify } from '#/components/ui/toast'
 import {
+  type AreaConfig,
   areaDeviceCount,
   areaLightIds,
   areaTempId,
   entities,
   isRoomLight,
   primaryAreas,
-  type AreaConfig,
 } from '#/config/dashboard'
-import { Page } from '#/components/layout/Page'
-import { PageHeader } from '#/components/layout/PageHeader'
-import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import { m, snappy, staggerContainer, staggerItem } from '#/lib/motion'
 
@@ -39,9 +39,7 @@ const roomIcons: Record<string, LucideIcon> = {
   outside: TreePine,
 }
 
-const allLights = (entities.allLightsOff as readonly string[]).filter(
-  isRoomLight,
-)
+const allLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
 
 function Temp({ entityId }: { entityId: string }) {
   const temp = useSensor(entityId)
@@ -59,8 +57,7 @@ function RoomCard({ area }: { area: AreaConfig }) {
   const Icon = roomIcons[area.id] ?? LayoutGrid
   const tempId = areaTempId(area)
   const deviceCount = areaDeviceCount(area)
-  const hasClimate =
-    (area.climateReadings?.length ?? 0) > 0 || area.sensors.length > 0
+  const hasClimate = (area.climateReadings?.length ?? 0) > 0 || area.sensors.length > 0
 
   async function togglePower() {
     try {
@@ -114,9 +111,7 @@ function RoomCard({ area }: { area: AreaConfig }) {
           aria-label={`${isOn ? 'Turn off' : 'Turn on'} ${area.name} lights`}
           className={cn(
             'absolute top-2.5 right-2.5 z-[2] grid size-11 place-items-center rounded-full transition',
-            isOn
-              ? 'bg-white/20 text-white'
-              : 'bg-white/5 text-ink-muted hover:text-ink',
+            isOn ? 'bg-white/20 text-white' : 'bg-white/5 text-ink-muted hover:text-ink',
           )}
         >
           <Power className="size-5" />
@@ -126,12 +121,7 @@ function RoomCard({ area }: { area: AreaConfig }) {
         <p className="truncate font-display text-[1.0625rem] font-bold tracking-tight">
           {area.name}
         </p>
-        <p
-          className={cn(
-            'truncate text-xs',
-            isOn ? 'text-white/80' : 'text-ink-muted',
-          )}
-        >
+        <p className={cn('truncate text-xs', isOn ? 'text-white/80' : 'text-ink-muted')}>
           {status}
           {tempId ? <Temp entityId={tempId} /> : null}
         </p>
@@ -163,9 +153,7 @@ function AllLightsOff() {
       transition={snappy}
       className={cn(
         'flex min-h-13 w-full items-center justify-center gap-2.5 rounded-2xl text-[0.9375rem] font-bold transition',
-        on === 0
-          ? 'bg-surface text-ink-faint'
-          : 'bg-surface text-ink hover:bg-surface-hover',
+        on === 0 ? 'bg-surface text-ink-faint' : 'bg-surface text-ink hover:bg-surface-hover',
       )}
     >
       <Power className="size-5" />

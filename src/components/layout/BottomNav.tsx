@@ -1,13 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  Home,
-  LayoutGrid,
-  Thermometer,
-  Music2,
-  Shield,
-} from 'lucide-react'
+import { Home, LayoutGrid, Music2, Shield, Thermometer } from 'lucide-react'
 import { cn } from '#/lib/cn'
-import { LayoutGroup, m, indicator } from '#/lib/motion'
+import { indicator, LayoutGroup, m } from '#/lib/motion'
 
 const items = [
   { to: '/', label: 'Home', icon: Home, match: 'exact' as const },
@@ -31,9 +25,7 @@ export function BottomNav() {
         <div className="mx-auto flex w-full max-w-2xl items-stretch justify-between px-2 sm:px-3">
           {items.map(({ to, label, icon: Icon, match }) => {
             const active =
-              match === 'exact'
-                ? pathname === to
-                : pathname === to || pathname.startsWith(`${to}/`)
+              match === 'exact' ? pathname === to : pathname === to || pathname.startsWith(`${to}/`)
 
             return (
               <Link
@@ -52,10 +44,7 @@ export function BottomNav() {
                       transition={indicator}
                     />
                   ) : null}
-                  <Icon
-                    className="relative size-5"
-                    strokeWidth={active ? 2.4 : 2}
-                  />
+                  <Icon className="relative size-5" strokeWidth={active ? 2.4 : 2} />
                 </span>
                 <span className="truncate">{label}</span>
               </Link>

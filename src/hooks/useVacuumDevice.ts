@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useHAConnection, type EntityState } from 'hass-react'
+import { useQuery } from '@tanstack/react-query'
+import { type EntityState, useHAConnection } from 'hass-react'
+import { useMemo } from 'react'
 
 function vacuumSlug(entityId: string) {
   return entityId.replace(/^vacuum\./, '')
@@ -14,10 +15,7 @@ function isRelated(entityId: string, slug: string) {
   )
 }
 
-function preferMapCamera(
-  cameras: EntityState[],
-  preferredIds: readonly string[] = [],
-) {
+function preferMapCamera(cameras: EntityState[], preferredIds: readonly string[] = []) {
   const scored = cameras.map((camera) => {
     const id = camera.entity_id
     let score = 0
@@ -27,8 +25,7 @@ function preferMapCamera(
     else if (id.endsWith('_map') || id.includes('_map_')) score += 20
     if (id.includes('saved') || id.includes('recovery')) score -= 10
     if (camera.state !== 'unavailable' && camera.state !== 'unknown') score += 5
-    if (camera.attributes.access_token || camera.attributes.entity_picture)
-      score += 5
+    if (camera.attributes.access_token || camera.attributes.entity_picture) score += 5
     return { camera, score }
   })
   scored.sort((a, b) => b.score - a.score)
@@ -54,35 +51,21 @@ export function useVacuumDevice(
 ): VacuumDeviceInfo {
   const { connection, connected } = useHAConnection()
   const slug = vacuumSlug(vacuumEntityId)
-  const [related, setRelated] = useState<EntityState[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!connection || !connected) {
-      setLoading(Boolean(connection && !connected))
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-
-    void connection
-      .sendMessagePromise<EntityState[]>({ type: 'get_states' })
-      .then((states) => {
-        if (cancelled) return
-        setRelated(states.filter((state) => isRelated(state.entity_id, slug)))
+  const query = useQuery({
+    queryKey: ['vacuum-related', slug],
+    enabled: Boolean(connection && connected),
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      if (!connection) return [] as EntityState[]
+      const states = await connection.sendMessagePromise<EntityState[]>({
+        type: 'get_states',
       })
-      .catch(() => {
-        if (!cancelled) setRelated([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      return states.filter((state) => isRelated(state.entity_id, slug))
+    },
+  })
 
-    return () => {
-      cancelled = true
-    }
-  }, [connection, connected, slug])
+  const related = query.data ?? []
 
   return useMemo(() => {
     const cameras = related.filter((e) => e.entity_id.startsWith('camera.'))
@@ -95,14 +78,12 @@ export function useVacuumDevice(
       mapCameraId: mapCamera?.entity_id ?? preferredMapCameras[0] ?? null,
       sensors: related.filter((e) => e.entity_id.startsWith('sensor.')),
       switches: related.filter((e) => e.entity_id.startsWith('switch.')),
-      binarySensors: related.filter((e) =>
-        e.entity_id.startsWith('binary_sensor.'),
-      ),
+      binarySensors: related.filter((e) => e.entity_id.startsWith('binary_sensor.')),
       selects: related.filter((e) => e.entity_id.startsWith('select.')),
       buttons: related.filter((e) => e.entity_id.startsWith('button.')),
-      loading,
+      loading: query.isLoading,
     }
-  }, [loading, preferredMapCameras, related, slug])
+  }, [preferredMapCameras, related, slug, query.isLoading])
 }
 
 export function friendlyLabel(entityId: string, attributes: Record<string, unknown>) {

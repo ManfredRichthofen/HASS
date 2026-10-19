@@ -1,12 +1,12 @@
 import { useClimate, useFan } from 'hass-react'
 import { Fan, Minus, Plus, Thermometer } from 'lucide-react'
-import { entityName } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
-import { Toggle } from '#/components/ui/toggle'
 import { notify } from '#/components/ui/toast'
+import { Toggle } from '#/components/ui/toggle'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
 
 const modes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'fan_only'] as const
 
@@ -32,9 +32,9 @@ function ThermostatFanRow({ fanId }: { fanId: string }) {
       <Switch
         checked={fan.isOn}
         onCheckedChange={() => {
-          void fan.toggle().catch((e) =>
-            notify('Fan failed', e instanceof Error ? e.message : 'Error'),
-          )
+          void fan
+            .toggle()
+            .catch((e) => notify('Fan failed', e instanceof Error ? e.message : 'Error'))
         }}
       />
     </div>
@@ -73,9 +73,7 @@ export function ClimateCard({
     }
   }
 
-  const supported = climate.supportedModes.length
-    ? climate.supportedModes
-    : [...modes]
+  const supported = climate.supportedModes.length ? climate.supportedModes : [...modes]
 
   if (compact) {
     return (

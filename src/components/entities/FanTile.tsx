@@ -1,20 +1,14 @@
-import { useEffect, useMemo, useState, type PointerEvent } from 'react'
 import { useFan, useSensor } from 'hass-react'
 import { ArrowDownUp, Fan, SlidersHorizontal, Wind } from 'lucide-react'
-import { entityName } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
-import {
-  AnimatePresence,
-  expandCollapse,
-  m,
-  snappy,
-  soft,
-} from '#/lib/motion'
+import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
-import { Toggle } from '#/components/ui/toggle'
 import { notify } from '#/components/ui/toast'
+import { Toggle } from '#/components/ui/toggle'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
+import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
 
 const speedPresets = [
   { label: 'Low', value: 33 },
@@ -33,13 +27,7 @@ function spinDuration(pct: number) {
   return `${3.6 - (clamped / 100) * 2.8}s`
 }
 
-function SensorReading({
-  entityId,
-  kind,
-}: {
-  entityId: string
-  kind: 'temp' | 'humidity'
-}) {
+function SensorReading({ entityId, kind }: { entityId: string; kind: 'temp' | 'humidity' }) {
   const sensor = useSensor(entityId)
   if (sensor.isUnavailable || sensor.numericValue == null) return null
   const value =
@@ -69,9 +57,7 @@ function SensorHint({
     >
       {tempId ? <SensorReading entityId={tempId} kind="temp" /> : null}
       {tempId && humidityId ? <span aria-hidden>·</span> : null}
-      {humidityId ? (
-        <SensorReading entityId={humidityId} kind="humidity" />
-      ) : null}
+      {humidityId ? <SensorReading entityId={humidityId} kind="humidity" /> : null}
     </span>
   )
 }
@@ -98,10 +84,7 @@ export function FanTile({
   const presets = fan.availablePresetModes.filter(Boolean)
   const showInline = canSpeed && fan.isOn && !unavailable
   const hasSensors = Boolean(tempId || humidityId)
-  const activePreset = useMemo(
-    () => (canSpeed ? nearestPreset(speed) : null),
-    [canSpeed, speed],
-  )
+  const activePreset = useMemo(() => (canSpeed ? nearestPreset(speed) : null), [canSpeed, speed])
 
   useEffect(() => {
     setSpeed(Math.max(0, Math.round(fan.percentage) || 0))
@@ -160,9 +143,7 @@ export function FanTile({
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
-          fan.isOn
-            ? 'bg-on border-transparent'
-            : 'border-border-subtle bg-surface',
+          fan.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
         )}
       >
@@ -178,24 +159,16 @@ export function FanTile({
             <span
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-xl',
-                fan.isOn
-                  ? 'bg-white/20 text-white'
-                  : 'bg-[#252e40] text-ink-muted',
+                fan.isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
               )}
             >
               <Fan
                 className={cn('size-5', fan.isOn && 'animate-spin')}
-                style={
-                  fan.isOn
-                    ? { animationDuration: spinDuration(speed || 40) }
-                    : undefined
-                }
+                style={fan.isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
               />
             </span>
             <span className="min-w-0 pt-1">
-              <span className="block text-sm font-semibold tracking-tight text-ink">
-                {name}
-              </span>
+              <span className="block text-sm font-semibold tracking-tight text-ink">{name}</span>
               <span
                 className={cn(
                   'mt-0.5 block text-xs',
@@ -205,11 +178,7 @@ export function FanTile({
                 {status}
               </span>
               {hasSensors ? (
-                <SensorHint
-                  tempId={tempId}
-                  humidityId={humidityId}
-                  onCard={fan.isOn}
-                />
+                <SensorHint tempId={tempId} humidityId={humidityId} onCard={fan.isOn} />
               ) : null}
             </span>
           </m.button>
@@ -401,12 +370,11 @@ export function FanTile({
                       checked={Boolean(fan.isOscillating)}
                       disabled={unavailable || !fan.isOn}
                       onCheckedChange={(checked) => {
-                        void fan.setOscillating(checked).catch((e) =>
-                          notify(
-                            'Oscillate failed',
-                            e instanceof Error ? e.message : 'Error',
-                          ),
-                        )
+                        void fan
+                          .setOscillating(checked)
+                          .catch((e) =>
+                            notify('Oscillate failed', e instanceof Error ? e.message : 'Error'),
+                          )
                       }}
                     />
                   </div>
@@ -416,14 +384,12 @@ export function FanTile({
                     type="button"
                     disabled={unavailable || !fan.isOn}
                     onClick={() => {
-                      const next =
-                        fan.direction === 'reverse' ? 'forward' : 'reverse'
-                      void fan.setDirection(next).catch((e) =>
-                        notify(
-                          'Direction failed',
-                          e instanceof Error ? e.message : 'Error',
-                        ),
-                      )
+                      const next = fan.direction === 'reverse' ? 'forward' : 'reverse'
+                      void fan
+                        .setDirection(next)
+                        .catch((e) =>
+                          notify('Direction failed', e instanceof Error ? e.message : 'Error'),
+                        )
                     }}
                     className="flex items-center justify-between rounded-2xl border border-border-subtle bg-canvas/40 px-3 py-2.5 text-left text-sm text-ink disabled:opacity-40"
                   >

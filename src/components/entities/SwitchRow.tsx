@@ -1,8 +1,8 @@
 import { useSwitch } from 'hass-react'
-import { entityName } from '#/lib/entityName'
-import { cn } from '#/lib/cn'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { cn } from '#/lib/cn'
+import { entityName } from '#/lib/entityName'
 
 export function SwitchRow({
   entityId,
@@ -16,11 +16,7 @@ export function SwitchRow({
 }) {
   const sw = useSwitch(entityId)
   const name =
-    label ??
-    entityName(
-      entityId,
-      (sw.attributes as { friendly_name?: string }).friendly_name,
-    )
+    label ?? entityName(entityId, (sw.attributes as { friendly_name?: string }).friendly_name)
 
   return (
     <div
@@ -40,9 +36,9 @@ export function SwitchRow({
           checked={sw.isOn}
           disabled={sw.isUnavailable}
           onCheckedChange={() => {
-            void sw.toggle().catch((e) =>
-              notify('Switch failed', e instanceof Error ? e.message : 'Error'),
-            )
+            void sw
+              .toggle()
+              .catch((e) => notify('Switch failed', e instanceof Error ? e.message : 'Error'))
           }}
         />
       ) : null}

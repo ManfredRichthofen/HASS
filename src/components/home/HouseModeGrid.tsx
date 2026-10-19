@@ -1,7 +1,7 @@
 import { useEntity, useServiceCall } from 'hass-react'
+import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { notify } from '#/components/ui/toast'
 
 function modeMatches(current: string, label: string) {
   return current.trim().toLowerCase() === label.trim().toLowerCase()

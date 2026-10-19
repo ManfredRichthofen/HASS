@@ -1,13 +1,8 @@
+import { ClientOnly, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
-import {
-  ClientOnly,
-  HeadContent,
-  Scripts,
-  createRootRoute,
-} from '@tanstack/react-router'
 import { AppProviders } from '#/components/AppProviders'
-import { PwaRegister } from '#/components/PwaRegister'
 import { AppShell } from '#/components/layout/AppShell'
+import { PwaRegister } from '#/components/PwaRegister'
 
 import appCss from '../styles.css?url'
 
@@ -15,9 +10,7 @@ const fontCss =
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap'
 
 const Devtools = import.meta.env.DEV
-  ? lazy(() =>
-      import('#/components/Devtools').then((mod) => ({ default: mod.Devtools })),
-    )
+  ? lazy(() => import('#/components/Devtools').then((mod) => ({ default: mod.Devtools })))
   : null
 
 export const Route = createRootRoute({
