@@ -23,8 +23,8 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/react-devtools": "0.10.13",
-    "@tanstack/react-query": "^5.104.3",
-    "@tanstack/react-query-devtools": "^5.104.3",
+    "@tanstack/react-query": "^5.104.4",
+    "@tanstack/react-query-devtools": "^5.104.4",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-start": "1.168.61",
@@ -35,8 +35,8 @@
     "@tauri-apps/plugin-updater": "^2.14.0",
     "clsx": "^2.1.1",
     "hass-react": "^1.0.0",
-    "lucide-react": "^1.58.0",
-    "motion": "^14.3.0",
+    "lucide-react": "^1.59.0",
+    "motion": "^14.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwindcss": "^4.3.3"
@@ -53,7 +53,7 @@
     "sharp": "^0.35.5",
     "typescript": "^6.0.3",
     "vite": "^8.3.4",
-    "wrangler": "^4.151.1"
+    "wrangler": "^4.151.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
