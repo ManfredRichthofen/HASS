@@ -3,6 +3,8 @@ package com.casa.dashboard
 import android.content.Context
 import android.location.Location
 import android.os.BatteryManager
+import android.os.Build
+import android.provider.Settings
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.android.gms.location.LocationServices
@@ -77,11 +79,12 @@ class LocationWorker(context: Context, params: WorkerParameters) :
         accuracy: Float?,
         battery: Int?,
     ): Boolean {
+        val deviceName = readDeviceName()
         val body = JSONObject().apply {
             put("dev_id", creds.deviceId)
             put("gps", JSONArray().put(lat).put(lon))
             if (accuracy != null) put("gps_accuracy", accuracy.toInt())
-            put("host_name", "Casa Android")
+            put("host_name", deviceName)
             if (battery != null) put("battery", battery)
         }
         return try {
@@ -139,5 +142,17 @@ class LocationWorker(context: Context, params: WorkerParameters) :
         val mgr = applicationContext.getSystemService(BatteryManager::class.java) ?: return null
         val level = mgr.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
         return if (level in 0..100) level else null
+    }
+
+    private fun readDeviceName(): String {
+        val fromSettings = try {
+            Settings.Global.getString(applicationContext.contentResolver, Settings.Global.DEVICE_NAME)
+        } catch (_: Exception) {
+            null
+        }
+        val candidate = fromSettings?.trim().orEmpty().ifBlank {
+            Build.MODEL?.trim().orEmpty()
+        }
+        return candidate.ifBlank { "Android" }
     }
 }

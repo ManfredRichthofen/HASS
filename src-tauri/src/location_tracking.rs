@@ -88,6 +88,32 @@ pub fn location_tracking_update_credentials(
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceNameResult {
+    pub name: String,
+}
+
+#[tauri::command]
+pub fn location_tracking_get_device_name(app: AppHandle) -> Result<DeviceNameResult, String> {
+    #[cfg(target_os = "android")]
+    {
+        let state = app
+            .try_state::<LocationTrackingState>()
+            .ok_or_else(|| {
+                "Location tracking is not available (plugin failed to load)".to_string()
+            })?;
+        state
+            .0
+            .run_mobile_plugin("getDeviceName", ())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Err("Device name is only available on Android".into())
+    }
+}
+
 /// Registers the Android Kotlin plugin. Failures are logged so the app still launches;
 /// start/stop commands then return a clear error instead of aborting process init.
 #[cfg(target_os = "android")]

@@ -1,6 +1,5 @@
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { useServiceCall } from 'hass-react'
-import { ListPlus, ListStart, Loader2, Play, Search } from 'lucide-react'
+import { Disc3, ListPlus, ListStart, Loader2, Music2, Play, Search } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -12,19 +11,139 @@ import {
   type MediaSearchItem,
   mediaClassFilters,
   mediaClassLabel,
-  mediaTargets,
   parseSearchResults,
 } from '#/lib/musicAssistant'
 
-const ROW_ESTIMATE = 68
+const GROUP_ORDER = ['track', 'album', 'artist', 'playlist', 'radio'] as const
+const GROUP_TITLES: Record<string, string> = {
+  track: 'Tracks',
+  album: 'Albums',
+  artist: 'Artists',
+  playlist: 'Playlists',
+  radio: 'Radio',
+  other: 'More',
+}
+
+function ModeIcon({ mode, className }: { mode: EnqueueMode; className?: string }) {
+  if (mode === 'add') return <ListPlus className={className} />
+  if (mode === 'next') return <ListStart className={className} />
+  return <Play className={cn(className, 'fill-current')} />
+}
+
+function Thumb({ item, round }: { item: MediaSearchItem; round?: boolean }) {
+  const [failed, setFailed] = useState(false)
+  return item.thumbnail && !failed ? (
+    <img
+      src={item.thumbnail}
+      alt=""
+      className="size-full object-cover"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <div
+      className={cn(
+        'grid size-full place-items-center bg-border text-ink-faint',
+        round && 'rounded-full',
+      )}
+    >
+      {item.media_class === 'track' ? <Music2 className="size-5" /> : <Disc3 className="size-6" />}
+    </div>
+  )
+}
+
+function TrackRow({
+  item,
+  busy,
+  mode,
+  onPlay,
+}: {
+  item: MediaSearchItem
+  busy: boolean
+  mode: EnqueueMode
+  onPlay: () => void
+}) {
+  const hint = enqueueModes.find((m) => m.id === mode)?.hint ?? 'Play'
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-2">
+      <div className="size-12 shrink-0 overflow-hidden rounded-xl">
+        <Thumb item={item} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
+        <p className="truncate text-xs text-ink-muted">{mediaClassLabel(item.media_class)}</p>
+      </div>
+      <Button
+        size="icon"
+        variant="accent"
+        className="shrink-0"
+        disabled={busy}
+        aria-label={`${hint} ${item.title}`}
+        onClick={onPlay}
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <ModeIcon mode={mode} className="size-4" />}
+      </Button>
+    </div>
+  )
+}
+
+function MediaCard({
+  item,
+  busy,
+  mode,
+  onPlay,
+}: {
+  item: MediaSearchItem
+  busy: boolean
+  mode: EnqueueMode
+  onPlay: () => void
+}) {
+  const hint = enqueueModes.find((m) => m.id === mode)?.hint ?? 'Play'
+  const round = item.media_class === 'artist'
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      aria-label={`${hint} ${item.title}`}
+      onClick={onPlay}
+      className="group min-w-0 rounded-2xl border border-border-subtle bg-surface p-2 text-left transition-ui hover:bg-surface-hover"
+    >
+      <div
+        className={cn(
+          'relative aspect-square w-full overflow-hidden',
+          round ? 'rounded-full' : 'rounded-xl',
+        )}
+      >
+        <Thumb item={item} round={round} />
+        <span
+          className={cn(
+            'absolute right-1.5 bottom-1.5 grid size-8 place-items-center rounded-full bg-accent text-white shadow-md transition-ui',
+            !busy && 'opacity-90 group-hover:opacity-100',
+          )}
+        >
+          {busy ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ModeIcon mode={mode} className="size-4" />
+          )}
+        </span>
+      </div>
+      <p className={cn('mt-2 truncate text-sm font-semibold text-ink', round && 'text-center')}>
+        {item.title}
+      </p>
+      <p className={cn('truncate text-xs text-ink-muted', round && 'text-center')}>
+        {mediaClassLabel(item.media_class)}
+      </p>
+    </button>
+  )
+}
 
 export function MusicSearch({
   target,
-  onTargetChange,
   onQueued,
 }: {
   target: string
-  onTargetChange: (id: string) => void
   onQueued?: () => void
 }) {
   const { callService, callServiceWithResponse } = useServiceCall()
@@ -35,24 +154,23 @@ export function MusicSearch({
   const [searching, setSearching] = useState(false)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
-  const listRef = useRef<HTMLDivElement>(null)
   const searchRequestId = useRef(0)
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return results
-    return results.filter((item) => item.media_class === filter)
+  const groups = useMemo(() => {
+    const visible = filter === 'all' ? results : results.filter((i) => i.media_class === filter)
+    const byClass = new Map<string, MediaSearchItem[]>()
+    for (const item of visible) {
+      const key = (GROUP_ORDER as readonly string[]).includes(item.media_class)
+        ? item.media_class
+        : 'other'
+      byClass.set(key, [...(byClass.get(key) ?? []), item])
+    }
+    return [...GROUP_ORDER, 'other' as const]
+      .filter((key) => byClass.has(key))
+      .map((key) => ({ key, title: GROUP_TITLES[key]!, items: byClass.get(key)! }))
   }, [filter, results])
 
-  const virtualizer = useVirtualizer({
-    count: searching ? 0 : filtered.length,
-    getScrollElement: () => listRef.current,
-    estimateSize: () => ROW_ESTIMATE,
-    overscan: 8,
-    getItemKey: (index) => {
-      const item = filtered[index]!
-      return `${item.media_content_id}-${item.title}-${index}`
-    },
-  })
+  const hasResults = groups.length > 0
 
   async function runSearch(event?: React.FormEvent) {
     event?.preventDefault()
@@ -69,11 +187,10 @@ export function MusicSearch({
       })
       if (requestId !== searchRequestId.current) return
       setResults(parseSearchResults(response, target))
-      listRef.current?.scrollTo({ top: 0 })
     } catch (e) {
       if (requestId !== searchRequestId.current) return
       setResults([])
-      notify('Search failed', e instanceof Error ? e.message : 'Music Assistant error')
+      notify('Search failed', e instanceof Error ? e.message : 'Could not search')
     } finally {
       if (requestId === searchRequestId.current) setSearching(false)
     }
@@ -93,7 +210,6 @@ export function MusicSearch({
       notify(label, item.title)
       onQueued?.()
     } catch (e) {
-      // Fall back to the generic media_player service if MA play_media rejects.
       try {
         await callService('media_player', 'play_media', {
           entity_id: target,
@@ -119,13 +235,10 @@ export function MusicSearch({
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-3.5 sm:space-y-4 sm:p-4">
-      <div>
-        <p className="text-sm text-ink-muted">Music Assistant</p>
-        <h3 className="mt-0.5 font-display text-lg font-semibold text-ink">Search & play</h3>
-      </div>
+    <div className="space-y-4 rounded-3xl border border-border-subtle bg-surface p-4 sm:p-5">
+      <h3 className="font-display text-lg font-semibold text-ink">Add music</h3>
 
-      <form onSubmit={(e) => void runSearch(e)} className="flex flex-col gap-2 sm:flex-row">
+      <form onSubmit={(e) => void runSearch(e)} className="flex gap-2">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />
           <Input
@@ -137,72 +250,48 @@ export function MusicSearch({
             autoComplete="off"
           />
         </div>
-        <Button
-          type="submit"
-          variant="accent"
-          disabled={searching || !query.trim()}
-          className="w-full shrink-0 sm:w-auto"
-        >
+        <Button type="submit" variant="accent" disabled={searching || !query.trim()}>
           {searching ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
         </Button>
       </form>
 
-      <div className="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {mediaTargets.map((player) => (
-          <button
-            key={player.id}
-            type="button"
-            onClick={() => onTargetChange(player.id)}
-            className={cn(
-              'touch-target shrink-0 rounded-xl border px-3 text-xs font-medium transition-ui',
-              target === player.id
-                ? 'border-accent/40 bg-accent-soft text-accent'
-                : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
-            )}
-          >
-            {player.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-1.5">
-        {enqueueModes.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            title={mode.hint}
-            onClick={() => setEnqueue(mode.id)}
-            className={cn(
-              'touch-target flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-medium transition',
-              enqueue === mode.id
-                ? 'border-accent/40 bg-accent-soft text-accent'
-                : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
-            )}
-          >
-            {mode.id === 'add' ? (
-              <ListPlus className="size-3.5" />
-            ) : mode.id === 'next' ? (
-              <ListStart className="size-3.5" />
-            ) : (
-              <Play className="size-3.5 fill-current" />
-            )}
-            {mode.label}
-          </button>
-        ))}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-bold tracking-[0.08em] text-ink-faint uppercase">
+          Tapping a result will
+        </p>
+        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-canvas p-1">
+          {enqueueModes.map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              title={mode.hint}
+              onClick={() => setEnqueue(mode.id)}
+              className={cn(
+                'touch-target flex items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-medium transition-ui',
+                enqueue === mode.id
+                  ? 'bg-canvas-elevated text-accent shadow-sm'
+                  : 'text-ink-muted hover:text-ink',
+              )}
+            >
+              <ModeIcon mode={mode.id} className="size-3.5" />
+              {mode.hint}
+            </button>
+          ))}
+        </div>
       </div>
 
       {results.length > 0 ? (
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {mediaClassFilters.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
               className={cn(
-                'touch-target shrink-0 rounded-xl px-3 text-xs font-medium capitalize transition-ui',
+                'touch-target shrink-0 rounded-full border px-3.5 text-xs font-medium transition-ui',
                 filter === item.id
-                  ? 'bg-canvas-elevated text-accent'
-                  : 'text-ink-muted hover:text-ink',
+                  ? 'border-accent/40 bg-accent-soft text-accent'
+                  : 'border-border-subtle text-ink-muted hover:text-ink',
               )}
             >
               {item.label}
@@ -211,73 +300,55 @@ export function MusicSearch({
         </div>
       ) : null}
 
-      <div ref={listRef} className="max-h-[28rem] overflow-y-auto overscroll-contain">
-        {searching ? <p className="py-8 text-center text-sm text-ink-muted">Searching…</p> : null}
+      <div className="space-y-5">
+        {searching ? (
+          <p className="py-8 text-center text-sm text-ink-muted">Searching…</p>
+        ) : null}
 
-        {!searching && searched && filtered.length === 0 ? (
-          <p className="py-8 text-center text-sm text-ink-muted">
-            No matches. Try another query or player.
+        {!searching && searched && !hasResults ? (
+          <p className="py-8 text-center text-sm text-ink-muted">No matches. Try another query.</p>
+        ) : null}
+
+        {!searching && !searched ? (
+          <p className="py-6 text-center text-sm text-ink-muted">
+            Find something to play, play next, or add to the queue.
           </p>
         ) : null}
 
-        {!searching && filtered.length > 0 ? (
-          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const item = filtered[virtualRow.index]!
-              return (
-                <div
-                  key={virtualRow.key}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  className="absolute top-0 left-0 w-full pb-2"
-                  style={{
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <div className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-canvas/60 p-2.5">
-                    <div className="size-12 shrink-0 overflow-hidden rounded-xl bg-border">
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt=""
-                          className="size-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="grid size-full place-items-center text-[10px] text-ink-faint uppercase">
-                          {item.media_class.slice(0, 3)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
-                      <p className="truncate text-xs capitalize text-ink-muted">
-                        {mediaClassLabel(item.media_class)}
-                      </p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="accent"
-                      disabled={playingId === item.media_content_id}
-                      aria-label={`${enqueueModes.find((m) => m.id === enqueue)?.hint ?? 'Play'} ${item.title}`}
-                      onClick={() => void playItem(item)}
-                    >
-                      {playingId === item.media_content_id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : enqueue === 'add' ? (
-                        <ListPlus className="size-4" />
-                      ) : enqueue === 'next' ? (
-                        <ListStart className="size-4" />
-                      ) : (
-                        <Play className="size-4 fill-current" />
-                      )}
-                    </Button>
+        {!searching
+          ? groups.map((group) => (
+              <section key={group.key} className="space-y-2">
+                <h4 className="text-xs font-bold tracking-[0.08em] text-ink-faint uppercase">
+                  {group.title}
+                </h4>
+                {group.key === 'track' ? (
+                  <div className="space-y-2">
+                    {group.items.map((item, i) => (
+                      <TrackRow
+                        key={`${item.media_content_id}-${i}`}
+                        item={item}
+                        mode={enqueue}
+                        busy={playingId === item.media_content_id}
+                        onPlay={() => void playItem(item)}
+                      />
+                    ))}
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : null}
+                ) : (
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {group.items.map((item, i) => (
+                      <MediaCard
+                        key={`${item.media_content_id}-${i}`}
+                        item={item}
+                        mode={enqueue}
+                        busy={playingId === item.media_content_id}
+                        onPlay={() => void playItem(item)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))
+          : null}
       </div>
     </div>
   )

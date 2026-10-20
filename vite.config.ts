@@ -57,6 +57,8 @@ export default defineConfig(({ mode }) => {
       // Vite 8 defaults to Oxc; 'esbuild' is deprecated and breaks on es2026.
       minify: process.env.TAURI_ENV_DEBUG ? false : 'oxc',
       sourcemap: Boolean(process.env.TAURI_ENV_DEBUG),
+      // hls.js is ~575 kB and loaded only when a camera stream opens.
+      chunkSizeWarningLimit: 600,
     },
   }
 })

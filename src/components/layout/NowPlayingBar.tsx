@@ -5,13 +5,12 @@ import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { AnimatePresence, m, slideUp, snappy, tap } from '#/lib/motion'
 
-/** Floating mini player that hovers above the bottom nav while music is active. */
+/** Floating mini player that hovers above the bottom nav while music is playing (hidden when paused). */
 export function NowPlayingBar() {
   const player = useMediaPlayer(entities.mediaAll)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  const active = player.isPlaying || player.isPaused
-  const visible = active && !pathname.startsWith('/media')
+  const visible = player.isPlaying && !pathname.startsWith('/media')
 
   async function toggle() {
     try {

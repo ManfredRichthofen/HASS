@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
@@ -17,6 +18,7 @@ import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
@@ -121,7 +123,33 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
     }
   }
 
+  /** User-visible Android device name (Settings → About → Device name), for HA tracker id. */
+  @Command
+  fun getDeviceName(invoke: Invoke) {
+    try {
+      val name = readDeviceName()
+      val result = JSObject()
+      result.put("name", name)
+      invoke.resolve(result)
+    } catch (e: Exception) {
+      invoke.reject("Failed to read device name: ${e.message}")
+    }
+  }
+
   // ---------------------------------------------------------------------------
+
+  private fun readDeviceName(): String {
+    val fromSettings = try {
+      Settings.Global.getString(activity.contentResolver, Settings.Global.DEVICE_NAME)
+    } catch (_: Exception) {
+      null
+    }
+    val candidate = fromSettings?.trim().orEmpty().ifBlank {
+      Build.MODEL?.trim().orEmpty()
+    }
+    return candidate.ifBlank { "Android" }
+  }
+
 
   private fun buildPendingIntent(): PendingIntent {
     val intent = Intent(activity.applicationContext, LocationUpdateReceiver::class.java)

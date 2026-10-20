@@ -27,6 +27,8 @@ export const enqueueModes = [
 
 export interface QueueMediaArtist {
   name?: string
+  image?: QueueImage | null
+  metadata?: { images?: QueueImage[] }
 }
 
 export interface QueueMediaItem {
@@ -34,15 +36,23 @@ export interface QueueMediaItem {
   uri?: string
   media_type?: string
   artists?: QueueMediaArtist[]
-  album?: { name?: string } | string | null
+  album?:
+    | QueueMediaItem
+    | { name?: string; image?: QueueImage | null; metadata?: { images?: QueueImage[] } }
+    | string
+    | null
   image?: QueueImage | null
+  metadata?: { images?: QueueImage[] }
 }
 
 export interface QueueImage {
+  type?: string
   path?: string | null
   url?: string | null
   provider?: string
   remotely_accessible?: boolean
+  /** Opaque id for `/imageproxy/<proxy_id>` (MA schema ≥ 31). */
+  proxy_id?: string | null
 }
 
 export interface QueueItem {
@@ -53,8 +63,16 @@ export interface QueueItem {
   available?: boolean
   image?: QueueImage | null
   media_item?: QueueMediaItem | null
+  streamdetails?: {
+    stream_metadata?: { image_url?: string | null }
+  } | null
   /** Some HA builds surface a discart_image URL. */
   discart_image?: string | null
+  /** Flat fields from `mass_queue.get_queue_items`. */
+  media_title?: string | null
+  media_artist?: string | null
+  media_image?: string | null
+  local_image_encoded?: string | null
 }
 
 export interface MusicQueue {
@@ -129,7 +147,7 @@ export function parseQueueResponse(response: unknown, entityId: string): MusicQu
   return normalizeQueue(nested)
 }
 
-function normalizeQueue(raw: MusicQueue): MusicQueue {
+export function normalizeQueue(raw: MusicQueue): MusicQueue {
   return {
     queue_id: raw.queue_id,
     display_name: raw.display_name,
@@ -148,12 +166,36 @@ function normalizeQueue(raw: MusicQueue): MusicQueue {
   }
 }
 
+/**
+ * HA's `music_assistant.get_queue` only returns current + next (items is a count).
+ * Build a short preview list so the UI works with HA login alone.
+ */
+export function queueItemsFromHaSummary(queue: MusicQueue | null | undefined): QueueItem[] {
+  if (!queue) return []
+  const items: QueueItem[] = []
+  if (queue.current_item) {
+    items.push({
+      ...queue.current_item,
+      index: queue.current_index ?? queue.current_item.index ?? 0,
+    })
+  }
+  if (queue.next_item) {
+    const nextIndex =
+      queue.next_item.index ??
+      (typeof queue.current_index === 'number' ? queue.current_index + 1 : items.length)
+    items.push({ ...queue.next_item, index: nextIndex })
+  }
+  return items
+}
+
 export function mediaClassLabel(mediaClass: string) {
   return mediaClass.replace(/_/g, ' ')
 }
 
 export function queueItemTitle(item: QueueItem | null | undefined) {
   if (!item) return null
+  const flatTitle = item.media_title?.trim()
+  if (flatTitle) return flatTitle
   const mediaName = item.media_item?.name?.trim()
   if (mediaName) return mediaName
   const name = item.name?.trim()
@@ -166,6 +208,8 @@ export function queueItemTitle(item: QueueItem | null | undefined) {
 
 export function queueItemArtist(item: QueueItem | null | undefined) {
   if (!item) return null
+  const flatArtist = item.media_artist?.trim()
+  if (flatArtist) return flatArtist
   const artists = item.media_item?.artists
   if (Array.isArray(artists) && artists.length > 0) {
     const names = artists.map((a) => a.name?.trim()).filter(Boolean)
@@ -178,19 +222,200 @@ export function queueItemArtist(item: QueueItem | null | undefined) {
   return null
 }
 
-export function queueItemImage(item: QueueItem | null | undefined) {
-  if (!item) return null
-  if (typeof item.discart_image === 'string' && item.discart_image) return item.discart_image
-  return pickImageUrl(item.image) ?? pickImageUrl(item.media_item?.image) ?? null
+const IMAGEPROXY_SIZES = [80, 160, 256, 512, 1024] as const
+
+function normalizeProxySize(size?: number) {
+  if (!size || size <= 0) return 0
+  for (const allowed of IMAGEPROXY_SIZES) {
+    if (size <= allowed) return allowed
+  }
+  return IMAGEPROXY_SIZES[IMAGEPROXY_SIZES.length - 1]
 }
 
-function pickImageUrl(image: QueueImage | null | undefined) {
-  if (!image) return null
-  if (typeof image.url === 'string' && image.url) return image.url
-  if (typeof image.path === 'string' && image.path) {
-    if (image.path.startsWith('http') || image.path.startsWith('/')) return image.path
+function trimBase(url: string) {
+  return url.replace(/\/+$/, '')
+}
+
+function pageProtocol() {
+  if (typeof window === 'undefined') return 'https'
+  return window.location.protocol.replace(':', '')
+}
+
+function isMixedContent(url: string) {
+  try {
+    const protocol = new URL(url).protocol.replace(':', '')
+    return protocol === 'http' && pageProtocol() === 'https'
+  } catch {
+    return false
   }
+}
+
+/** Resolve HA `entity_picture` (often `/api/media_player_proxy/...`) against the HA base URL. */
+export function resolveHaMediaUrl(path: string | null | undefined, haBaseUrl?: string | null) {
+  if (!path) return null
+  if (path.startsWith('data:')) return path
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return isMixedContent(path) ? null : path
+  }
+  if (!haBaseUrl) return path.startsWith('/') ? path : null
+  const absolute = `${trimBase(haBaseUrl)}${path.startsWith('/') ? path : `/${path}`}`
+  return isMixedContent(absolute) ? null : absolute
+}
+
+/**
+ * Find the best artwork object on a queue item — mirrors Music Assistant frontend
+ * (`getMediaItemImage`): stream art → queue image → media item → album → metadata → artists.
+ */
+export function findQueueItemImage(
+  item: QueueItem | QueueMediaItem | QueueMediaArtist | null | undefined,
+  imageType: 'thumb' | 'landscape' = 'thumb',
+): QueueImage | null {
+  if (!item || typeof item !== 'object') return null
+
+  // QueueItem live radio/stream art
+  if ('streamdetails' in item) {
+    const live = item.streamdetails?.stream_metadata?.image_url
+    if (typeof live === 'string' && live) {
+      return {
+        type: 'thumb',
+        path: live,
+        provider: 'builtin',
+        remotely_accessible: true,
+      }
+    }
+  }
+
+  // Nested media_item on a QueueItem
+  if ('media_item' in item && item.media_item) {
+    const nested = findQueueItemImage(item.media_item, imageType)
+    if (nested) return nested
+  }
+
+  // Direct image matching type
+  if ('image' in item && item.image && isUsableImage(item.image)) {
+    const type = (item.image.type ?? 'thumb').toLowerCase()
+    if (type === imageType || (!item.image.type && imageType === 'thumb')) {
+      return item.image
+    }
+  }
+
+  // Prefer album art for tracks
+  if ('album' in item && item.album && typeof item.album === 'object') {
+    const albumImage = findQueueItemImage(item.album as QueueMediaItem, imageType)
+    if (albumImage) return albumImage
+  }
+
+  // metadata.images[]
+  if ('metadata' in item && item.metadata?.images) {
+    for (const img of item.metadata.images) {
+      if (!isUsableImage(img)) continue
+      const type = (img.type ?? 'thumb').toLowerCase()
+      if (type === imageType) return img
+    }
+  }
+
+  // Artist fallback
+  if ('artists' in item && Array.isArray(item.artists)) {
+    for (const artist of item.artists) {
+      const artistImage = findQueueItemImage(artist, imageType)
+      if (artistImage) return artistImage
+    }
+  }
+
+  // Landscape fallback from thumb request
+  if (imageType === 'thumb') {
+    return findQueueItemImage(item, 'landscape')
+  }
+
+  // Last resort: any direct image regardless of type
+  if ('image' in item && isUsableImage(item.image)) return item.image ?? null
+
   return null
+}
+
+function isUsableImage(image: QueueImage | null | undefined): image is QueueImage {
+  if (!image) return false
+  return Boolean(image.proxy_id || image.path || image.url)
+}
+
+/** Build a browser-loadable URL for a MediaItemImage / QueueImage. */
+export function mediaImageUrl(
+  image: QueueImage | null | undefined,
+  massBaseUrl?: string | null,
+  size = 160,
+): string | null {
+  if (!image) return null
+  if (typeof image.url === 'string' && image.url) {
+    return absoluteAgainst(image.url, massBaseUrl)
+  }
+  if (!image.path && !image.proxy_id) return null
+  if (image.path?.startsWith('data:')) return image.path
+
+  const normalizedSize = normalizeProxySize(size)
+  const needsProxy =
+    Boolean(image.proxy_id) ||
+    !image.remotely_accessible ||
+    Boolean(normalizedSize) ||
+    (typeof image.path === 'string' &&
+      image.path.includes('://') &&
+      image.path.split('://')[0] !== pageProtocol())
+
+  if (needsProxy && image.proxy_id && massBaseUrl) {
+    const base = trimBase(massBaseUrl)
+    const url = normalizedSize
+      ? `${base}/imageproxy/${image.proxy_id}?size=${normalizedSize}`
+      : `${base}/imageproxy/${image.proxy_id}`
+    return isMixedContent(url) ? null : url
+  }
+
+  // Remotely accessible direct URL (Spotify CDN, etc.)
+  if (image.remotely_accessible && image.path) {
+    return absoluteAgainst(image.path, massBaseUrl)
+  }
+
+  // Legacy query-string proxy (older MA servers still accept this)
+  if (massBaseUrl && image.provider && image.path) {
+    const base = trimBase(massBaseUrl)
+    const params = new URLSearchParams({
+      provider: image.provider,
+      path: image.path,
+      size: String(normalizedSize || 160),
+    })
+    const url = `${base}/imageproxy?${params.toString()}`
+    return isMixedContent(url) ? null : url
+  }
+
+  if (image.path) return absoluteAgainst(image.path, massBaseUrl)
+  return null
+}
+
+function absoluteAgainst(path: string, baseUrl?: string | null) {
+  if (path.startsWith('data:')) return path
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return isMixedContent(path) ? null : path
+  }
+  if (!baseUrl) return path.startsWith('/') ? path : null
+  const absolute = `${trimBase(baseUrl)}${path.startsWith('/') ? path : `/${path}`}`
+  return isMixedContent(absolute) ? null : absolute
+}
+
+export function queueItemImage(
+  item: QueueItem | null | undefined,
+  massBaseUrl?: string | null,
+  size = 160,
+) {
+  if (!item) return null
+  if (typeof item.local_image_encoded === 'string' && item.local_image_encoded) {
+    return item.local_image_encoded
+  }
+  if (typeof item.media_image === 'string' && item.media_image) {
+    return absoluteAgainst(item.media_image, massBaseUrl)
+  }
+  if (typeof item.discart_image === 'string' && item.discart_image) {
+    return absoluteAgainst(item.discart_image, massBaseUrl)
+  }
+  const image = findQueueItemImage(item)
+  return mediaImageUrl(image, massBaseUrl, size)
 }
 
 export function formatDuration(seconds: number | null | undefined) {

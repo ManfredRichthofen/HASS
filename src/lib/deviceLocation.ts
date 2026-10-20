@@ -40,6 +40,18 @@ export function setLocationSharingEnabled(enabled: boolean): void {
   }
 }
 
+/** Slug for Home Assistant `device_tracker.<dev_id>` (lowercase alphanumeric + underscores). */
+export function slugifyDeviceId(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_')
+  return slug || 'casa_device'
+}
+
 /** Stable slug for `device_tracker.<dev_id>` (creates the entity on first see). */
 export function getOrCreateLocationDeviceId(): string {
   try {
@@ -56,6 +68,34 @@ export function getOrCreateLocationDeviceId(): string {
     /* private mode */
   }
   return id
+}
+
+/** Persist a tracker id (e.g. Android device name slug). */
+export function setLocationDeviceId(id: string): void {
+  const slug = slugifyDeviceId(id)
+  try {
+    localStorage.setItem(DEVICE_ID_KEY, slug)
+  } catch {
+    /* private mode */
+  }
+}
+
+const DEVICE_NAME_KEY = 'casa.location.device_name'
+
+export function getLocationDeviceName(): string | null {
+  try {
+    return localStorage.getItem(DEVICE_NAME_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setLocationDeviceName(name: string): void {
+  try {
+    localStorage.setItem(DEVICE_NAME_KEY, name)
+  } catch {
+    /* private mode */
+  }
 }
 
 export function readLastLocationReport(): LocationReportSnapshot | null {

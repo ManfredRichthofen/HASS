@@ -7,6 +7,7 @@ pub fn run() {
         location_tracking::location_tracking_start,
         location_tracking::location_tracking_stop,
         location_tracking::location_tracking_update_credentials,
+        location_tracking::location_tracking_get_device_name,
     ]);
 
     // Background HA location sharing — Android Kotlin plugin only.

@@ -2,6 +2,7 @@ import { useHAConnection, useServiceCall } from 'hass-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   formatCoords,
+  getLocationDeviceName,
   getOrCreateLocationDeviceId,
   isLocationSharingEnabled,
   isTauri,
@@ -14,6 +15,7 @@ import {
 } from '#/lib/deviceLocation'
 import { readHaAuth } from '#/lib/haAuthStorage'
 import {
+  resolveAndroidTrackerIdentity,
   startNativeLocationTracking,
   stopNativeLocationTracking,
   updateNativeLocationCredentials,
@@ -84,7 +86,14 @@ export function useDeviceLocation() {
     const last = readLastLocationReport()
     lastReportRef.current = last
     setLastReport(last)
-  }, [])
+
+    if (!native) return
+    void resolveAndroidTrackerIdentity()
+      .then(({ deviceId: id }) => setDeviceId(id))
+      .catch(() => {
+        /* keep stored / random id until tracking starts */
+      })
+  }, [native])
 
   useEffect(() => {
     if (native) {
@@ -147,10 +156,13 @@ export function useDeviceLocation() {
       try {
         const battery = await readBatteryPercent()
         const id = getOrCreateLocationDeviceId()
+        const hostName = native
+          ? (getLocationDeviceName() ?? 'Android')
+          : 'Casa Web'
         const serviceData: Record<string, unknown> = {
           dev_id: id,
           gps: [lat, lon],
-          host_name: native ? 'Casa Android' : 'Casa Web',
+          host_name: hostName,
         }
         if (accuracy != null) serviceData.gps_accuracy = Math.round(accuracy)
         if (battery != null) serviceData.battery = battery

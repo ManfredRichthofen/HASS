@@ -1,11 +1,16 @@
 import { useCamera } from 'hass-react'
-import Hls from 'hls.js'
 import { Loader2, VideoOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '#/lib/cn'
 
 function canPlayNativeHls(video: HTMLVideoElement) {
   return Boolean(video.canPlayType('application/vnd.apple.mpegurl'))
+}
+
+/** Lazy-load hls.js (~500 kB) only when Chromium needs MSE playback. */
+async function loadHls() {
+  const mod = await import('hls.js')
+  return mod.default
 }
 
 /**
@@ -68,8 +73,8 @@ export function CameraStream({
     const url = camera.streamState.url
     if (!video || mode !== 'hls' || !url || !camera.streamState.isActive) return
 
-    let hls: Hls | null = null
     let cancelled = false
+    let hls: { destroy: () => void } | null = null
 
     const report = (message: string) => {
       if (!cancelled) setError(message)
@@ -86,37 +91,46 @@ export function CameraStream({
       }
     }
 
-    if (Hls.isSupported()) {
-      hls = new Hls({
+    void loadHls().then((Hls) => {
+      if (cancelled) return
+      if (!Hls.isSupported()) {
+        report('HLS not supported in this browser')
+        return
+      }
+
+      const instance = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 30,
       })
-      hls.loadSource(url)
-      hls.attachMedia(video)
-      hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (cancelled) {
+        instance.destroy()
+        return
+      }
+      hls = instance
+      instance.loadSource(url)
+      instance.attachMedia(video)
+      instance.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          report(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Network error' : 'Playback error')
-          hls?.destroy()
+          report(
+            data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Network error' : 'Playback error',
+          )
+          instance.destroy()
         }
       })
       if (autoPlay) {
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        instance.on(Hls.Events.MANIFEST_PARSED, () => {
           void video.play().catch(() => undefined)
         })
       }
-      return () => {
-        cancelled = true
-        hls?.destroy()
-        video.pause()
-        video.removeAttribute('src')
-        video.load()
-      }
-    }
+    })
 
-    report('HLS not supported in this browser')
     return () => {
       cancelled = true
+      hls?.destroy()
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
     }
   }, [autoPlay, camera.streamState.isActive, camera.streamState.url, mode])
 

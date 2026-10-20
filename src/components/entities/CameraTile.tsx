@@ -1,11 +1,14 @@
 import { useCamera } from 'hass-react'
 import { Camera, Video } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { CameraStream } from '#/components/entities/CameraStream'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 import { m, tap } from '#/lib/motion'
+
+const CameraStream = lazy(() =>
+  import('#/components/entities/CameraStream').then((mod) => ({ default: mod.CameraStream })),
+)
 
 export function CameraTile({ entityId, label }: { entityId: string; label?: string }) {
   const camera = useCamera(entityId)
@@ -56,7 +59,17 @@ export function CameraTile({ entityId, label }: { entityId: string; label?: stri
 
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent title={name} description="Live view" className="max-w-2xl">
-          {open ? <CameraStream entityId={entityId} className="mt-1" /> : null}
+          {open ? (
+            <Suspense
+              fallback={
+                <div className="mt-1 grid aspect-video place-items-center rounded-2xl bg-canvas text-ink-faint">
+                  <Video className="size-7 opacity-40" />
+                </div>
+              }
+            >
+              <CameraStream entityId={entityId} className="mt-1" />
+            </Suspense>
+          ) : null}
         </DrawerContent>
       </Drawer>
     </>

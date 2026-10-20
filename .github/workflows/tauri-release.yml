@@ -103,6 +103,6 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'Casa v__VERSION__'
           releaseBody: 'Android APK for Casa. Sideload the .apk asset below.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           uploadUpdaterJson: false

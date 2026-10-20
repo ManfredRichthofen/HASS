@@ -1,7 +1,13 @@
 import { useServiceCall } from 'hass-react'
 import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ListEnd,
   ListMusic,
+  ListStart,
   Loader2,
+  MoreHorizontal,
   Pause,
   Play,
   Repeat,
@@ -10,44 +16,61 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Progress } from '#/components/ui/progress'
 import { notify } from '#/components/ui/toast'
+import { haUrl } from '#/config/ha'
 import { useMusicQueue } from '#/hooks/useMusicQueue'
 import { cn } from '#/lib/cn'
 import {
   formatDuration,
   mediaTargets,
   nextRepeatMode,
+  type QueueItem,
   queueItemArtist,
   queueItemImage,
   queueItemTitle,
   repeatModeLabel,
+  resolveHaMediaUrl,
 } from '#/lib/musicAssistant'
 
 function Artwork({
   src,
   label,
-  size = 'lg',
+  size = 'md',
 }: {
   src: string | null | undefined
   label: string
-  size?: 'sm' | 'lg'
+  size?: 'md' | 'hero'
 }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const showImage = Boolean(src) && src !== failedSrc
+
   return (
     <div
       className={cn(
-        'shrink-0 overflow-hidden rounded-xl bg-border',
-        size === 'lg' ? 'size-16 sm:size-[4.5rem]' : 'size-12',
+        'shrink-0 overflow-hidden bg-border',
+        size === 'hero' && 'size-24 rounded-2xl shadow-lg sm:size-32',
+        size === 'md' && 'size-12 rounded-xl',
       )}
     >
-      {src ? (
-        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+      {showImage && src ? (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedSrc(src)}
+        />
       ) : (
         <div className="grid size-full place-items-center text-ink-faint">
-          <ListMusic className={size === 'lg' ? 'size-6' : 'size-4'} />
+          <ListMusic className={size === 'md' ? 'size-4' : 'size-8'} />
         </div>
       )}
       <span className="sr-only">{label}</span>
@@ -75,6 +98,174 @@ function useLivePosition(position: number | null, duration: number | null, playi
   return { position: clamped, pct }
 }
 
+function ActionChip({
+  icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  danger?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-medium transition-ui hover:bg-surface-hover',
+        danger ? 'text-danger' : 'text-ink',
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+function QueueRow({
+  item,
+  position,
+  massUrl,
+  busy,
+  disabled,
+  canManage,
+  supportMoveToEnd,
+  isFirstMovable,
+  isLast,
+  onPlay,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  onPlayNext,
+  onMoveEnd,
+}: {
+  item: QueueItem
+  position: number
+  massUrl: string | null
+  busy: string | null
+  disabled: boolean
+  canManage: boolean
+  supportMoveToEnd: boolean
+  isFirstMovable: boolean
+  isLast: boolean
+  onPlay: () => void
+  onRemove: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onPlayNext: () => void
+  onMoveEnd: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const title = queueItemTitle(item) ?? 'Unknown track'
+  const artist = queueItemArtist(item)
+  const art = queueItemImage(item, massUrl, 160)
+  const itemId = item.queue_item_id ?? String(position)
+  const rowBusy = busy === itemId
+
+  function act(fn: () => void) {
+    setExpanded(false)
+    fn()
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border bg-surface transition-ui',
+        expanded ? 'border-accent/30' : 'border-border-subtle',
+      )}
+    >
+      <div className="flex items-center gap-2 p-2">
+        <span className="w-5 shrink-0 text-center text-[11px] font-medium tabular-nums text-ink-faint">
+          {position}
+        </span>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+          disabled={disabled || rowBusy}
+          aria-label={`Play ${title}`}
+          onClick={onPlay}
+        >
+          <Artwork src={art} label="" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{title}</p>
+            <p className="truncate text-xs text-ink-muted">{artist ?? 'Queued'}</p>
+          </div>
+        </button>
+
+        {item.duration != null ? (
+          <span className="hidden shrink-0 text-xs tabular-nums text-ink-faint sm:block">
+            {formatDuration(item.duration)}
+          </span>
+        ) : null}
+
+        {canManage ? (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-9 shrink-0"
+            disabled={disabled || rowBusy}
+            aria-label="Queue item actions"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+          >
+            {rowBusy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : expanded ? (
+              <ChevronDown className="size-4" />
+            ) : (
+              <MoreHorizontal className="size-4" />
+            )}
+          </Button>
+        ) : null}
+      </div>
+
+      {expanded ? (
+        <div className="flex flex-wrap gap-1.5 border-t border-border-subtle px-2 py-2">
+          <ActionChip
+            icon={<Play className="size-3.5" />}
+            label="Play now"
+            onClick={() => act(onPlay)}
+          />
+          <ActionChip
+            icon={<ListStart className="size-3.5" />}
+            label="Play next"
+            onClick={() => act(onPlayNext)}
+          />
+          {!isFirstMovable ? (
+            <ActionChip
+              icon={<ArrowUp className="size-3.5" />}
+              label="Up"
+              onClick={() => act(onMoveUp)}
+            />
+          ) : null}
+          {!isLast ? (
+            <ActionChip
+              icon={<ArrowDown className="size-3.5" />}
+              label="Down"
+              onClick={() => act(onMoveDown)}
+            />
+          ) : null}
+          {supportMoveToEnd && !isLast ? (
+            <ActionChip
+              icon={<ListEnd className="size-3.5" />}
+              label="To end"
+              onClick={() => act(onMoveEnd)}
+            />
+          ) : null}
+          <ActionChip
+            danger
+            icon={<X className="size-3.5" />}
+            label="Remove"
+            onClick={() => act(onRemove)}
+          />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function QueueManager({
   target,
   onTargetChange,
@@ -83,29 +274,66 @@ export function QueueManager({
   onTargetChange: (id: string) => void
 }) {
   const { callService } = useServiceCall()
-  const { queue, loading, fetching, refresh, player } = useMusicQueue(target)
+  const queueApi = useMusicQueue(target)
+  const {
+    queue,
+    items,
+    configured,
+    viaMassQueue,
+    massUrl,
+    loading,
+    fetching,
+    ensuring,
+    error,
+    refresh,
+    player,
+  } = queueApi
   const [busy, setBusy] = useState<string | null>(null)
-  const [transferOpen, setTransferOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
+
+  // Drop the confirm prompt if it's ignored or the room changes.
+  useEffect(() => {
+    if (!confirmClear) return
+    const id = window.setTimeout(() => setConfirmClear(false), 4_000)
+    return () => window.clearTimeout(id)
+  }, [confirmClear])
+  useEffect(() => setConfirmClear(false), [target])
 
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
   const attrs = player.attributes as { entity_picture?: unknown }
-  const entityPicture = typeof attrs.entity_picture === 'string' ? attrs.entity_picture : null
-  const currentArt = queueItemImage(queue?.current_item) ?? entityPicture
-  const nextTitle = queueItemTitle(queue?.next_item)
-  const nextArtist = queueItemArtist(queue?.next_item)
-  const nextArt = queueItemImage(queue?.next_item)
-
+  const entityPicture =
+    typeof attrs.entity_picture === 'string' ? resolveHaMediaUrl(attrs.entity_picture, haUrl) : null
+  const currentArt = entityPicture ?? queueItemImage(queue?.current_item, massUrl, 256)
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
   const { position, pct } = useLivePosition(player.mediaPosition, duration, player.isPlaying)
 
   const shuffle = player.shuffle ?? queue?.shuffle_enabled ?? false
   const repeat = (player.repeat ?? queue?.repeat_mode ?? 'off').toLowerCase()
-  const itemCount = queue?.items ?? 0
-  const hasQueue =
-    Boolean(queue?.current_item) || itemCount > 0 || player.isPlaying || player.isPaused
-  const unavailable = player.isUnavailable
+  const currentIndex = useMemo(() => {
+    const currentId = queue?.current_item?.queue_item_id
+    if (currentId) {
+      const found = items.findIndex((item) => item.queue_item_id === currentId)
+      if (found >= 0) return found
+    }
+    return queue?.current_index ?? null
+  }, [items, queue?.current_index, queue?.current_item?.queue_item_id])
 
+  const upNext = useMemo(() => {
+    const mapped = items.map((item, index) => ({ item, index }))
+    if (currentIndex == null) return mapped
+    return mapped.filter(({ index }) => index > currentIndex)
+  }, [currentIndex, items])
+
+  const upNextDuration = useMemo(
+    () => upNext.reduce((sum, { item }) => sum + (item.duration ?? 0), 0),
+    [upNext],
+  )
+
+  const unavailable = player.isUnavailable
+  const hasNowPlaying = Boolean(currentTitle) && (player.isPlaying || player.isPaused || items.length > 0)
+  const canManageItems = configured
   const transferTargets = useMemo(
     () => mediaTargets.filter((playerTarget) => playerTarget.id !== target),
     [target],
@@ -115,7 +343,6 @@ export function QueueManager({
     setBusy(key)
     try {
       await action()
-      await refresh()
     } catch (e) {
       notify(failLabel, e instanceof Error ? e.message : 'Error')
     } finally {
@@ -123,90 +350,113 @@ export function QueueManager({
     }
   }
 
-  async function clearQueue() {
-    await run(
-      'clear',
-      () => callService('media_player', 'clear_playlist', { entity_id: target }),
-      'Clear failed',
-    )
-  }
-
   async function transferTo(destination: string) {
-    setTransferOpen(false)
+    setMenuOpen(false)
     await run(
       'transfer',
-      () =>
-        callService('music_assistant', 'transfer_queue', {
+      async () => {
+        await callService('music_assistant', 'transfer_queue', {
           entity_id: destination,
           source_player: target,
           auto_play: true,
-        }),
+        })
+        onTargetChange(destination)
+        await refresh()
+      },
       'Transfer failed',
     )
-    onTargetChange(destination)
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-3.5 sm:space-y-4 sm:p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-ink-muted">Music Assistant</p>
-          <h3 className="mt-0.5 font-display text-lg font-semibold text-ink">Queue</h3>
-        </div>
-        {fetching && !loading ? (
-          <Loader2 className="mt-1 size-4 shrink-0 animate-spin text-ink-faint" />
-        ) : null}
-      </div>
-
-      <div className="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {mediaTargets.map((playerTarget) => (
-          <button
-            key={playerTarget.id}
-            type="button"
-            onClick={() => onTargetChange(playerTarget.id)}
-            className={cn(
-              'touch-target shrink-0 rounded-xl border px-3 text-xs font-medium transition-ui',
-              target === playerTarget.id
-                ? 'border-accent/40 bg-accent-soft text-accent'
-                : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
-            )}
-          >
-            {playerTarget.label}
+    <div className="space-y-5">
+      {error ? (
+        <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error.message}{' '}
+          <button type="button" className="underline" onClick={() => void refresh()}>
+            Retry
           </button>
-        ))}
-      </div>
-
-      {loading && !queue ? (
-        <p className="py-8 text-center text-sm text-ink-muted">Loading queue…</p>
-      ) : null}
-
-      {!loading && !hasQueue ? (
-        <div className="rounded-2xl border border-dashed border-border-subtle bg-canvas/50 px-4 py-8 text-center">
-          <ListMusic className="mx-auto size-7 text-ink-faint" />
-          <p className="mt-3 text-sm font-medium text-ink">Nothing in the queue</p>
-          <p className="mt-1 text-xs text-ink-muted">Search below and play or add tracks.</p>
         </div>
       ) : null}
 
-      {hasQueue ? (
-        <div className="space-y-3">
-          <div className="rounded-2xl border border-border-subtle bg-canvas/60 p-3">
-            <div className="flex gap-3">
-              <Artwork src={currentArt} label="Now playing artwork" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium tracking-wide text-ink-faint uppercase">
-                  Now playing
-                </p>
-                <p className="mt-0.5 truncate font-display text-base font-semibold text-ink">
+      {loading && !hasNowPlaying && upNext.length === 0 ? (
+        <div className="rounded-2xl border border-border-subtle bg-surface px-4 py-10 text-center">
+          <Loader2 className="mx-auto size-5 animate-spin text-ink-faint" />
+          <p className="mt-3 text-sm text-ink-muted">Loading…</p>
+        </div>
+      ) : null}
+
+      {!loading && !hasNowPlaying && upNext.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border-subtle bg-surface px-4 py-10 text-center">
+          <ListMusic className="mx-auto size-7 text-ink-faint" />
+          <p className="mt-3 text-sm font-medium text-ink">Nothing playing</p>
+          <p className="mt-1 text-xs text-ink-muted">Use Add music to play or queue a track.</p>
+        </div>
+      ) : null}
+
+      {hasNowPlaying ? (
+        <div className="relative rounded-3xl border border-border-subtle bg-surface">
+          {currentArt ? (
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+              <img
+                src={currentArt}
+                alt=""
+                aria-hidden
+                className="size-full scale-150 object-cover opacity-25 blur-3xl"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          ) : null}
+
+          <div className="relative p-4 sm:p-5">
+            <div className="flex items-start gap-4">
+              <Artwork src={currentArt} label="Now playing artwork" size="hero" />
+              <div className="min-w-0 flex-1 self-stretch">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-accent uppercase">
+                    {player.isPlaying ? 'Now playing' : 'Paused'}
+                  </p>
+                  <div className="relative -mt-1.5 -mr-1.5 shrink-0">
+                    {(fetching && !loading) || ensuring ? (
+                      <Loader2 className="m-2.5 size-4 animate-spin text-ink-faint" />
+                    ) : (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-9"
+                        disabled={unavailable || busy !== null}
+                        aria-label="Queue options"
+                        aria-expanded={menuOpen}
+                        onClick={() => setMenuOpen((open) => !open)}
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    )}
+                    {menuOpen ? (
+                      <div className="absolute right-0 z-20 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-border bg-canvas-elevated shadow-lg">
+                        {transferTargets.map((dest) => (
+                          <button
+                            key={dest.id}
+                            type="button"
+                            className="block w-full px-3 py-2.5 text-left text-sm text-ink transition hover:bg-surface-hover"
+                            onClick={() => void transferTo(dest.id)}
+                          >
+                            Transfer to {dest.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <p className="mt-1 line-clamp-2 font-display text-xl font-semibold leading-tight text-ink">
                   {currentTitle ?? 'Unknown track'}
                 </p>
                 {currentArtist ? (
-                  <p className="truncate text-sm text-ink-muted">{currentArtist}</p>
+                  <p className="mt-0.5 truncate text-sm text-ink-muted">{currentArtist}</p>
                 ) : null}
               </div>
             </div>
 
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-5 space-y-1.5">
               <Progress value={pct} aria-label="Playback progress" />
               <div className="flex justify-between text-[11px] tabular-nums text-ink-faint">
                 <span>{formatDuration(position)}</span>
@@ -214,8 +464,22 @@ export function QueueManager({
               </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1">
+            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn('justify-self-start', shuffle && 'text-accent')}
+                disabled={unavailable || busy !== null}
+                aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+                aria-pressed={shuffle}
+                onClick={() =>
+                  void run('shuffle', () => queueApi.setShuffle(!shuffle), 'Shuffle failed')
+                }
+              >
+                <Shuffle className="size-4" />
+              </Button>
+
+              <div className="flex items-center gap-2">
                 <Button
                   size="icon"
                   variant="ghost"
@@ -223,11 +487,12 @@ export function QueueManager({
                   aria-label="Previous"
                   onClick={() => void run('prev', () => player.previousTrack(), 'Previous failed')}
                 >
-                  <SkipBack className="size-5" />
+                  <SkipBack className="size-5 fill-current" />
                 </Button>
                 <Button
                   size="icon"
                   variant="accent"
+                  className="size-14 rounded-full"
                   disabled={unavailable || busy !== null}
                   aria-label={player.isPlaying ? 'Pause' : 'Play'}
                   onClick={() =>
@@ -239,11 +504,11 @@ export function QueueManager({
                   }
                 >
                   {busy === 'toggle' ? (
-                    <Loader2 className="size-5 animate-spin" />
+                    <Loader2 className="size-6 animate-spin" />
                   ) : player.isPlaying ? (
-                    <Pause className="size-5" />
+                    <Pause className="size-6 fill-current" />
                   ) : (
-                    <Play className="size-5 fill-current" />
+                    <Play className="size-6 fill-current" />
                   )}
                 </Button>
                 <Button
@@ -253,123 +518,109 @@ export function QueueManager({
                   aria-label="Next"
                   onClick={() => void run('next', () => player.nextTrack(), 'Next failed')}
                 >
-                  <SkipForward className="size-5" />
+                  <SkipForward className="size-5 fill-current" />
                 </Button>
               </div>
 
-              <div className="flex items-center gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={unavailable || busy !== null}
-                  aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
-                  aria-pressed={shuffle}
-                  className={cn(shuffle && 'text-accent')}
-                  onClick={() =>
-                    void run('shuffle', () => player.setShuffle(!shuffle), 'Shuffle failed')
-                  }
-                >
-                  <Shuffle className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={unavailable || busy !== null}
-                  aria-label={repeatModeLabel(repeat)}
-                  aria-pressed={repeat !== 'off'}
-                  className={cn(repeat !== 'off' && 'text-accent')}
-                  onClick={() =>
-                    void run(
-                      'repeat',
-                      () => player.setRepeat(nextRepeatMode(repeat)),
-                      'Repeat failed',
-                    )
-                  }
-                >
-                  {repeat === 'one' ? (
-                    <Repeat1 className="size-4" />
-                  ) : (
-                    <Repeat className="size-4" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={unavailable || busy !== null || itemCount === 0}
-                  aria-label="Clear queue"
-                  onClick={() => void clearQueue()}
-                >
-                  {busy === 'clear' ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-4" />
-                  )}
-                </Button>
-              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn('justify-self-end', repeat !== 'off' && 'text-accent')}
+                disabled={unavailable || busy !== null}
+                aria-label={repeatModeLabel(repeat)}
+                aria-pressed={repeat !== 'off'}
+                onClick={() =>
+                  void run(
+                    'repeat',
+                    () => queueApi.setRepeat(nextRepeatMode(repeat)),
+                    'Repeat failed',
+                  )
+                }
+              >
+                {repeat === 'one' ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
+              </Button>
             </div>
           </div>
+        </div>
+      ) : null}
 
-          {queue?.next_item ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-canvas/40 p-2.5">
-              <Artwork src={nextArt} label="Up next artwork" size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium tracking-wide text-ink-faint uppercase">
-                  Up next
-                </p>
-                <p className="truncate text-sm font-semibold text-ink">
-                  {nextTitle ?? 'Unknown track'}
-                </p>
-                {nextArtist ? (
-                  <p className="truncate text-xs text-ink-muted">{nextArtist}</p>
-                ) : null}
-              </div>
-              {queue.next_item.duration != null ? (
-                <span className="shrink-0 text-xs tabular-nums text-ink-faint">
-                  {formatDuration(queue.next_item.duration)}
-                </span>
-              ) : null}
+      {upNext.length > 0 ? (
+        <div className="space-y-2.5">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">Up next</h3>
+              <p className="text-xs text-ink-muted">
+                {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}
+                {upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
+                {queue?.is_dynamic || queue?.autoplay_enabled ? ' · Radio' : ''}
+              </p>
             </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-            <p>
-              {itemCount > 0 ? (
-                <>
-                  <span className="font-medium text-ink">{itemCount}</span> in queue
-                  {queue?.current_index != null ? <> · #{queue.current_index + 1}</> : null}
-                </>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={confirmClear ? 'text-danger' : 'text-ink-muted'}
+              disabled={unavailable || busy !== null || !items.length}
+              onClick={() => {
+                if (!confirmClear) {
+                  setConfirmClear(true)
+                  return
+                }
+                setConfirmClear(false)
+                void run('clear', () => queueApi.clear(), 'Clear failed')
+              }}
+            >
+              {busy === 'clear' ? (
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                'Queue empty'
+                <Trash2 className="size-3.5" />
               )}
-              {queue?.is_dynamic || queue?.autoplay_enabled ? ' · Radio mode' : null}
-              {shuffle ? ' · Shuffle' : null}
-              {repeat !== 'off' ? ` · ${repeatModeLabel(repeat)}` : null}
-            </p>
+              {confirmClear ? 'Tap to clear all' : 'Clear queue'}
+            </Button>
+          </div>
 
-            <div className="relative">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={unavailable || busy !== null || transferTargets.length === 0}
-                onClick={() => setTransferOpen((open) => !open)}
-              >
-                {busy === 'transfer' ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                Transfer
-              </Button>
-              {transferOpen ? (
-                <div className="absolute right-0 bottom-full z-10 mb-1 min-w-[10rem] overflow-hidden rounded-xl border border-border bg-canvas-elevated shadow-lg">
-                  {transferTargets.map((dest) => (
-                    <button
-                      key={dest.id}
-                      type="button"
-                      className="block w-full px-3 py-2.5 text-left text-sm text-ink transition-ui hover:bg-surface-hover"
-                      onClick={() => void transferTo(dest.id)}
-                    >
-                      {dest.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+          <div className="max-h-[26rem] overflow-y-auto overscroll-contain sm:max-h-[32rem]">
+            <div className="space-y-2">
+              {upNext.map((entry, rowIndex) => {
+                const { item, index } = entry
+                const itemId = item.queue_item_id ?? `idx-${index}`
+                return (
+                  <div key={item.queue_item_id ?? `q-${index}`}>
+                    <QueueRow
+                      item={item}
+                      position={rowIndex + 1}
+                      massUrl={massUrl}
+                      busy={busy}
+                      disabled={unavailable || busy !== null}
+                      canManage={canManageItems}
+                      supportMoveToEnd={!viaMassQueue}
+                      isFirstMovable={currentIndex == null ? index === 0 : index <= currentIndex + 1}
+                      isLast={index === items.length - 1}
+                      onPlay={() =>
+                        void run(
+                          itemId,
+                          () => queueApi.playIndex(item.queue_item_id ?? String(index)),
+                          'Play failed',
+                        )
+                      }
+                      onRemove={() =>
+                        void run(itemId, () => queueApi.removeItem(itemId), 'Remove failed')
+                      }
+                      onMoveUp={() =>
+                        void run(itemId, () => queueApi.moveUp(itemId), 'Move failed')
+                      }
+                      onMoveDown={() =>
+                        void run(itemId, () => queueApi.moveDown(itemId), 'Move failed')
+                      }
+                      onPlayNext={() =>
+                        void run(itemId, () => queueApi.playNext(itemId), 'Move failed')
+                      }
+                      onMoveEnd={() =>
+                        void run(itemId, () => queueApi.moveToEnd(itemId), 'Move failed')
+                      }
+                    />
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

@@ -41,8 +41,8 @@ On first run, grant **Location → Allow all the time**.
 Uses Fused Location PendingIntents + WorkManager (no foreground service notification).
 
 1. Sign in to Home Assistant in the app.
-2. Open **Settings → This device → Share location**.
-3. Minimize / lock the phone — Home Assistant `device_tracker.casa_web_*` should keep updating.
+2. Open **Settings → This device → Enable location based automations**.
+3. Minimize / lock the phone — Home Assistant creates a tracker from the Android device name (e.g. `device_tracker.pixel_8`).
 4. Assign that tracker to a Person in HA for presence.
 
 ## Release / sideload APK

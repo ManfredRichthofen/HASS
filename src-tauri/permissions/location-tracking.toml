@@ -4,5 +4,6 @@ description = "Allows starting and stopping Android background location sharing 
 commands.allow = [
   "location_tracking_start",
   "location_tracking_stop",
-  "location_tracking_update_credentials"
+  "location_tracking_update_credentials",
+  "location_tracking_get_device_name"
 ]

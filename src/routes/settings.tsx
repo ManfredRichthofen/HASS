@@ -4,6 +4,7 @@ import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { LocationSettings } from '#/components/location/LocationSettings'
+import { MusicAssistantSettings } from '#/components/media/MusicAssistantSettings'
 import { Button } from '#/components/ui/button'
 import { UpdateSettings } from '#/components/update/UpdateSettings'
 import { haUrl } from '#/config/ha'
@@ -26,6 +27,10 @@ function SettingsPage() {
 
       <Section title="This device">
         <LocationSettings />
+      </Section>
+
+      <Section title="Media">
+        <MusicAssistantSettings />
       </Section>
 
       {isTauri() ? (
