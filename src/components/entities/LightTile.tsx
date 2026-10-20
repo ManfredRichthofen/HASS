@@ -86,7 +86,7 @@ export function LightTile({ entityId }: { entityId: string }) {
         layout
         transition={soft}
         className={cn(
-          'relative flex flex-col justify-between rounded-2xl border p-3.5',
+          'relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border p-3.5',
           showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.25rem]',
           light.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
@@ -167,7 +167,7 @@ export function LightTile({ entityId }: { entityId: string }) {
               onPointerDown={stopSliderPointer}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mt-2">
+              <div className="mt-2 min-w-0">
                 <Slider
                   onCard
                   aria-label={`${name} brightness`}

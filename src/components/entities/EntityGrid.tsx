@@ -5,7 +5,7 @@ export function EntityGrid({ children, className }: { children: ReactNode; class
   return (
     <div
       className={cn(
-        'grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-4',
+        'grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-4 [&>*]:min-w-0',
         className,
       )}
     >

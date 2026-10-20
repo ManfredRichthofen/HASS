@@ -109,7 +109,7 @@ export function ClimateCard({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-border-subtle bg-surface p-4 sm:p-5',
+        'min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4 sm:p-5',
         unavailable && 'opacity-40',
       )}
     >
@@ -163,7 +163,7 @@ export function ClimateCard({
       </div>
 
       {climate.supportsTargetTemperature ? (
-        <div className="mb-5 space-y-2">
+        <div className="mb-5 min-w-0 space-y-2">
           <Slider
             aria-label="Target temperature"
             min={climate.minTemp}

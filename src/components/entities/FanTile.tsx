@@ -141,7 +141,7 @@ export function FanTile({
         layout
         transition={soft}
         className={cn(
-          'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
+          'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
           fan.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
@@ -168,10 +168,12 @@ export function FanTile({
               />
             </span>
             <span className="min-w-0 pt-1">
-              <span className="block text-sm font-semibold tracking-tight text-ink">{name}</span>
+              <span className="line-clamp-2 block text-sm font-semibold tracking-tight text-ink">
+                {name}
+              </span>
               <span
                 className={cn(
-                  'mt-0.5 block text-xs',
+                  'mt-0.5 block truncate text-xs',
                   fan.isOn ? 'text-white/80' : 'text-ink-muted',
                 )}
               >
@@ -204,8 +206,8 @@ export function FanTile({
               className="relative overflow-hidden"
               onPointerDown={stopBubble}
             >
-              <div className="mt-4 space-y-3">
-                <div className="flex gap-1.5">
+              <div className="mt-4 min-w-0 space-y-3">
+                <div className="flex min-w-0 gap-1.5">
                   {speedPresets.map((preset) => {
                     const selected = activePreset?.value === preset.value
                     return (
@@ -218,7 +220,7 @@ export function FanTile({
                           void commitSpeed(preset.value)
                         }}
                         className={cn(
-                          'touch-target flex-1 rounded-xl border px-2 text-xs font-semibold transition',
+                          'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition',
                           selected
                             ? 'border-white/60 bg-white/25 text-white'
                             : 'border-transparent bg-white/10 text-white/80 hover:text-white',
@@ -230,7 +232,7 @@ export function FanTile({
                   })}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-white/80">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
@@ -269,7 +271,7 @@ export function FanTile({
               className="relative overflow-hidden"
               onPointerDown={stopBubble}
             >
-              <div className="mt-4 flex gap-1.5">
+              <div className="mt-4 flex min-w-0 gap-1.5">
                 {speedPresets.map((preset) => (
                   <button
                     key={preset.label}
@@ -278,7 +280,7 @@ export function FanTile({
                       setSpeed(preset.value)
                       void commitSpeed(preset.value)
                     }}
-                    className="touch-target flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-2 text-xs font-semibold text-ink-muted transition hover:border-info/30 hover:text-ink"
+                    className="touch-target min-w-0 flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition hover:border-info/30 hover:text-ink"
                   >
                     {preset.label}
                   </button>

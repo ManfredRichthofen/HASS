@@ -49,7 +49,13 @@ function compareSemver(a: string, b: string): number {
 }
 
 async function openUrl(url: string): Promise<void> {
-  window.open(url, '_blank', 'noopener,noreferrer')
+  // window.open is a no-op in the Android WebView; hand the URL to the system (browser/downloader).
+  try {
+    const { openUrl: open } = await import('@tauri-apps/plugin-opener')
+    await open(url)
+  } catch {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 }
 
 /** Desktop: official Tauri updater against GitHub `latest.json`. */
@@ -80,6 +86,10 @@ async function checkAndroidGithubRelease(): Promise<UpdateCheckResult> {
   const res = await fetch(githubRepo.apiLatestReleaseUrl, {
     headers: { Accept: 'application/vnd.github+json' },
   })
+  // /releases/latest 404s until a non-draft release is published.
+  if (res.status === 404) {
+    return { status: 'upToDate', version: current }
+  }
   if (!res.ok) {
     throw new Error(`GitHub release check failed (${res.status})`)
   }

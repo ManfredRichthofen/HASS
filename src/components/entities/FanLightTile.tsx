@@ -2,7 +2,6 @@ import { useFan, useLight } from 'hass-react'
 import { Fan, Lightbulb, Wind } from 'lucide-react'
 import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
-import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
@@ -97,7 +96,7 @@ export function FanLightTile({
       layout
       transition={soft}
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-2xl border p-3.5',
+        'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5',
         showInline || (!fan.isOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
         active ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
         unavailable && 'opacity-40',
@@ -105,8 +104,13 @@ export function FanLightTile({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 pt-0.5">
-          <p className="text-sm font-semibold tracking-tight text-ink">{label}</p>
-          <p className={cn('mt-0.5 text-xs', active ? 'text-white/80' : 'text-ink-muted')}>
+          <p className="truncate text-sm font-semibold tracking-tight text-ink">{label}</p>
+          <p
+            className={cn(
+              'mt-0.5 truncate text-xs',
+              active ? 'text-white/80' : 'text-ink-muted',
+            )}
+          >
             Light {light.isOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
           </p>
         </div>
@@ -131,23 +135,14 @@ export function FanLightTile({
           whileTap={{ scale: 0.98 }}
           transition={snappy}
           className={cn(
-            'flex min-h-11 items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs font-semibold transition',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition',
             light.isOn
               ? 'border-white/40 bg-white/20 text-white'
               : 'border-border-subtle bg-canvas/40 text-ink-muted',
           )}
         >
-          <span className="inline-flex items-center gap-1.5">
-            <Lightbulb className="size-3.5" />
-            Light
-          </span>
-          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-            <Switch
-              checked={light.isOn}
-              disabled={light.isUnavailable}
-              onCheckedChange={() => void toggleLight()}
-            />
-          </span>
+          <Lightbulb className="size-3.5 shrink-0" />
+          <span className="truncate">Light</span>
         </m.button>
 
         <m.button
@@ -157,23 +152,14 @@ export function FanLightTile({
           whileTap={{ scale: 0.98 }}
           transition={snappy}
           className={cn(
-            'flex min-h-11 items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs font-semibold transition',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition',
             fan.isOn
               ? 'border-white/40 bg-white/20 text-white'
               : 'border-border-subtle bg-canvas/40 text-ink-muted',
           )}
         >
-          <span className="inline-flex items-center gap-1.5">
-            <Fan className="size-3.5" />
-            Fan
-          </span>
-          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-            <Switch
-              checked={fan.isOn}
-              disabled={fan.isUnavailable}
-              onCheckedChange={() => void toggleFan()}
-            />
-          </span>
+          <Fan className="size-3.5 shrink-0" />
+          <span className="truncate">Fan</span>
         </m.button>
       </div>
 
@@ -187,8 +173,8 @@ export function FanLightTile({
             className="overflow-hidden"
             onPointerDown={stopBubble}
           >
-            <div className="mt-3 space-y-2">
-              <div className="flex gap-1.5">
+            <div className="mt-3 min-w-0 space-y-2">
+              <div className="flex min-w-0 gap-1.5">
                 {speedPresets.map((preset) => {
                   const selected = fan.isOn && activePreset?.value === preset.value
                   return (
@@ -201,7 +187,7 @@ export function FanLightTile({
                         void commitSpeed(preset.value)
                       }}
                       className={cn(
-                        'touch-target flex-1 rounded-xl border px-2 text-xs font-semibold transition',
+                        'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition',
                         selected
                           ? 'border-white/60 bg-white/25 text-white'
                           : fan.isOn
@@ -215,7 +201,7 @@ export function FanLightTile({
                 })}
               </div>
               {showInline ? (
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-white/80">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed

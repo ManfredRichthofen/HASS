@@ -54,7 +54,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
   return (
     <div
       className={cn(
-        'rounded-2xl border border-border-subtle bg-surface p-4',
+        'min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4',
         isActive && 'border-success/30',
         unavailable && 'opacity-40',
       )}
@@ -94,7 +94,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-canvas hover:text-ink"
@@ -105,6 +105,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
           {player.isMuted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
         </button>
         <Slider
+          className="min-w-0 flex-1"
           aria-label="Volume"
           min={0}
           max={100}

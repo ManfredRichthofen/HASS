@@ -81,8 +81,11 @@ jobs:
         run: bun run android:patch
 
       - name: Setup Android signing
-        if: env.ANDROID_KEY_BASE64 != ''
         run: |
+          if [ -z "$ANDROID_KEY_BASE64" ]; then
+            echo "::error::ANDROID_KEY_BASE64 is not set. Releases must be signed with one stable key or in-app updates cannot install over the previous APK."
+            exit 1
+          fi
           cd src-tauri/gen/android
           echo "keyAlias=$ANDROID_KEY_ALIAS" > keystore.properties
           echo "password=$ANDROID_KEY_PASSWORD" >> keystore.properties

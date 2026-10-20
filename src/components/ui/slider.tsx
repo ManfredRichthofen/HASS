@@ -40,7 +40,10 @@ export function Slider({
 
   return (
     <BaseSlider.Root
-      className={cn('relative flex w-full touch-none select-none items-center', className)}
+      className={cn(
+        'relative flex w-full min-w-0 max-w-full touch-none select-none items-center',
+        className,
+      )}
       {...props}
       value={controlled ? local : undefined}
       defaultValue={controlled ? undefined : defaultValue}
@@ -56,10 +59,11 @@ export function Slider({
         onValueCommitted?.(next as never, eventDetails)
       }}
     >
-      <BaseSlider.Control className="flex w-full touch-none py-4">
+      {/* px-3 = half of thumb (size-6) so ends stay inside the card */}
+      <BaseSlider.Control className="flex w-full min-w-0 touch-none px-3 py-3">
         <BaseSlider.Track
           className={cn(
-            'relative h-2 w-full grow rounded-full',
+            'relative h-2 w-full min-w-0 grow rounded-full',
             onCard ? 'bg-white/25' : 'bg-border',
           )}
         >
@@ -72,7 +76,7 @@ export function Slider({
           <BaseSlider.Thumb
             aria-label={ariaLabel}
             className={cn(
-              'size-6 rounded-full border-2 bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+              'size-6 shrink-0 rounded-full border-2 bg-ink shadow outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               onCard ? 'border-white' : 'border-accent',
             )}
           />
