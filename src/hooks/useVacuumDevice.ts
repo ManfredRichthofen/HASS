@@ -52,10 +52,13 @@ export function useVacuumDevice(
   const { connection, connected } = useHAConnection()
   const slug = vacuumSlug(vacuumEntityId)
 
+  // Prefer curated map camera IDs — skip a full get_states when config already has them.
+  const needsDiscovery = preferredMapCameras.length === 0
+
   const query = useQuery({
     queryKey: ['vacuum-related', slug],
-    enabled: Boolean(connection && connected),
-    staleTime: 2 * 60_000,
+    enabled: Boolean(connection && connected && needsDiscovery),
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!connection) return [] as EntityState[]
       const states = await connection.sendMessagePromise<EntityState[]>({
@@ -81,9 +84,9 @@ export function useVacuumDevice(
       binarySensors: related.filter((e) => e.entity_id.startsWith('binary_sensor.')),
       selects: related.filter((e) => e.entity_id.startsWith('select.')),
       buttons: related.filter((e) => e.entity_id.startsWith('button.')),
-      loading: query.isLoading,
+      loading: needsDiscovery && query.isLoading,
     }
-  }, [preferredMapCameras, related, slug, query.isLoading])
+  }, [needsDiscovery, preferredMapCameras, related, slug, query.isLoading])
 }
 
 export function friendlyLabel(entityId: string, attributes: Record<string, unknown>) {

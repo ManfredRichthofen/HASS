@@ -1,28 +1,46 @@
 import { useCamera } from 'hass-react'
 import { Map as MapIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { cn } from '#/lib/cn'
 
-export function VacuumMap({ cameraId, className }: { cameraId: string; className?: string }) {
+export function VacuumMap({
+  cameraId,
+  className,
+  /** When false (docked/idle), refresh less often. */
+  active = true,
+}: {
+  cameraId: string
+  className?: string
+  active?: boolean
+}) {
   const camera = useCamera(cameraId)
-  const [bust, setBust] = useState(0)
+  const refreshImage = camera.refreshImage
 
   useEffect(() => {
-    void camera.refreshImage().catch(() => undefined)
-    const id = window.setInterval(() => {
-      setBust((n) => n + 1)
-      void camera.refreshImage().catch(() => undefined)
-    }, 15_000)
-    return () => window.clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraId])
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return
+      void refreshImage().catch(() => undefined)
+    }
+
+    refresh()
+    const intervalMs = active ? 15_000 : 60_000
+    const id = window.setInterval(refresh, intervalMs)
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [active, refreshImage])
 
   const src = camera.imageUrl
-    ? `${camera.imageUrl}${camera.imageUrl.includes('?') ? '&' : '?'}r=${bust}`
-    : null
 
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl bg-[#0a0d12]', className)}>
+    <div className={cn('relative overflow-hidden rounded-2xl bg-canvas', className)}>
       {src && !camera.isUnavailable ? (
         <img src={src} alt="Vacuum map" className="aspect-[4/3] w-full object-contain" />
       ) : (

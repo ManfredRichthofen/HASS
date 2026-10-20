@@ -16,14 +16,14 @@ export function Switch({ className, ...props }: ComponentProps<typeof BaseSwitch
       <span
         aria-hidden
         className={cn(
-          'pointer-events-none absolute inset-x-1.5 inset-y-2.5 rounded-full transition',
+          'pointer-events-none absolute inset-x-1.5 inset-y-2.5 rounded-full transition-ui',
           'bg-border peer-data-checked:bg-accent',
           '[[data-checked]_&]:bg-accent',
         )}
       />
       <BaseSwitch.Thumb
         className={cn(
-          'relative z-10 size-6 rounded-full bg-ink shadow transition duration-150',
+          'relative z-10 size-6 rounded-full bg-ink shadow transition-ui duration-fast',
           'data-checked:translate-x-3 data-unchecked:-translate-x-3',
         )}
       />

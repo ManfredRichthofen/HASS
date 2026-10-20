@@ -6,11 +6,19 @@ import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 
-export function MediaCard({ entityId, compact = false }: { entityId: string; compact?: boolean }) {
+export function MediaCard({
+  entityId,
+  compact = false,
+}: {
+  entityId: string
+  /** `auto` collapses when idle so callers don't need a second useMediaPlayer. */
+  compact?: boolean | 'auto'
+}) {
   const player = useMediaPlayer(entityId)
   const name = entityName(entityId, player.attributes.friendly_name)
   const unavailable = player.isUnavailable
   const isActive = player.isPlaying || player.isPaused
+  const showCompact = compact === 'auto' ? !isActive : compact
   // Music Assistant / Sonos keep last track in attributes while idle — don't show it as current.
   const title = isActive
     ? (player.mediaTitle ?? 'Nothing playing')
@@ -27,7 +35,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
     }
   }
 
-  if (compact) {
+  if (showCompact) {
     return (
       <button
         type="button"
@@ -36,7 +44,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
           void run(() => (player.isPlaying ? player.pause() : player.play()), 'Playback failed')
         }
         className={cn(
-          'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-3 text-left transition hover:bg-surface-hover',
+          'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-3 text-left transition-ui hover:bg-surface-hover',
           unavailable && 'opacity-40',
         )}
       >
@@ -97,7 +105,7 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
-          className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-canvas hover:text-ink"
+          className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition-ui hover:bg-canvas hover:text-ink"
           disabled={unavailable}
           aria-label={player.isMuted ? 'Unmute' : 'Mute'}
           onClick={() => void run(() => player.toggleMute(), 'Mute failed')}
@@ -124,8 +132,5 @@ export function MediaCard({ entityId, compact = false }: { entityId: string; com
 
 /** Compact when idle; expands to full controls while playing/paused. */
 export function MediaPlayerRow({ entityId }: { entityId: string }) {
-  const player = useMediaPlayer(entityId)
-  const isActive = player.isPlaying || player.isPaused
-
-  return <MediaCard entityId={entityId} compact={!isActive} />
+  return <MediaCard entityId={entityId} compact="auto" />
 }

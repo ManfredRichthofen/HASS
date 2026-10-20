@@ -117,7 +117,7 @@ function AnimatedOutlet() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="popLayout" initial={false}>
       <m.div
         key={pathname}
         initial={pageFade.initial}

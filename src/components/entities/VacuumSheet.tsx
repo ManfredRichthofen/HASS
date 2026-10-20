@@ -69,7 +69,7 @@ function ModeChips({ entityId, title }: { entityId: string; title: string }) {
               disabled={entity.isUnavailable}
               onClick={() => void select(option)}
               className={cn(
-                'touch-target rounded-xl border px-3 text-xs font-medium capitalize transition',
+                'touch-target rounded-xl border px-3 text-xs font-medium capitalize transition-ui',
                 selected
                   ? 'border-accent/40 bg-accent-soft text-accent'
                   : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
@@ -136,7 +136,10 @@ export function VacuumSheet({ entityId }: { entityId: string }) {
       </div>
 
       {device.mapCameraId ? (
-        <VacuumMap cameraId={device.mapCameraId} />
+        <VacuumMap
+          cameraId={device.mapCameraId}
+          active={vacuum.isCleaning || vacuum.isReturning}
+        />
       ) : (
         <div className="grid place-items-center gap-1 rounded-2xl bg-canvas py-12 text-ink-faint">
           <MapIcon className="size-6 opacity-40" />

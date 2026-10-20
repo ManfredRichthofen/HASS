@@ -8,7 +8,7 @@ import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import { entityName, simpleToggleLights } from '#/lib/entityName'
-import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
+import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
 
 function rgbCss(rgb?: [number, number, number] | null) {
   if (!rgb) return undefined
@@ -39,14 +39,10 @@ export function LightTile({ entityId }: { entityId: string }) {
       light.minColorTempKelvin != null &&
       light.maxColorTempKelvin != null)
 
-  const iconBg =
+  const iconStyle =
     light.isOn && canColor && light.rgbColor
-      ? rgbCss(light.rgbColor)!
-      : light.isOn
-        ? 'rgba(255, 255, 255, 0.2)'
-        : 'rgba(37, 46, 64, 1)'
-  const iconColor =
-    light.isOn && canColor && light.rgbColor ? '#0b0f17' : light.isOn ? '#ffffff' : '#8f9bb3'
+      ? { backgroundColor: rgbCss(light.rgbColor), color: 'var(--color-canvas)' }
+      : undefined
 
   useEffect(() => {
     setBrightnessPct(Math.max(1, Math.round(light.brightnessPercent) || 1))
@@ -82,11 +78,9 @@ export function LightTile({ entityId }: { entityId: string }) {
 
   return (
     <>
-      <m.div
-        layout
-        transition={soft}
+      <div
         className={cn(
-          'relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border p-3.5',
+          'relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border p-3.5 transition-state',
           showInlineDimmer ? 'min-h-[9.5rem]' : 'min-h-[7.25rem]',
           light.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
@@ -97,17 +91,20 @@ export function LightTile({ entityId }: { entityId: string }) {
             type="button"
             disabled={unavailable}
             onClick={() => void handleToggle()}
-            whileTap={{ scale: 0.98 }}
+            whileTap={tap.soft}
             transition={snappy}
             className="flex min-h-11 min-w-0 flex-1 items-start gap-3 text-left"
           >
-            <m.span
-              className="grid size-11 shrink-0 place-items-center rounded-xl"
-              animate={{ backgroundColor: iconBg, color: iconColor }}
-              transition={soft}
+            <span
+              className={cn(
+                'grid size-11 shrink-0 place-items-center rounded-xl transition-state',
+                !iconStyle &&
+                  (light.isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted'),
+              )}
+              style={iconStyle}
             >
               <Lightbulb className="size-5" />
-            </m.span>
+            </span>
             <span className="min-w-0 pt-1">
               <span className="line-clamp-2 block text-sm font-semibold text-ink">{name}</span>
               <span
@@ -134,7 +131,7 @@ export function LightTile({ entityId }: { entityId: string }) {
               aria-label={`Color for ${name}`}
               onClick={() => setOpen(true)}
               className={cn(
-                'grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition',
+                'grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition-ui',
                 'hover:bg-white/10 hover:text-ink',
                 (!light.isOn || unavailable) && 'opacity-50',
               )}
@@ -188,7 +185,7 @@ export function LightTile({ entityId }: { entityId: string }) {
             </m.div>
           ) : null}
         </AnimatePresence>
-      </m.div>
+      </div>
 
       {hasColorDrawer ? (
         <Drawer open={open} onOpenChange={setOpen}>

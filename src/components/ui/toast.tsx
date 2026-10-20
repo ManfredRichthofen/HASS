@@ -24,7 +24,7 @@ function ToastList() {
       key={toast.id}
       toast={toast}
       className={cn(
-        'relative rounded-2xl border border-border bg-surface px-4 py-3 pr-8 text-sm text-ink shadow-xl',
+        'relative rounded-2xl border border-border bg-surface px-4 py-3 pr-8 text-sm text-ink shadow-xl transition-ui',
         'data-ending-style:translate-y-2 data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0',
       )}
     >

@@ -7,7 +7,7 @@ import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { AnimatePresence, m, snappy, soft } from '#/lib/motion'
+import { AnimatePresence, m, snappy, swapIcon, swapText, tap } from '#/lib/motion'
 
 export function QuickDeviceRow() {
   const player = useMediaPlayer(entities.mediaAll)
@@ -47,15 +47,11 @@ export function QuickDeviceRow() {
   return (
     <>
       <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
-        <m.div
-          animate={{
-            borderColor: player.isPlaying
-              ? 'rgba(94, 207, 142, 0.35)'
-              : 'rgba(255, 255, 255, 0.08)',
-            backgroundColor: player.isPlaying ? 'rgba(94, 207, 142, 0.05)' : 'rgba(28, 34, 44, 1)',
-          }}
-          transition={soft}
-          className="min-w-0 rounded-2xl border"
+        <div
+          className={cn(
+            'min-w-0 rounded-2xl border transition-state',
+            player.isPlaying ? 'border-success/35 bg-success/5' : 'border-border-subtle bg-surface',
+          )}
         >
           <Link to="/media" className="flex min-h-14 items-center gap-3 p-3.5">
             <span
@@ -75,11 +71,11 @@ export function QuickDeviceRow() {
                 <m.button
                   key={player.isPlaying ? 'pause' : 'play'}
                   type="button"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={snappy}
-                  whileTap={{ scale: 0.92 }}
+                  initial={swapIcon.initial}
+                  animate={swapIcon.animate}
+                  exit={swapIcon.exit}
+                  transition={swapIcon.transition}
+                  whileTap={tap.hard}
                   onClick={(e) => void togglePlayback(e)}
                   className="grid size-11 shrink-0 place-items-center rounded-xl bg-canvas text-ink"
                   aria-label={player.isPlaying ? 'Pause' : 'Play'}
@@ -99,21 +95,18 @@ export function QuickDeviceRow() {
               )}
             </AnimatePresence>
           </Link>
-        </m.div>
+        </div>
 
         <m.button
           type="button"
-          whileTap={{ scale: 0.985 }}
+          whileTap={tap.soft}
           transition={snappy}
           disabled={vacuum.isUnavailable}
           onClick={() => setVacuumOpen(true)}
-          animate={{
-            borderColor: vacuum.isCleaning
-              ? 'rgba(96, 165, 250, 0.35)'
-              : 'rgba(255, 255, 255, 0.08)',
-            backgroundColor: vacuum.isCleaning ? 'rgba(96, 165, 250, 0.05)' : 'rgba(28, 34, 44, 1)',
-          }}
-          className="flex min-h-14 min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left disabled:opacity-40"
+          className={cn(
+            'flex min-h-14 min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-left transition-state disabled:opacity-40',
+            vacuum.isCleaning ? 'border-info/35 bg-info/5' : 'border-border-subtle bg-surface',
+          )}
         >
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-info/15 text-info">
             <RobotVacuum className="size-5" />
@@ -123,10 +116,10 @@ export function QuickDeviceRow() {
             <AnimatePresence mode="popLayout" initial={false}>
               <m.p
                 key={vacuumLabel}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={soft}
+                initial={swapText.initial}
+                animate={swapText.animate}
+                exit={swapText.exit}
+                transition={swapText.transition}
                 className="truncate text-xs capitalize text-ink-muted"
               >
                 {vacuumLabel}

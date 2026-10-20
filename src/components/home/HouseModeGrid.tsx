@@ -2,6 +2,7 @@ import { useEntity, useServiceCall } from 'hass-react'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
+import { m, snappy, tap } from '#/lib/motion'
 
 function modeMatches(current: string, label: string) {
   return current.trim().toLowerCase() === label.trim().toLowerCase()
@@ -26,19 +27,21 @@ export function HouseModeGrid() {
       {entities.houseModes.map((item) => {
         const selected = modeMatches(current, item.label)
         return (
-          <button
+          <m.button
             key={item.id}
             type="button"
+            whileTap={tap.medium}
+            transition={snappy}
             onClick={() => void runScript(item.id, item.label)}
             className={cn(
-              'touch-target flex items-center justify-center rounded-xl border px-3 text-sm font-semibold transition',
+              'touch-target flex items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-ui',
               selected
                 ? 'border-transparent bg-accent text-white'
                 : 'border-border-subtle bg-surface text-ink hover:bg-surface-hover',
             )}
           >
             {item.label}
-          </button>
+          </m.button>
         )
       })}
     </div>

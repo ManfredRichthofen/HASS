@@ -10,6 +10,8 @@ import {
   UserRound,
   UserRoundX,
 } from 'lucide-react'
+import { CameraTile } from '#/components/entities/CameraTile'
+import { EntityGrid } from '#/components/entities/EntityGrid'
 import { LockTile } from '#/components/entities/LockTile'
 import { HouseModeGrid } from '#/components/home/HouseModeGrid'
 import { Page } from '#/components/layout/Page'
@@ -22,6 +24,7 @@ import { m, staggerContainer, staggerItem } from '#/lib/motion'
 export const Route = createFileRoute('/security')({ component: SecurityPage })
 
 const leakIds = entities.security.leaks.map((l) => l.id)
+const securityCameras = entities.security.cameras
 
 function StatusRow({
   icon: Icon,
@@ -41,7 +44,7 @@ function StatusRow({
           'grid size-10 shrink-0 place-items-center rounded-xl',
           tone === 'ok' && 'bg-success/15 text-success',
           tone === 'bad' && 'bg-danger/15 text-danger',
-          tone === 'muted' && 'bg-[#252e40] text-ink-muted',
+          tone === 'muted' && 'bg-icon-well text-ink-muted',
         )}
       >
         <Icon className="size-5" />
@@ -66,7 +69,7 @@ function StatusRow({
 function SecurityPage() {
   const lock = useLock(entities.lock)
   const door = useBinarySensor(entities.security.doorContact)
-  const leaks = useEntityGroup([...leakIds])
+  const leaks = useEntityGroup(leakIds)
   const occupancy = useBinarySensor(entities.occupancyAny)
 
   const issues: string[] = []
@@ -87,15 +90,15 @@ function SecurityPage() {
   return (
     <m.div initial="initial" animate="animate" variants={staggerContainer}>
       <Page>
-        <PageHeader title="Security" subtitle="Doors, leaks and house mode" />
+        <PageHeader title="Security" subtitle="Doors, cameras, leaks and house mode" />
 
         <m.div
           variants={staggerItem}
           className={cn(
-            'flex items-center gap-4 rounded-3xl border border-border-subtle p-5 transition-colors duration-500',
+            'flex items-center gap-4 rounded-3xl border border-border-subtle p-5 transition-state',
             secure
-              ? 'bg-gradient-to-br from-[#14261f] to-surface'
-              : 'bg-gradient-to-br from-[#2e1a14] to-surface',
+              ? 'bg-gradient-to-br from-success-muted to-surface'
+              : 'bg-gradient-to-br from-danger-muted to-surface',
           )}
         >
           <span
@@ -104,7 +107,9 @@ function SecurityPage() {
               secure ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger',
             )}
           >
-            <span className="absolute inset-0 animate-ping rounded-2xl border-2 border-current opacity-20" />
+            {!secure ? (
+              <span className="absolute inset-0 animate-ping rounded-2xl border-2 border-current opacity-20" />
+            ) : null}
             {secure ? <ShieldCheck className="size-7" /> : <ShieldAlert className="size-7" />}
           </span>
           <div className="min-w-0">
@@ -112,6 +117,18 @@ function SecurityPage() {
             <p className="text-sm text-ink-muted">{heroSub}</p>
           </div>
         </m.div>
+
+        {securityCameras.length > 0 ? (
+          <m.div variants={staggerItem}>
+            <Section title="Cameras">
+              <EntityGrid>
+                {securityCameras.map((cam) => (
+                  <CameraTile key={cam.id} entityId={cam.id} label={cam.label} />
+                ))}
+              </EntityGrid>
+            </Section>
+          </m.div>
+        ) : null}
 
         <m.div variants={staggerItem}>
           <Section title="House mode">
@@ -161,7 +178,7 @@ function SecurityPage() {
             <StatusRow
               icon={someoneHome ? UserRound : UserRoundX}
               label="Someone home"
-              value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'No one'}
+              value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'Empty'}
               tone={someoneHome ? 'ok' : 'muted'}
             />
           </Section>

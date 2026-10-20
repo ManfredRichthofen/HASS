@@ -274,7 +274,7 @@ export const entities = {
     ],
     fans: ['fan.mts300'],
   },
-  /** Security page: door contact + leak sensors (hidden automatically if unavailable). */
+  /** Security page: door contact, leaks, and cameras (hidden automatically if unavailable). */
   security: {
     doorContact: 'binary_sensor.level_lock_pro_door',
     leaks: [
@@ -284,6 +284,11 @@ export const entities = {
       },
       { id: 'binary_sensor.washer_leak_sensor', label: 'Washer' },
     ],
+    /**
+     * Live cameras for the Security page. Add HA `camera.*` entity IDs here.
+     * Stills use camera_proxy; live view uses HLS via hls.js (MJPEG fallback).
+     */
+    cameras: [] as readonly { id: string; label: string }[],
   },
   houseMode: 'input_select.house_mode',
   houseModeAuto: 'input_boolean.house_mode_auto',

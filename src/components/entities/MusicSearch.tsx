@@ -1,12 +1,14 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useServiceCall } from 'hass-react'
-import { Loader2, Play, Search } from 'lucide-react'
+import { ListPlus, ListStart, Loader2, Play, Search } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import {
+  type EnqueueMode,
+  enqueueModes,
   type MediaSearchItem,
   mediaClassFilters,
   mediaClassLabel,
@@ -16,10 +18,18 @@ import {
 
 const ROW_ESTIMATE = 68
 
-export function MusicSearch() {
+export function MusicSearch({
+  target,
+  onTargetChange,
+  onQueued,
+}: {
+  target: string
+  onTargetChange: (id: string) => void
+  onQueued?: () => void
+}) {
   const { callService, callServiceWithResponse } = useServiceCall()
   const [query, setQuery] = useState('')
-  const [target, setTarget] = useState<string>(mediaTargets[0].id)
+  const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
   const [filter, setFilter] = useState<string>('all')
   const [results, setResults] = useState<MediaSearchItem[]>([])
   const [searching, setSearching] = useState(false)
@@ -69,18 +79,40 @@ export function MusicSearch() {
     }
   }
 
-  async function playItem(item: MediaSearchItem) {
+  async function playItem(item: MediaSearchItem, mode: EnqueueMode = enqueue) {
     if (!item.can_play && !item.media_content_id) return
     setPlayingId(item.media_content_id)
     try {
-      await callService('media_player', 'play_media', {
+      await callService('music_assistant', 'play_media', {
         entity_id: target,
-        media_content_id: item.media_content_id,
-        media_content_type: item.media_content_type || 'music',
+        media_id: item.media_content_id,
+        media_type: item.media_content_type || item.media_class || 'track',
+        enqueue: mode,
       })
-      notify('Playing', item.title)
+      const label = mode === 'add' ? 'Queued' : mode === 'next' ? 'Playing next' : 'Playing'
+      notify(label, item.title)
+      onQueued?.()
     } catch (e) {
-      notify('Play failed', e instanceof Error ? e.message : 'Could not start playback')
+      // Fall back to the generic media_player service if MA play_media rejects.
+      try {
+        await callService('media_player', 'play_media', {
+          entity_id: target,
+          media_content_id: item.media_content_id,
+          media_content_type: item.media_content_type || 'music',
+          enqueue: mode === 'play' ? 'play' : mode === 'next' ? 'next' : 'add',
+        })
+        notify(mode === 'add' ? 'Queued' : 'Playing', item.title)
+        onQueued?.()
+      } catch (fallbackError) {
+        notify(
+          'Play failed',
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : e instanceof Error
+              ? e.message
+              : 'Could not start playback',
+        )
+      }
     } finally {
       setPlayingId(null)
     }
@@ -120,15 +152,41 @@ export function MusicSearch() {
           <button
             key={player.id}
             type="button"
-            onClick={() => setTarget(player.id)}
+            onClick={() => onTargetChange(player.id)}
             className={cn(
-              'touch-target shrink-0 rounded-xl border px-3 text-xs font-medium transition',
+              'touch-target shrink-0 rounded-xl border px-3 text-xs font-medium transition-ui',
               target === player.id
                 ? 'border-accent/40 bg-accent-soft text-accent'
                 : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
             )}
           >
             {player.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1.5">
+        {enqueueModes.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            title={mode.hint}
+            onClick={() => setEnqueue(mode.id)}
+            className={cn(
+              'touch-target flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-medium transition',
+              enqueue === mode.id
+                ? 'border-accent/40 bg-accent-soft text-accent'
+                : 'border-border-subtle bg-canvas text-ink-muted hover:text-ink',
+            )}
+          >
+            {mode.id === 'add' ? (
+              <ListPlus className="size-3.5" />
+            ) : mode.id === 'next' ? (
+              <ListStart className="size-3.5" />
+            ) : (
+              <Play className="size-3.5 fill-current" />
+            )}
+            {mode.label}
           </button>
         ))}
       </div>
@@ -141,7 +199,7 @@ export function MusicSearch() {
               type="button"
               onClick={() => setFilter(item.id)}
               className={cn(
-                'touch-target shrink-0 rounded-xl px-3 text-xs font-medium capitalize transition',
+                'touch-target shrink-0 rounded-xl px-3 text-xs font-medium capitalize transition-ui',
                 filter === item.id
                   ? 'bg-canvas-elevated text-accent'
                   : 'text-ink-muted hover:text-ink',
@@ -201,11 +259,15 @@ export function MusicSearch() {
                       size="icon"
                       variant="accent"
                       disabled={playingId === item.media_content_id}
-                      aria-label={`Play ${item.title}`}
+                      aria-label={`${enqueueModes.find((m) => m.id === enqueue)?.hint ?? 'Play'} ${item.title}`}
                       onClick={() => void playItem(item)}
                     >
                       {playingId === item.media_content_id ? (
                         <Loader2 className="size-4 animate-spin" />
+                      ) : enqueue === 'add' ? (
+                        <ListPlus className="size-4" />
+                      ) : enqueue === 'next' ? (
+                        <ListStart className="size-4" />
                       ) : (
                         <Play className="size-4 fill-current" />
                       )}

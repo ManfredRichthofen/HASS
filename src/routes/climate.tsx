@@ -43,7 +43,7 @@ function ClimatePage() {
       <PageHeader title="Climate" subtitle="Comfort across the home" />
 
       <Section>
-        <ClimateCard entityId={entities.climate} fanId="fan.mts300" />
+        <ClimateCard entityId={entities.climate} />
       </Section>
 
       <Section title="History">
@@ -60,7 +60,12 @@ function ClimatePage() {
 
       <Section title="Fans">
         <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
-          {/* Thermostat fan lives on ClimateCard above — don't duplicate. */}
+          <FanTile
+            entityId="fan.mts300"
+            label="Living room fan"
+            tempId="sensor.mts300_temperature"
+            humidityId="sensor.mts300_humidity"
+          />
           <FanLightTile
             label="Bedroom ceiling"
             lightId="light.bedroom_ceiling_light"

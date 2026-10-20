@@ -1,8 +1,7 @@
-import { useClimate, useFan } from 'hass-react'
-import { Fan, Minus, Plus, Thermometer } from 'lucide-react'
+import { useClimate } from 'hass-react'
+import { Minus, Plus, Thermometer } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
-import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { Toggle } from '#/components/ui/toggle'
 import { cn } from '#/lib/cn'
@@ -10,45 +9,11 @@ import { entityName } from '#/lib/entityName'
 
 const modes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'fan_only'] as const
 
-function ThermostatFanRow({ fanId }: { fanId: string }) {
-  const fan = useFan(fanId)
-  if (fan.isUnavailable) return null
-
-  const speed = Math.round(fan.percentage) || 0
-
-  return (
-    <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-canvas/40 px-3.5 py-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
-          <Fan className={cn('size-4', fan.isOn && 'animate-spin')} />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">Fan</p>
-          <p className="text-xs text-ink-muted">
-            {fan.isOn ? (speed ? `${speed}%` : 'On') : 'Off'}
-          </p>
-        </div>
-      </div>
-      <Switch
-        checked={fan.isOn}
-        onCheckedChange={() => {
-          void fan
-            .toggle()
-            .catch((e) => notify('Fan failed', e instanceof Error ? e.message : 'Error'))
-        }}
-      />
-    </div>
-  )
-}
-
 export function ClimateCard({
   entityId,
-  fanId,
   compact = false,
 }: {
   entityId: string
-  /** Same-device thermostat fan entity, shown on this card. */
-  fanId?: string
   compact?: boolean
 }) {
   const climate = useClimate(entityId)
@@ -191,8 +156,6 @@ export function ClimateCard({
           </Toggle>
         ))}
       </div>
-
-      {fanId ? <ThermostatFanRow fanId={fanId} /> : null}
     </div>
   )
 }

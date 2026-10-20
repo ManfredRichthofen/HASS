@@ -8,7 +8,7 @@ import { notify } from '#/components/ui/toast'
 import { Toggle } from '#/components/ui/toggle'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
-import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
+import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
 
 const speedPresets = [
   { label: 'Low', value: 33 },
@@ -137,11 +137,9 @@ export function FanTile({
 
   return (
     <>
-      <m.div
-        layout
-        transition={soft}
+      <div
         className={cn(
-          'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5',
+          'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5 transition-state',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
           fan.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
           unavailable && 'opacity-40',
@@ -152,14 +150,14 @@ export function FanTile({
             type="button"
             disabled={unavailable}
             onClick={() => void handleToggle()}
-            whileTap={{ scale: 0.98 }}
+            whileTap={tap.soft}
             transition={snappy}
             className="flex min-h-11 min-w-0 flex-1 items-start gap-3 text-left"
           >
             <span
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-xl',
-                fan.isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+                fan.isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
               )}
             >
               <Fan
@@ -190,7 +188,7 @@ export function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition hover:bg-white/10 hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition-ui hover:bg-white/10 hover:text-ink"
           >
             <SlidersHorizontal className="size-4" />
           </button>
@@ -220,7 +218,7 @@ export function FanTile({
                           void commitSpeed(preset.value)
                         }}
                         className={cn(
-                          'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition',
+                          'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition-ui',
                           selected
                             ? 'border-white/60 bg-white/25 text-white'
                             : 'border-transparent bg-white/10 text-white/80 hover:text-white',
@@ -280,7 +278,7 @@ export function FanTile({
                       setSpeed(preset.value)
                       void commitSpeed(preset.value)
                     }}
-                    className="touch-target min-w-0 flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition hover:border-info/30 hover:text-ink"
+                    className="touch-target min-w-0 flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition-ui hover:border-info/30 hover:text-ink"
                   >
                     {preset.label}
                   </button>
@@ -289,7 +287,7 @@ export function FanTile({
             </m.div>
           ) : null}
         </AnimatePresence>
-      </m.div>
+      </div>
 
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent title={name} description="Fan controls">

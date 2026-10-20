@@ -27,12 +27,24 @@
   --color-on-to: #4b57f2;
 
   --color-success: #3ddba7;
+  --color-success-muted: #14261f;
   --color-danger: #ff8a5b;
+  --color-danger-muted: #2e1a14;
   --color-info: #6ea8fe;
+  --color-icon-well: #252e40;
 
   --spacing-touch: 2.75rem;
   --radius-card: 1rem;
   --radius-control: 0.75rem;
+
+  /* Motion — keep in sync with src/lib/motion.ts */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 300ms;
+  --default-transition-duration: var(--duration-fast);
+  --default-transition-timing-function: var(--ease-out);
 }
 
 * {
@@ -84,11 +96,39 @@ body::before {
 /* Solid indigo fill for "on" cards (lights, active toggles) */
 @utility bg-on {
   background-image: linear-gradient(145deg, var(--color-on-from), var(--color-on-to));
-  box-shadow: 0 10px 26px #5b6cff59;
+  box-shadow: 0 4px 14px #5b6cff33;
   color: #fff;
 }
 
 @utility touch-target {
   min-height: var(--spacing-touch);
   min-width: var(--spacing-touch);
+}
+
+/* Color / opacity / transform — default interactive surface */
+@utility transition-ui {
+  transition-property:
+    color, background-color, border-color, opacity, box-shadow, transform, filter;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+/* State color changes on cards (on/off) */
+@utility transition-state {
+  transition-property: color, background-color, border-color, background-image, box-shadow;
+  transition-duration: var(--duration-slow);
+  transition-timing-function: var(--ease-out);
+}
+
+/* CSS keyframes only — MotionConfig reducedMotion="user" handles JS springs */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping {
+    animation: none;
+  }
 }

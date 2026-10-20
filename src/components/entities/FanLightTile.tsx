@@ -4,7 +4,7 @@ import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
-import { AnimatePresence, expandCollapse, m, snappy, soft } from '#/lib/motion'
+import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
 
 const speedPresets = [
   { label: 'Low', value: 33 },
@@ -92,11 +92,9 @@ export function FanLightTile({
       : 'Off'
 
   return (
-    <m.div
-      layout
-      transition={soft}
+    <div
       className={cn(
-        'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5',
+        'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5 transition-state',
         showInline || (!fan.isOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
         active ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
         unavailable && 'opacity-40',
@@ -105,19 +103,14 @@ export function FanLightTile({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 pt-0.5">
           <p className="truncate text-sm font-semibold tracking-tight text-ink">{label}</p>
-          <p
-            className={cn(
-              'mt-0.5 truncate text-xs',
-              active ? 'text-white/80' : 'text-ink-muted',
-            )}
-          >
+          <p className={cn('mt-0.5 truncate text-xs', active ? 'text-white/80' : 'text-ink-muted')}>
             Light {light.isOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
           </p>
         </div>
         <span
           className={cn(
             'grid size-11 shrink-0 place-items-center rounded-xl',
-            active ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+            active ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
           )}
         >
           <Fan
@@ -132,10 +125,10 @@ export function FanLightTile({
           type="button"
           disabled={light.isUnavailable}
           onClick={() => void toggleLight()}
-          whileTap={{ scale: 0.98 }}
+          whileTap={tap.soft}
           transition={snappy}
           className={cn(
-            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-ui',
             light.isOn
               ? 'border-white/40 bg-white/20 text-white'
               : 'border-border-subtle bg-canvas/40 text-ink-muted',
@@ -149,10 +142,10 @@ export function FanLightTile({
           type="button"
           disabled={fan.isUnavailable}
           onClick={() => void toggleFan()}
-          whileTap={{ scale: 0.98 }}
+          whileTap={tap.soft}
           transition={snappy}
           className={cn(
-            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-ui',
             fan.isOn
               ? 'border-white/40 bg-white/20 text-white'
               : 'border-border-subtle bg-canvas/40 text-ink-muted',
@@ -187,7 +180,7 @@ export function FanLightTile({
                         void commitSpeed(preset.value)
                       }}
                       className={cn(
-                        'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition',
+                        'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition-ui',
                         selected
                           ? 'border-white/60 bg-white/25 text-white'
                           : fan.isOn
@@ -230,6 +223,6 @@ export function FanLightTile({
           </m.div>
         ) : null}
       </AnimatePresence>
-    </m.div>
+    </div>
   )
 }

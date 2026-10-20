@@ -34,7 +34,7 @@ function HomePage() {
           <Link
             to="/settings"
             aria-label="Settings and more"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition-ui hover:text-ink"
           >
             <Settings className="size-5" />
           </Link>

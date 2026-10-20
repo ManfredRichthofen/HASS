@@ -22,7 +22,7 @@ export function TabsTab({ className, ...props }: ComponentProps<typeof BaseTabs.
   return (
     <BaseTabs.Tab
       className={cn(
-        'flex-1 rounded-xl px-3 py-2 text-sm font-medium text-ink-muted transition',
+        'flex-1 rounded-xl px-3 py-2 text-sm font-medium text-ink-muted transition-ui',
         'hover:text-ink data-active:bg-canvas-elevated data-active:text-accent data-active:shadow-sm',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         className,

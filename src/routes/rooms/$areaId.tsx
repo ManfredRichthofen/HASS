@@ -17,7 +17,7 @@ import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
-import { m, snappy } from '#/lib/motion'
+import { m, snappy, tap } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/$areaId')({
   component: RoomDetailPage,
@@ -44,17 +44,17 @@ function AllLightsCard({ ids }: { ids: string[] }) {
     <m.button
       type="button"
       onClick={() => void toggle()}
-      whileTap={{ scale: 0.98 }}
+      whileTap={tap.soft}
       transition={snappy}
       className={cn(
-        'flex min-h-16 w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition-colors duration-300',
+        'flex min-h-16 w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition-state',
         isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
       )}
     >
       <span
         className={cn(
           'grid size-11 shrink-0 place-items-center rounded-2xl',
-          isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+          isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
         )}
       >
         <Lightbulb className="size-5" />

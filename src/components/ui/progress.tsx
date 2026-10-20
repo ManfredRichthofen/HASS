@@ -6,7 +6,7 @@ export function Progress({ className, value, ...props }: ComponentProps<typeof B
   return (
     <BaseProgress.Root className={cn('grid gap-1', className)} value={value} {...props}>
       <BaseProgress.Track className="h-1.5 overflow-hidden rounded-full bg-border">
-        <BaseProgress.Indicator className="h-full bg-accent transition-all" />
+        <BaseProgress.Indicator className="h-full bg-accent transition-[width] duration-slow" />
       </BaseProgress.Track>
     </BaseProgress.Root>
   )

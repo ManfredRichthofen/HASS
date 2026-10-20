@@ -9,6 +9,10 @@ export {
   motion,
 } from 'motion/react'
 
+/** Shared ease-out curve — matches CSS `--ease-out` */
+export const easeOut = [0.22, 1, 0.36, 1] as const
+export const easeIn = [0.4, 0, 1, 1] as const
+
 /** Fast tap / press feedback */
 export const snappy = {
   type: 'spring' as const,
@@ -33,36 +37,70 @@ export const indicator = {
   mass: 0.8,
 }
 
+/**
+ * Press feedback scales — pass to `whileTap`.
+ * soft: large cards / rows · medium: chips / tiles · hard: icon buttons
+ */
+export const tap = {
+  soft: { scale: 0.98 },
+  medium: { scale: 0.97 },
+  hard: { scale: 0.92 },
+} as const
+
 export const fadeUp = {
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: 6 },
-  transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.22, ease: easeOut },
 }
 
 export const pageFade = {
   initial: { opacity: 0, y: 6 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0 },
-  transition: { duration: 0.14, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.16, ease: easeOut },
+}
+
+/** Floating sheet / now-playing bar entrance */
+export const slideUp = {
+  initial: { opacity: 0, y: 20, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 16, scale: 0.97 },
+  transition: soft,
+}
+
+/** Label / status text swap (AnimatePresence mode="popLayout") */
+export const swapText = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: 0.16, ease: easeOut },
+}
+
+/** Icon / control crossfade (play↔pause) */
+export const swapIcon = {
+  initial: { opacity: 0, scale: 0.85 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.85 },
+  transition: snappy,
 }
 
 export const staggerContainer = {
   initial: {},
   animate: {
     transition: {
-      staggerChildren: 0.025,
+      staggerChildren: 0.03,
       delayChildren: 0,
     },
   },
 }
 
 export const staggerItem = {
-  initial: { opacity: 0, y: 6 },
+  initial: { opacity: 0, y: 8 },
   animate: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.2, ease: easeOut },
   },
 }
 
@@ -76,6 +114,6 @@ export const expandCollapse = {
   exit: {
     opacity: 0,
     height: 0,
-    transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const },
+    transition: { duration: 0.16, ease: easeIn },
   },
 }

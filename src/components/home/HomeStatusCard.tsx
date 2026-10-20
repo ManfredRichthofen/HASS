@@ -3,7 +3,7 @@ import { useBinarySensor, useEntity, useEntityGroup, useLock } from 'hass-react'
 import { Lightbulb, Lock, LockOpen, type LucideIcon, UserRound, UserRoundX } from 'lucide-react'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { AnimatePresence, m, soft } from '#/lib/motion'
+import { AnimatePresence, m, swapText } from '#/lib/motion'
 
 const watchedLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
 
@@ -13,7 +13,7 @@ export function HomeStatusCard() {
   const occupancy = useBinarySensor(entities.occupancyAny)
   const lock = useLock(entities.lock)
   // Curated light.* only — avoids a full get_states via useLights().
-  const lights = useEntityGroup([...watchedLights])
+  const lights = useEntityGroup(watchedLights as string[])
 
   const lightsOn = lights.filter((light) => light.state === 'on').length
 
@@ -31,10 +31,10 @@ export function HomeStatusCard() {
             <AnimatePresence mode="popLayout" initial={false}>
               <m.span
                 key={modeLabel}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={soft}
+                initial={swapText.initial}
+                animate={swapText.animate}
+                exit={swapText.exit}
+                transition={swapText.transition}
                 className="inline-block max-w-full truncate"
               >
                 {modeLabel}
@@ -113,7 +113,7 @@ function StatusCell({
     <div
       className={cn(
         'flex h-full min-h-[4.25rem] flex-col rounded-xl bg-canvas/50 px-2 py-2 sm:min-h-[4.5rem] sm:px-2.5 sm:py-2.5',
-        interactive && 'transition hover:bg-canvas',
+        interactive && 'transition-ui hover:bg-canvas',
         !interactive && 'opacity-90',
       )}
     >
@@ -129,10 +129,10 @@ function StatusCell({
       <AnimatePresence mode="popLayout" initial={false}>
         <m.p
           key={value}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={soft}
+          initial={swapText.initial}
+          animate={swapText.animate}
+          exit={swapText.exit}
+          transition={swapText.transition}
           className="mt-0.5 truncate text-xs font-semibold text-ink sm:text-sm"
         >
           {value}

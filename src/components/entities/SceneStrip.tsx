@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { m, snappy } from '#/lib/motion'
+import { m, snappy, tap } from '#/lib/motion'
 
 const icons: Record<string, LucideIcon> = {
   daylight: Sun,
@@ -54,10 +54,10 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
             type="button"
             disabled={busyId != null}
             onClick={() => void runScene(scene)}
-            whileTap={{ scale: 0.97 }}
+            whileTap={tap.medium}
             transition={snappy}
             className={cn(
-              'touch-target inline-flex items-center justify-center gap-1.5 rounded-xl border px-2.5 text-sm font-semibold transition sm:gap-2 sm:px-3',
+              'touch-target inline-flex items-center justify-center gap-1.5 rounded-xl border px-2.5 text-sm font-semibold transition-ui sm:gap-2 sm:px-3',
               selected || active
                 ? 'border-transparent bg-accent text-white'
                 : 'border-border-subtle bg-surface text-ink hover:bg-surface-hover',

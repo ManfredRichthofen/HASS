@@ -22,7 +22,7 @@ export function BottomNav() {
       )}
     >
       <LayoutGroup>
-        <div className="mx-auto flex w-full max-w-2xl items-stretch justify-between px-2 sm:px-3">
+        <div className="mx-auto flex w-full max-w-[88rem] items-stretch justify-between px-2 sm:px-5 md:px-8 lg:px-10">
           {items.map(({ to, label, icon: Icon, match }) => {
             const active =
               match === 'exact' ? pathname === to : pathname === to || pathname.startsWith(`${to}/`)
@@ -32,7 +32,7 @@ export function BottomNav() {
                 key={to}
                 to={to}
                 className={cn(
-                  'relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-colors',
+                  'relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-ui',
                   active ? 'text-accent-strong' : 'text-ink-muted hover:text-ink',
                 )}
               >

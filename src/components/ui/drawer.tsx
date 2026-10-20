@@ -31,12 +31,12 @@ export function DrawerContent({
 }) {
   return (
     <BaseDrawer.Portal>
-      <BaseDrawer.Backdrop className="fixed inset-0 bg-black/55 backdrop-blur-[2px] transition data-ending-style:opacity-0 data-starting-style:opacity-0" />
+      <BaseDrawer.Backdrop className="fixed inset-0 bg-black/55 backdrop-blur-[2px] transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0" />
       <BaseDrawer.Viewport className="fixed inset-0 flex items-end justify-center p-0 sm:items-end sm:p-4">
         <BaseDrawer.Popup
           className={cn(
             'relative flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-canvas-elevated shadow-2xl outline-none',
-            'transition duration-300 data-ending-style:translate-y-8 data-ending-style:opacity-0 data-starting-style:translate-y-8 data-starting-style:opacity-0',
+            'transition-ui duration-slow data-ending-style:translate-y-8 data-ending-style:opacity-0 data-starting-style:translate-y-8 data-starting-style:opacity-0',
             'pb-[max(1.25rem,env(safe-area-inset-bottom))]',
             className,
           )}

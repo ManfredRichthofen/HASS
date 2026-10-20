@@ -44,7 +44,7 @@ export function ClimateSparkline() {
     <Link
       to="/climate"
       className={cn(
-        'flex min-h-14 items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-3.5 py-3 transition sm:px-4',
+        'flex min-h-14 items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-3.5 py-3 transition-ui sm:px-4',
         'hover:border-accent/30 hover:bg-surface-hover',
       )}
     >

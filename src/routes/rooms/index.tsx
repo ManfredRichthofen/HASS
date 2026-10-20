@@ -25,7 +25,7 @@ import {
   primaryAreas,
 } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { m, snappy, staggerContainer, staggerItem } from '#/lib/motion'
+import { m, snappy, staggerContainer, staggerItem, tap } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/')({ component: RoomsPage })
 
@@ -83,10 +83,10 @@ function RoomCard({ area }: { area: AreaConfig }) {
   return (
     <m.div
       variants={staggerItem}
-      whileTap={{ scale: 0.97 }}
+      whileTap={tap.medium}
       transition={snappy}
       className={cn(
-        'relative flex min-h-[9.75rem] flex-col justify-between rounded-3xl border p-4 transition-colors duration-300',
+        'relative flex min-h-[9.75rem] flex-col justify-between rounded-3xl border p-4 transition-state',
         isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
       )}
     >
@@ -98,8 +98,8 @@ function RoomCard({ area }: { area: AreaConfig }) {
       />
       <span
         className={cn(
-          'grid size-11 place-items-center rounded-2xl transition-colors duration-300',
-          isOn ? 'bg-white/20 text-white' : 'bg-[#252e40] text-ink-muted',
+          'grid size-11 place-items-center rounded-2xl transition-state',
+          isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
         )}
       >
         <Icon className="size-6" />
@@ -110,7 +110,7 @@ function RoomCard({ area }: { area: AreaConfig }) {
           onClick={() => void togglePower()}
           aria-label={`${isOn ? 'Turn off' : 'Turn on'} ${area.name} lights`}
           className={cn(
-            'absolute top-2.5 right-2.5 z-[2] grid size-11 place-items-center rounded-full transition',
+            'absolute top-2.5 right-2.5 z-[2] grid size-11 place-items-center rounded-full transition-ui',
             isOn ? 'bg-white/20 text-white' : 'bg-white/5 text-ink-muted hover:text-ink',
           )}
         >
@@ -149,10 +149,10 @@ function AllLightsOff() {
       type="button"
       disabled={on === 0}
       onClick={() => void turnOff()}
-      whileTap={{ scale: 0.98 }}
+      whileTap={tap.soft}
       transition={snappy}
       className={cn(
-        'flex min-h-13 w-full items-center justify-center gap-2.5 rounded-2xl text-[0.9375rem] font-bold transition',
+        'flex min-h-13 w-full items-center justify-center gap-2.5 rounded-2xl text-[0.9375rem] font-bold transition-ui',
         on === 0 ? 'bg-surface text-ink-faint' : 'bg-surface text-ink hover:bg-surface-hover',
       )}
     >

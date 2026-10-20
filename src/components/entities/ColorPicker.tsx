@@ -75,7 +75,7 @@ export function ColorPicker({
               aria-label={preset.label}
               onClick={() => onChange(preset.rgb)}
               className={cn(
-                'aspect-square rounded-full border-2 transition active:scale-95',
+                'aspect-square rounded-full border-2 transition-ui active:scale-[0.92]',
                 selected ? 'border-ink' : 'border-transparent',
                 disabled && 'opacity-40',
               )}

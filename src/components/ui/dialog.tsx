@@ -31,11 +31,11 @@ export function DialogContent({
 }) {
   return (
     <BaseDialog.Portal>
-      <BaseDialog.Backdrop className="fixed inset-0 bg-black/55 backdrop-blur-[2px] transition data-ending-style:opacity-0 data-starting-style:opacity-0" />
+      <BaseDialog.Backdrop className="fixed inset-0 bg-black/55 backdrop-blur-[2px] transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0" />
       <BaseDialog.Popup
         className={cn(
           'fixed top-1/2 left-1/2 w-[min(100%-2rem,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-canvas-elevated p-5 shadow-2xl outline-none',
-          'data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
+          'transition-ui duration-slow data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
           className,
         )}
       >
