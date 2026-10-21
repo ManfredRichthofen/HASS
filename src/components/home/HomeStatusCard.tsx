@@ -1,6 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { useBinarySensor, useEntity, useEntityGroup, useLock } from 'hass-react'
-import { Lightbulb, Lock, LockOpen, type LucideIcon, UserRound, UserRoundX } from 'lucide-react'
+import { ChevronDown, Lightbulb, Lock, LockOpen, type LucideIcon, UserRound, UserRoundX } from 'lucide-react'
+import { useState } from 'react'
+import { HouseModeGrid } from '#/components/home/HouseModeGrid'
+import { Drawer, DrawerContent } from '#/components/ui/drawer'
+import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, swapText } from '#/lib/motion'
@@ -14,6 +18,7 @@ export function HomeStatusCard() {
   const lock = useLock(entities.lock)
   // Curated light.* only — avoids a full get_states via useLights().
   const lights = useEntityGroup(watchedLights as string[])
+  const [modeOpen, setModeOpen] = useState(false)
 
   const lightsOn = lights.filter((light) => light.state === 'on').length
 
@@ -22,69 +27,99 @@ export function HomeStatusCard() {
   const someoneHome = !occupancy.isUnavailable && occupancy.isOn
   const locked = lock.isLocked
 
+  async function toggleLock() {
+    if (lock.isUnavailable) return
+    const unlocking = lock.isLocked
+    try {
+      if (unlocking) await lock.unlock()
+      else await lock.lock()
+      notify(unlocking ? 'Unlocked' : 'Locked')
+    } catch (e) {
+      notify('Lock failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface p-3.5 sm:p-4">
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-ink-muted">House mode</p>
-          <p className="truncate font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-            <AnimatePresence mode="popLayout" initial={false}>
-              <m.span
-                key={modeLabel}
-                initial={swapText.initial}
-                animate={swapText.animate}
-                exit={swapText.exit}
-                transition={swapText.transition}
-                className="inline-block max-w-full truncate"
-              >
-                {modeLabel}
-              </m.span>
-            </AnimatePresence>
-          </p>
+    <>
+      <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface p-3.5 sm:p-4">
+        <div className="flex items-end justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setModeOpen(true)}
+            className="group min-w-0 rounded-lg text-left outline-none transition-ui focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <p className="flex items-center gap-1 text-sm text-ink-muted">
+              House mode
+              <ChevronDown className="size-3.5 opacity-60 transition-ui group-hover:opacity-100" />
+            </p>
+            <p className="truncate font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <m.span
+                  key={modeLabel}
+                  initial={swapText.initial}
+                  animate={swapText.animate}
+                  exit={swapText.exit}
+                  transition={swapText.transition}
+                  className="inline-block max-w-full truncate"
+                >
+                  {modeLabel}
+                </m.span>
+              </AnimatePresence>
+            </p>
+          </button>
+          <span
+            className={cn(
+              'mb-0.5 shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold',
+              autoOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
+            )}
+          >
+            {autoOn ? 'Auto' : 'Manual'}
+          </span>
         </div>
-        <span
-          className={cn(
-            'mb-0.5 shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold',
-            autoOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
-          )}
-        >
-          {autoOn ? 'Auto' : 'Manual'}
-        </span>
+
+        <div className="mt-3 grid flex-1 grid-cols-3 gap-1.5 sm:mt-4 sm:gap-2">
+          <StatusCell
+            label="Home"
+            value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'Empty'}
+            tone={someoneHome ? 'active' : 'muted'}
+            icon={someoneHome ? UserRound : UserRoundX}
+          />
+          <Link
+            to="/rooms"
+            className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <StatusCell
+              label="Lights"
+              value={lightsOn === 0 ? 'Off' : `${lightsOn} on`}
+              tone={lightsOn > 0 ? 'light' : 'muted'}
+              icon={Lightbulb}
+              interactive
+            />
+          </Link>
+          <button
+            type="button"
+            disabled={lock.isUnavailable}
+            onClick={() => void toggleLock()}
+            aria-label={locked ? 'Unlock front door' : 'Lock front door'}
+            className="block min-h-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40"
+          >
+            <StatusCell
+              label="Door"
+              value={lock.isUnavailable ? '—' : locked ? 'Locked' : 'Open'}
+              tone={locked ? 'success' : 'danger'}
+              icon={locked ? Lock : LockOpen}
+              interactive
+            />
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 grid flex-1 grid-cols-3 gap-1.5 sm:mt-4 sm:gap-2">
-        <StatusCell
-          label="Home"
-          value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'Empty'}
-          tone={someoneHome ? 'active' : 'muted'}
-          icon={someoneHome ? UserRound : UserRoundX}
-        />
-        <Link
-          to="/rooms"
-          className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          <StatusCell
-            label="Lights"
-            value={lightsOn === 0 ? 'Off' : `${lightsOn} on`}
-            tone={lightsOn > 0 ? 'light' : 'muted'}
-            icon={Lightbulb}
-            interactive
-          />
-        </Link>
-        <Link
-          to="/security"
-          className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          <StatusCell
-            label="Door"
-            value={lock.isUnavailable ? '—' : locked ? 'Locked' : 'Open'}
-            tone={locked ? 'success' : 'danger'}
-            icon={locked ? Lock : LockOpen}
-            interactive
-          />
-        </Link>
-      </div>
-    </div>
+      <Drawer open={modeOpen} onOpenChange={setModeOpen}>
+        <DrawerContent title="House mode" description="Choose how the house should behave">
+          <HouseModeGrid />
+        </DrawerContent>
+      </Drawer>
+    </>
   )
 }
 

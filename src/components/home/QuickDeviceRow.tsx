@@ -3,13 +3,14 @@ import { useMediaPlayer, useVacuum } from 'hass-react'
 import { ChevronRight, Music2, Pause, Play, RobotVacuum } from 'lucide-react'
 import { type MouseEvent, useState } from 'react'
 import { VacuumSheet } from '#/components/entities/VacuumSheet'
+import { CardGrid } from '#/components/layout/CardGrid'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, snappy, swapIcon, swapText, tap } from '#/lib/motion'
 
-export function QuickDeviceRow() {
+export function QuickDeviceRow({ className }: { className?: string }) {
   const player = useMediaPlayer(entities.mediaAll)
   const vacuum = useVacuum(entities.vacuum)
   const [vacuumOpen, setVacuumOpen] = useState(false)
@@ -46,7 +47,7 @@ export function QuickDeviceRow() {
 
   return (
     <>
-      <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
+      <CardGrid className={className}>
         <div
           className={cn(
             'min-w-0 rounded-2xl border transition-state',
@@ -128,7 +129,7 @@ export function QuickDeviceRow() {
           </div>
           <ChevronRight className="size-5 shrink-0 text-ink-faint" />
         </m.button>
-      </div>
+      </CardGrid>
 
       <Drawer open={vacuumOpen} onOpenChange={setVacuumOpen}>
         <DrawerContent title="Vacuum">

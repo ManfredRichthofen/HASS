@@ -10,6 +10,7 @@ import { LightTile } from '#/components/entities/LightTile'
 import { MediaCard } from '#/components/entities/MediaCard'
 import { SensorChip } from '#/components/entities/SensorChip'
 import { SwitchRow } from '#/components/entities/SwitchRow'
+import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
@@ -110,6 +111,7 @@ function RoomDetailPage() {
         subtitle="Lights, fans and media"
         backTo="/rooms"
         backLabel="Rooms"
+        backClassName="xl:hidden"
       />
 
       {empty ? (
@@ -148,11 +150,11 @@ function RoomDetailPage() {
           title={fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'}
         >
           {fanLights.length > 0 ? (
-            <div className="mb-2.5 grid gap-2.5 sm:gap-3 md:grid-cols-2">
+            <CardGrid className="mb-2.5 sm:mb-3">
               {fanLights.map((kit) => (
                 <FanLightTile key={kit.fanId} {...kit} />
               ))}
-            </div>
+            </CardGrid>
           ) : null}
           {fanDevices.length > 0 || area.fans.length > 0 ? (
             <EntityGrid>
@@ -175,31 +177,31 @@ function RoomDetailPage() {
 
       {area.appliances?.length ? (
         <Section title="Appliances">
-          <div className="grid gap-2.5 md:grid-cols-2">
+          <CardGrid>
             {area.appliances.map((a) => (
               <ApplianceRow key={a.powerId} {...a} />
             ))}
-          </div>
+          </CardGrid>
         </Section>
       ) : null}
 
       {area.switches?.length ? (
         <Section title="Irrigation">
-          <div className="grid gap-2.5 md:grid-cols-2">
+          <CardGrid>
             {area.switches.map((id) => (
               <SwitchRow key={id} entityId={id} label={entityName(id)} />
             ))}
-          </div>
+          </CardGrid>
         </Section>
       ) : null}
 
       {area.media.length > 0 ? (
         <Section title="Media">
-          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
+          <CardGrid>
             {area.media.map((id) => (
               <MediaCard key={id} entityId={id} />
             ))}
-          </div>
+          </CardGrid>
         </Section>
       ) : null}
     </Page>

@@ -1,31 +1,23 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Home, LayoutGrid, Music2, Shield, Thermometer } from 'lucide-react'
+import { isNavActive, navItems } from '#/components/layout/navItems'
 import { cn } from '#/lib/cn'
 import { indicator, LayoutGroup, m } from '#/lib/motion'
 
-const items = [
-  { to: '/', label: 'Home', icon: Home, match: 'exact' as const },
-  { to: '/rooms', label: 'Rooms', icon: LayoutGrid, match: 'prefix' as const },
-  { to: '/climate', label: 'Climate', icon: Thermometer, match: 'prefix' as const },
-  { to: '/media', label: 'Media', icon: Music2, match: 'prefix' as const },
-  { to: '/security', label: 'Security', icon: Shield, match: 'prefix' as const },
-]
-
+/** Phone navigation; tablets use SideNav. */
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-canvas-elevated',
+        'fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-canvas-elevated md:hidden',
         'pb-[max(1rem,env(safe-area-inset-bottom))] pt-2',
       )}
     >
       <LayoutGroup>
-        <div className="mx-auto flex w-full max-w-[88rem] items-stretch justify-between px-2 sm:px-5 md:px-8 lg:px-10">
-          {items.map(({ to, label, icon: Icon, match }) => {
-            const active =
-              match === 'exact' ? pathname === to : pathname === to || pathname.startsWith(`${to}/`)
+        <div className="mx-auto flex w-full items-stretch justify-between px-2 sm:px-5">
+          {navItems.map(({ to, label, icon: Icon, match }) => {
+            const active = isNavActive(pathname, to, match)
 
             return (
               <Link

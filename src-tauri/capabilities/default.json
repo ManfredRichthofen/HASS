@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "allow-location-tracking"
+    "allow-location-tracking",
+    "allow-app-update"
   ]
 }

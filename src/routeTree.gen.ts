@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClimateRouteImport } from './routes/climate'
 import { Route as MediaRouteImport } from './routes/media'
+import { Route as RoomsRouteImport } from './routes/rooms'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
@@ -32,6 +33,11 @@ const MediaRoute = MediaRouteImport.update({
   path: '/media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomsRoute = RoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -43,20 +49,21 @@ const SettingsRoute = SettingsRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomsIndexRoute = RoomsIndexRouteImport.update({
-  id: '/rooms/',
-  path: '/rooms/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => RoomsRoute,
 } as any)
 const RoomsAreaIdRoute = RoomsAreaIdRouteImport.update({
-  id: '/rooms/$areaId',
-  path: '/rooms/$areaId',
-  getParentRoute: () => rootRouteImport,
+  id: '/$areaId',
+  path: '/$areaId',
+  getParentRoute: () => RoomsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/climate': typeof ClimateRoute
   '/media': typeof MediaRoute
+  '/rooms': typeof RoomsRouteWithChildren
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/rooms/$areaId': typeof RoomsAreaIdRoute
@@ -76,6 +83,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/climate': typeof ClimateRoute
   '/media': typeof MediaRoute
+  '/rooms': typeof RoomsRouteWithChildren
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/rooms/$areaId': typeof RoomsAreaIdRoute
@@ -87,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/climate'
     | '/media'
+    | '/rooms'
     | '/security'
     | '/settings'
     | '/rooms/$areaId'
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/climate'
     | '/media'
+    | '/rooms'
     | '/security'
     | '/settings'
     | '/rooms/$areaId'
@@ -115,10 +125,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClimateRoute: typeof ClimateRoute
   MediaRoute: typeof MediaRoute
+  RoomsRoute: typeof RoomsRouteWithChildren
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
-  RoomsAreaIdRoute: typeof RoomsAreaIdRoute
-  RoomsIndexRoute: typeof RoomsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -144,6 +153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rooms': {
+      id: '/rooms'
+      path: '/rooms'
+      fullPath: '/rooms'
+      preLoaderRoute: typeof RoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/security': {
       id: '/security'
       path: '/security'
@@ -160,29 +176,40 @@ declare module '@tanstack/react-router' {
     }
     '/rooms/': {
       id: '/rooms/'
-      path: '/rooms'
+      path: '/'
       fullPath: '/rooms/'
       preLoaderRoute: typeof RoomsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof RoomsRoute
     }
     '/rooms/$areaId': {
       id: '/rooms/$areaId'
-      path: '/rooms/$areaId'
+      path: '/$areaId'
       fullPath: '/rooms/$areaId'
       preLoaderRoute: typeof RoomsAreaIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof RoomsRoute
     }
   }
 }
+
+interface RoomsRouteChildren {
+  RoomsAreaIdRoute: typeof RoomsAreaIdRoute
+  RoomsIndexRoute: typeof RoomsIndexRoute
+}
+
+const RoomsRouteChildren: RoomsRouteChildren = {
+  RoomsAreaIdRoute: RoomsAreaIdRoute,
+  RoomsIndexRoute: RoomsIndexRoute,
+}
+
+const RoomsRouteWithChildren = RoomsRoute._addFileChildren(RoomsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClimateRoute: ClimateRoute,
   MediaRoute: MediaRoute,
+  RoomsRoute: RoomsRouteWithChildren,
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
-  RoomsAreaIdRoute: RoomsAreaIdRoute,
-  RoomsIndexRoute: RoomsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

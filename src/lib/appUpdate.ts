@@ -8,8 +8,8 @@ export type UpdateCheckResult =
       status: 'available'
       version: string
       notes?: string | null
-      /** Desktop only — ready to downloadAndInstall via Tauri updater. */
-      install: () => Promise<void>
+      /** Desktop: Tauri updater. Android: in-app APK download + system installer prompt. */
+      install: (onProgress?: (fraction: number | null) => void) => Promise<void>
       /** Android / fallback — open GitHub release page. */
       openRelease?: () => Promise<void>
     }
@@ -80,6 +80,35 @@ async function checkDesktopUpdate(): Promise<UpdateCheckResult> {
   }
 }
 
+/** Android: download the APK in-app (polling native progress), then open the system installer. */
+async function downloadAndInstallApk(
+  url: string,
+  onProgress?: (fraction: number | null) => void,
+): Promise<void> {
+  const { invoke } = await import('@tauri-apps/api/core')
+  let polling = true
+  const poll = (async () => {
+    while (polling) {
+      await new Promise((r) => setTimeout(r, 400))
+      if (!polling) break
+      try {
+        const p = await invoke<{ downloaded: number; total: number }>('app_update_progress')
+        onProgress?.(p.total > 0 ? p.downloaded / p.total : null)
+      } catch {
+        /* progress is best-effort */
+      }
+    }
+  })()
+  try {
+    await invoke('app_update_download', { url })
+  } finally {
+    polling = false
+    await poll
+  }
+  onProgress?.(1)
+  await invoke('app_update_install')
+}
+
 /** Android: compare app version to latest GitHub release tag (APK sideload). */
 async function checkAndroidGithubRelease(): Promise<UpdateCheckResult> {
   const current = await getCurrentVersion()
@@ -115,8 +144,12 @@ async function checkAndroidGithubRelease(): Promise<UpdateCheckResult> {
     status: 'available',
     version: remote,
     notes: data.body ?? null,
-    install: async () => {
-      await openUrl(releaseUrl)
+    install: async (onProgress) => {
+      if (!apk) {
+        await openUrl(releaseUrl)
+        return
+      }
+      await downloadAndInstallApk(apk.browser_download_url, onProgress)
     },
     openRelease: async () => {
       await openUrl(data.html_url ?? githubRepo.latestReleaseUrl)

@@ -14,6 +14,7 @@ import { CameraTile } from '#/components/entities/CameraTile'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { LockTile } from '#/components/entities/LockTile'
 import { HouseModeGrid } from '#/components/home/HouseModeGrid'
+import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
@@ -118,18 +119,20 @@ function SecurityPage() {
           </div>
         </m.div>
 
-        {securityCameras.length > 0 ? (
-          <m.div variants={staggerItem}>
-            <Section title="Cameras">
-              <EntityGrid>
-                {securityCameras.map((cam) => (
-                  <CameraTile key={cam.id} entityId={cam.id} label={cam.label} />
-                ))}
-              </EntityGrid>
-            </Section>
-          </m.div>
-        ) : null}
+        <div className={cn('grid items-start gap-5 md:gap-6', securityCameras.length > 0 && 'xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
+          {securityCameras.length > 0 ? (
+            <m.div variants={staggerItem}>
+              <Section title="Cameras">
+                <EntityGrid>
+                  {securityCameras.map((cam) => (
+                    <CameraTile key={cam.id} entityId={cam.id} label={cam.label} />
+                  ))}
+                </EntityGrid>
+              </Section>
+            </m.div>
+          ) : null}
 
+          <div className="flex min-w-0 flex-col gap-5 md:gap-6">
         <m.div variants={staggerItem}>
           <Section title="House mode">
             <HouseModeGrid />
@@ -138,7 +141,7 @@ function SecurityPage() {
 
         <m.div variants={staggerItem}>
           <Section title="Front door">
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <CardGrid>
               <LockTile entityId={entities.lock} />
               {!door.isUnavailable ? (
                 <StatusRow
@@ -148,13 +151,13 @@ function SecurityPage() {
                   tone={door.isOn ? 'bad' : 'ok'}
                 />
               ) : null}
-            </div>
+            </CardGrid>
           </Section>
         </m.div>
 
         <m.div variants={staggerItem}>
           <Section title="Water leaks">
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <CardGrid>
               {entities.security.leaks.map((leak, i) => {
                 const sensor = leaks[i]
                 if (!sensor || sensor.state === 'unavailable') return null
@@ -169,7 +172,7 @@ function SecurityPage() {
                   />
                 )
               })}
-            </div>
+            </CardGrid>
           </Section>
         </m.div>
 
@@ -183,6 +186,8 @@ function SecurityPage() {
             />
           </Section>
         </m.div>
+          </div>
+        </div>
       </Page>
     </m.div>
   )

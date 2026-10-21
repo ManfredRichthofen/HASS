@@ -34,7 +34,7 @@ function HomePage() {
           <Link
             to="/settings"
             aria-label="Settings and more"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition-ui hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition-ui hover:text-ink md:hidden"
           >
             <Settings className="size-5" />
           </Link>
@@ -45,28 +45,32 @@ function HomePage() {
           <WeatherCard />
         </m.div>
 
-        <m.div variants={staggerItem}>
-          <Section title="Lighting">
-            <div className="mb-3">
-              <SceneStrip />
-            </div>
-            <EntityGrid>
-              {entities.favorites.lights.filter(isRoomLight).map((id) => (
-                <LightTile key={id} entityId={id} />
-              ))}
-            </EntityGrid>
-          </Section>
-        </m.div>
+        <div className="grid items-start gap-5 md:gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <m.div variants={staggerItem}>
+            <Section title="Lighting">
+              <div className="mb-3">
+                <SceneStrip />
+              </div>
+              <EntityGrid className="lg:grid-cols-4 xl:grid-cols-3">
+                {entities.favorites.lights.filter(isRoomLight).map((id) => (
+                  <LightTile key={id} entityId={id} />
+                ))}
+              </EntityGrid>
+            </Section>
+          </m.div>
 
-        <m.div variants={staggerItem}>
-          <ClimateSparkline />
-        </m.div>
+          <div className="flex min-w-0 flex-col gap-5 md:gap-6">
+            <m.div variants={staggerItem}>
+              <ClimateSparkline />
+            </m.div>
 
-        <m.div variants={staggerItem}>
-          <Section title="Devices">
-            <QuickDeviceRow />
-          </Section>
-        </m.div>
+            <m.div variants={staggerItem}>
+              <Section title="Devices">
+                <QuickDeviceRow className="md:grid-cols-2 xl:grid-cols-1" />
+              </Section>
+            </m.div>
+          </div>
+        </div>
       </Page>
     </m.div>
   )

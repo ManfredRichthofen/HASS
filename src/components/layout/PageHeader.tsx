@@ -9,6 +9,7 @@ export function PageHeader({
   action,
   backTo,
   backLabel = 'Back',
+  backClassName,
   className,
 }: {
   title: string
@@ -16,6 +17,7 @@ export function PageHeader({
   action?: ReactNode
   backTo?: '/rooms' | '/' | '/climate' | '/media' | '/security' | '/settings'
   backLabel?: string
+  backClassName?: string
   className?: string
 }) {
   return (
@@ -23,7 +25,10 @@ export function PageHeader({
       {backTo ? (
         <Link
           to={backTo}
-          className="mb-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-muted transition-ui hover:text-accent-strong"
+          className={cn(
+            'mb-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-muted transition-ui hover:text-accent-strong',
+            backClassName,
+          )}
         >
           <ArrowLeft className="size-4" />
           {backLabel}

@@ -4,6 +4,7 @@ import { ClimateCard } from '#/components/entities/ClimateCard'
 import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
 import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
+import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
@@ -59,7 +60,7 @@ function ClimatePage() {
       </Section>
 
       <Section title="Fans">
-        <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2">
+        <CardGrid>
           <FanTile
             entityId="fan.mts300"
             label="Living room fan"
@@ -77,7 +78,7 @@ function ClimatePage() {
             tempId="sensor.afg_smt_pro_2_0_temperature"
             humidityId="sensor.afg_smt_pro_2_0_humidity"
           />
-        </div>
+        </CardGrid>
       </Section>
     </Page>
   )

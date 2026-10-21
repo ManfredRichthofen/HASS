@@ -2,6 +2,7 @@ import { Outlet, useRouterState } from '@tanstack/react-router'
 import { useHAConnection } from 'hass-react'
 import { BottomNav } from '#/components/layout/BottomNav'
 import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
+import { SideNav } from '#/components/layout/SideNav'
 import { LocationProvider } from '#/components/location/LocationProvider'
 import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
@@ -136,9 +137,10 @@ export function AppShell() {
     <ToastProvider>
       <MotionConfig reducedMotion="user">
         <LazyMotion features={domAnimation} strict>
-          <div className="mx-auto flex min-h-dvh w-full max-w-[88rem] flex-col">
+          <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
-              <main className="flex-1 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-4 md:px-8 lg:px-10">
+              <SideNav />
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-4 md:px-8 md:pb-8 md:pt-6 lg:px-10">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />

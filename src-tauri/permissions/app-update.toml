@@ -1,0 +1,8 @@
+[[permission]]
+identifier = "allow-app-update"
+description = "Allows downloading and installing Android APK updates."
+commands.allow = [
+  "app_update_download",
+  "app_update_progress",
+  "app_update_install"
+]

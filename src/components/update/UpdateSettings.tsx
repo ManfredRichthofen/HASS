@@ -8,6 +8,8 @@ import { isTauri } from '#/lib/deviceLocation'
 export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
   const [result, setResult] = useState<UpdateCheckResult | null>(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<number | null>(null)
+  const [downloading, setDownloading] = useState(false)
   const native = isTauri()
 
   const runCheck = useCallback(async (silent = false) => {
@@ -55,8 +57,8 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
           <p className="text-sm font-semibold text-ink">App updates</p>
           <p className="mt-1 text-xs text-ink-muted">
             Checks GitHub releases for Casa (
-            <code className="text-ink">ManfredRichthofen/HASS</code>). Desktop installs update
-            in-app; Android opens the latest APK release.
+            <code className="text-ink">ManfredRichthofen/HASS</code>). Desktop and Android both
+            update in-app. Android downloads the APK and asks you to confirm the install.
           </p>
         </div>
       </div>
@@ -88,14 +90,25 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
             disabled={busy}
             onClick={() => {
               setBusy(true)
+              setDownloading(true)
+              setProgress(null)
               void result
-                .install()
+                .install(setProgress)
                 .then(() => notify('Installing update…'))
-                .catch((e) => notify('Update failed', e instanceof Error ? e.message : 'Error'))
-                .finally(() => setBusy(false))
+                .catch((e) =>
+                  notify('Update failed', e instanceof Error ? e.message : String(e)),
+                )
+                .finally(() => {
+                  setBusy(false)
+                  setDownloading(false)
+                })
             }}
           >
-            Install update
+            {downloading
+              ? progress != null
+                ? `Downloading ${Math.round(progress * 100)}%`
+                : 'Downloading…'
+              : 'Install update'}
           </Button>
         ) : null}
       </div>

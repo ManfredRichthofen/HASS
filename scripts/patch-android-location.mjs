@@ -34,6 +34,7 @@ const kotlinSources = [
   'LocationCredentialStore.kt',
   'LocationWorker.kt',
   'LocationUpdateReceiver.kt',
+  'AppUpdatePlugin.kt',
 ]
 
 for (const file of kotlinSources) {
@@ -56,6 +57,7 @@ const permissions = [
   'android.permission.ACCESS_COARSE_LOCATION',
   'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_BACKGROUND_LOCATION',
+  'android.permission.REQUEST_INSTALL_PACKAGES',
 ]
 
 for (const perm of permissions) {
@@ -130,6 +132,8 @@ const proguardRules = `# Casa location plugin is registered reflectively from Ru
 -keep class com.casa.dashboard.LocationTrackingPlugin { *; }
 -keep class com.casa.dashboard.LocationWorker { *; }
 -keep class com.casa.dashboard.LocationUpdateReceiver { *; }
+-keep class com.casa.dashboard.AppUpdatePlugin { *; }
+-keep class com.casa.dashboard.DownloadArgs { *; }
 -keep class com.casa.dashboard.LocationCredentialStore { *; }
 -keep class com.casa.dashboard.TrackingCredentials { *; }
 
@@ -144,7 +148,7 @@ const proguardRules = `# Casa location plugin is registered reflectively from Ru
 
 if (
   !existsSync(proguardPath) ||
-  !readFileSync(proguardPath, 'utf8').includes('WorkDatabase_Impl')
+  !readFileSync(proguardPath, 'utf8').includes('AppUpdatePlugin')
 ) {
   writeFileSync(proguardPath, proguardRules)
 }

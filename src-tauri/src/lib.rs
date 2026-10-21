@@ -1,3 +1,4 @@
+mod app_update;
 mod location_tracking;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -8,12 +9,17 @@ pub fn run() {
         location_tracking::location_tracking_stop,
         location_tracking::location_tracking_update_credentials,
         location_tracking::location_tracking_get_device_name,
+        app_update::app_update_download,
+        app_update::app_update_progress,
+        app_update::app_update_install,
     ]);
 
     // Background HA location sharing — Android Kotlin plugin only.
     #[cfg(target_os = "android")]
     {
-        builder = builder.plugin(location_tracking::init());
+        builder = builder
+            .plugin(location_tracking::init())
+            .plugin(app_update::init());
     }
 
     #[cfg(any(target_os = "android", target_os = "ios"))]

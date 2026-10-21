@@ -8,6 +8,8 @@
 -keep class com.casa.dashboard.LocationTrackingPlugin { *; }
 -keep class com.casa.dashboard.LocationWorker { *; }
 -keep class com.casa.dashboard.LocationUpdateReceiver { *; }
+-keep class com.casa.dashboard.AppUpdatePlugin { *; }
+-keep class com.casa.dashboard.DownloadArgs { *; }
 -keep class com.casa.dashboard.LocationCredentialStore { *; }
 -keep class com.casa.dashboard.TrackingCredentials { *; }
 
