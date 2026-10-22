@@ -8,12 +8,16 @@ on:
       - 'src-tauri/tauri.conf.json'
   workflow_dispatch:
 
+# Needs repo Setting → Actions → General → Workflow permissions → Read and write.
+# Job-level grant below is required so tauri-action can create the GitHub Release.
 permissions:
   contents: write
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       should_release: ${{ steps.gate.outputs.should_release }}
       version: ${{ steps.gate.outputs.version }}
@@ -72,6 +76,8 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -79,9 +85,14 @@ jobs:
       NDK_VERSION: 28.2.13676358
       # Baked into the bundle at build time; .env is gitignored so CI needs it explicitly.
       VITE_HA_URL: ${{ vars.VITE_HA_URL || secrets.VITE_HA_URL }}
+      # Prefer a PAT with `contents: write` if the repo default token is read-only.
+      # Fall back to GITHUB_TOKEN once Workflow permissions are set to Read and write.
+      GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Java
         uses: actions/setup-java@v6
@@ -152,9 +163,26 @@ jobs:
           echo "$ANDROID_KEY_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
           echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
+      - name: Ensure release tag/permissions
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="app-v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
+          fi
+          # Probe create permission before the long Android build finishes uploading.
+          if ! gh api repos/${{ github.repository }} --jq .permissions.push | grep -q true; then
+            echo "::error::GITHUB_TOKEN cannot create releases. Fix: Settings → Actions → General → Workflow permissions → Read and write permissions. Or add secret RELEASE_GITHUB_TOKEN (classic PAT with repo scope). Then trigger a fresh run — do not re-run the failed job."
+            exit 1
+          fi
+          echo "Token can push; tauri-action will create $TAG."
+
       - uses: tauri-apps/tauri-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
         with:
           mobile: android
