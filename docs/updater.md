@@ -13,6 +13,16 @@ A keypair was generated for this machine at:
 - Private: `%USERPROFILE%\.tauri\casa.key` (**never commit**)
 - Public: already embedded in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`
 
+### Required repo setting (releases)
+
+**Settings → Actions → General → Workflow permissions → Read and write permissions**
+
+Without this, the APK builds but creating the GitHub Release fails with `Resource not accessible by integration`. After changing it, trigger a **fresh** run (don’t re-run the old one).
+
+Optional: add secret `RELEASE_GITHUB_TOKEN` (classic PAT with `repo` scope) if org policy keeps the default token read-only.
+
+### Secrets
+
 Add GitHub Actions secrets on **ManfredRichthofen/HASS**:
 
 | Secret | Value |
@@ -22,6 +32,7 @@ Add GitHub Actions secrets on **ManfredRichthofen/HASS**:
 | `ANDROID_KEY_BASE64` | Base64 of the release keystore |
 | `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Keystore credentials |
 | `VITE_HA_URL` | Home Assistant URL baked into the APK (secret or variable) |
+| `RELEASE_GITHUB_TOKEN` | Optional PAT with `repo` scope for creating releases |
 
 Local desktop builds that produce updater artifacts:
 
