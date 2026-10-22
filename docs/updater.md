@@ -44,7 +44,7 @@ Notes:
 
 - Other edits to `tauri.conf.json` that do **not** change `version` are ignored.
 - If tag `app-v{version}` already exists, the workflow skips.
-- You can still run the workflow manually (**Actions → Casa release → Run workflow**) or push an `app-v*` tag.
+- You can still run the workflow manually (**Actions → Casa release → Run workflow**).
 
 ## Android in-app updates
 

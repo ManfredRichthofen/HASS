@@ -1,12 +1,11 @@
 name: Casa release
 
+# Auto-builds when `version` in src-tauri/tauri.conf.json is bumped on main.
 on:
   push:
     branches: [main]
     paths:
       - 'src-tauri/tauri.conf.json'
-    tags:
-      - 'app-v*'
   workflow_dispatch:
 
 permissions:
