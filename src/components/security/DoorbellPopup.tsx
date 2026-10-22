@@ -1,14 +1,16 @@
 import { useBinarySensor, useBinarySensors, useCameras } from 'hass-react'
 import { Bell } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { DoorbellEventViewer } from '#/components/security/DoorbellEventViewer'
 import { Dialog, DialogContent } from '#/components/ui/dialog'
 import { entities } from '#/config/dashboard'
+import { frigateCameraFromEntity } from '#/lib/frigate'
 
 const CameraStream = lazy(() =>
   import('#/components/entities/CameraStream').then((mod) => ({ default: mod.CameraStream })),
 )
 
-const AUTO_CLOSE_MS = 60_000
+const AUTO_CLOSE_MS = 90_000
 
 function looksLikeDoorbellCamera(entityId: string, friendlyName?: string | null) {
   const hay = `${entityId} ${friendlyName ?? ''}`.toLowerCase()
@@ -53,7 +55,7 @@ function resolveDoorbellIds(
 }
 
 /**
- * Watches the doorbell visitor sensor and pops a live Frigate stream when it rings.
+ * Watches the doorbell visitor sensor and pops a live Frigate stream + event viewer.
  */
 export function DoorbellPopup() {
   const cameras = useCameras()
@@ -63,6 +65,10 @@ export function DoorbellPopup() {
   const ring = useBinarySensor(ringId)
   const [open, setOpen] = useState(false)
   const prevOn = useRef<boolean | null>(null)
+
+  const frigateCamera =
+    entities.doorbell.frigateCamera || frigateCameraFromEntity(cameraId)
+  const frigateInstanceId = entities.doorbell.frigateInstanceId || 'frigate'
 
   useEffect(() => {
     if (ring.isUnavailable) {
@@ -90,7 +96,7 @@ export function DoorbellPopup() {
       <DialogContent
         title="Doorbell"
         description="Someone is at the door"
-        className="w-[min(100%-1.5rem,36rem)] p-4 sm:p-5"
+        className="max-h-[min(92dvh,52rem)] w-[min(100%-1.5rem,40rem)] overflow-y-auto p-4 sm:p-5"
       >
         <div className="flex items-center gap-2 text-sm text-ink-muted">
           <Bell className="size-4 text-accent" />
@@ -104,14 +110,15 @@ export function DoorbellPopup() {
               </div>
             }
           >
-            <CameraStream
-              entityId={cameraId}
-              className="mt-3"
-              controls
-              muted
-            />
+            <CameraStream entityId={cameraId} className="mt-3" controls muted />
           </Suspense>
         ) : null}
+
+        <DoorbellEventViewer
+          camera={frigateCamera}
+          instanceId={frigateInstanceId}
+          active={open}
+        />
       </DialogContent>
     </Dialog>
   )

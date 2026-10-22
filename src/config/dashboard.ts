@@ -295,12 +295,16 @@ export const entities = {
   },
 
   /**
-   * Frigate doorbell — live stream popup when the button is pressed.
+   * Frigate doorbell — live stream + event viewer when the button is pressed.
    * `ringId` is the visitor/ding binary sensor (not motion).
+   * `frigateCamera` is the Frigate camera name (usually matches the HA object id).
+   * `frigateInstanceId` is the Frigate MQTT client_id (default `frigate`).
    */
   doorbell: {
     cameraId: 'camera.doorbell',
     ringId: 'binary_sensor.doorbell_visitor',
+    frigateCamera: 'doorbell',
+    frigateInstanceId: 'frigate',
   },
   houseMode: 'input_select.house_mode',
   houseModeAuto: 'input_boolean.house_mode_auto',
