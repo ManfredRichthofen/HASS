@@ -19,6 +19,9 @@ Add GitHub Actions secrets on **ManfredRichthofen/HASS**:
 | --- | --- |
 | `TAURI_SIGNING_PRIVATE_KEY` | Full contents of `casa.key` |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Empty if the key has no password |
+| `ANDROID_KEY_BASE64` | Base64 of the release keystore |
+| `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Keystore credentials |
+| `VITE_HA_URL` | Home Assistant URL baked into the APK (secret or variable) |
 
 Local desktop builds that produce updater artifacts:
 
@@ -27,19 +30,22 @@ $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\casa.key" 
 npx tauri build
 ```
 
-## Publish a release
+## Publish a release (automatic)
 
-1. Bump `version` in `src-tauri/tauri.conf.json` (and optionally `src-tauri/Cargo.toml`).
-2. Commit, then tag:
+Bump `version` in `src-tauri/tauri.conf.json` and push to `main`:
 
-```powershell
-git tag app-v0.1.1
-git push origin app-v0.1.1
+```json
+"version": "0.1.4"
 ```
 
-3. GitHub Action **Tauri release** builds Windows / Linux / macOS, signs updater artifacts, and drafts a GitHub Release including `latest.json`.
-4. Publish the draft release when ready. Installed desktop apps will pick it up on next launch / **More → App updates**.
+The **Casa release** workflow detects the version change, builds the Android APK, creates tag `app-v0.1.4`, and publishes a GitHub Release with the APK asset.
 
-## Android APKs
+Notes:
 
-Upload a universal APK (from `npm run android:build`) to the same GitHub Release as an asset named `*.apk`. The Android in-app checker will offer that download when the release tag is newer than the installed app version.
+- Other edits to `tauri.conf.json` that do **not** change `version` are ignored.
+- If tag `app-v{version}` already exists, the workflow skips.
+- You can still run the workflow manually (**Actions → Casa release → Run workflow**) or push an `app-v*` tag.
+
+## Android in-app updates
+
+The Android checker offers the latest release APK when the release tag is newer than the installed app version.

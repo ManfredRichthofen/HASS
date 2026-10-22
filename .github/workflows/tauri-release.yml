@@ -1,7 +1,10 @@
-name: Android APK release
+name: Casa release
 
 on:
   push:
+    branches: [main]
+    paths:
+      - 'src-tauri/tauri.conf.json'
     tags:
       - 'app-v*'
   workflow_dispatch:
@@ -10,7 +13,65 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.gate.outputs.should_release }}
+      version: ${{ steps.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether to release
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "::error::Could not read version from src-tauri/tauri.conf.json"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+          # Manual runs always release (idempotent skip below if tag exists).
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if git ls-remote --tags origin "refs/tags/app-v${VERSION}" | grep -q .; then
+              echo "Tag app-v${VERSION} already exists — skipping."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+
+          # Path pushes: only release when the version field actually changed.
+          PREV=""
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            PREV=$(git show HEAD^:src-tauri/tauri.conf.json 2>/dev/null | jq -r '.version // empty' || true)
+          fi
+          echo "Previous version: ${PREV:-<none>}"
+
+          if [[ -n "$PREV" && "$PREV" == "$VERSION" ]]; then
+            echo "Version unchanged — skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git ls-remote --tags origin "refs/tags/app-v${VERSION}" | grep -q .; then
+            echo "Tag app-v${VERSION} already exists on origin — skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Version bumped${PREV:+ from $PREV} to $VERSION — releasing."
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+
   publish-android:
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     env:
       ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
@@ -102,7 +163,11 @@ jobs:
           args: --apk --target aarch64
           tagName: app-v__VERSION__
           releaseName: 'Casa v__VERSION__'
-          releaseBody: 'Android APK for Casa. Sideload the .apk asset below.'
+          releaseBody: |
+            Casa v__VERSION__
+
+            Android APK — sideload the `.apk` asset below.
+            Triggered by a version bump in `src-tauri/tauri.conf.json`.
           releaseDraft: false
           prerelease: false
           uploadUpdaterJson: false
