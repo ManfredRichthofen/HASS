@@ -285,10 +285,22 @@ export const entities = {
       { id: 'binary_sensor.washer_leak_sensor', label: 'Washer' },
     ],
     /**
-     * Live cameras for the Security page. Add HA `camera.*` entity IDs here.
+     * Live cameras for the Security page.
      * Stills use camera_proxy; live view uses HLS via hls.js (MJPEG fallback).
      */
-    cameras: [] as readonly { id: string; label: string }[],
+    cameras: [{ id: 'camera.doorbell', label: 'Doorbell' }] as readonly {
+      id: string
+      label: string
+    }[],
+  },
+
+  /**
+   * Frigate doorbell — live stream popup when the button is pressed.
+   * `ringId` is the visitor/ding binary sensor (not motion).
+   */
+  doorbell: {
+    cameraId: 'camera.doorbell',
+    ringId: 'binary_sensor.doorbell_visitor',
   },
   houseMode: 'input_select.house_mode',
   houseModeAuto: 'input_boolean.house_mode_auto',

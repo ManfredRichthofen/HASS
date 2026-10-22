@@ -17,6 +17,7 @@ pub struct TrackingCredentials {
     pub refresh_token: String,
     pub client_id: String,
     pub device_id: String,
+    pub webhook_id: String,
 }
 
 #[tauri::command]

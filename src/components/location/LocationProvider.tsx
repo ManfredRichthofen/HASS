@@ -7,7 +7,10 @@ type LocationContextValue = {
   setEnabled: (enabled: boolean) => Promise<{ ok: true } | { ok: false; message: string }>
   permission: LocationPermission
   deviceId: string
+  webhookId: string
   entityId: string | null
+  /** Per-device Template YAML — each person pastes their own snippet in HA. */
+  templateYaml: string
   lastReport: LocationReportSnapshot | null
   lastCoords: string | null
   reporting: boolean

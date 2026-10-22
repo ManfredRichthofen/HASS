@@ -12,6 +12,8 @@ object LocationCredentialStore {
   private const val KEY_REFRESH = "refresh_token"
   private const val KEY_CLIENT = "client_id"
   private const val KEY_DEVICE = "device_id"
+  private const val KEY_WEBHOOK = "webhook_id"
+  private const val DEFAULT_WEBHOOK = "casa_location"
 
   data class Credentials(
     val haUrl: String,
@@ -19,6 +21,7 @@ object LocationCredentialStore {
     val refreshToken: String,
     val clientId: String,
     val deviceId: String,
+    val webhookId: String,
   )
 
   private fun prefs(context: Context): SharedPreferences {
@@ -41,6 +44,7 @@ object LocationCredentialStore {
     refreshToken: String,
     clientId: String,
     deviceId: String,
+    webhookId: String,
   ) {
     prefs(context).edit()
       .putString(KEY_HA_URL, haUrl.trimEnd('/'))
@@ -48,6 +52,7 @@ object LocationCredentialStore {
       .putString(KEY_REFRESH, refreshToken)
       .putString(KEY_CLIENT, clientId)
       .putString(KEY_DEVICE, deviceId)
+      .putString(KEY_WEBHOOK, webhookId.ifBlank { DEFAULT_WEBHOOK })
       .apply()
   }
 
@@ -59,7 +64,8 @@ object LocationCredentialStore {
       val refresh = p.getString(KEY_REFRESH, null) ?: return null
       val client = p.getString(KEY_CLIENT, null) ?: return null
       val device = p.getString(KEY_DEVICE, null) ?: return null
-      Credentials(haUrl, access, refresh, client, device)
+      val webhook = p.getString(KEY_WEBHOOK, null)?.ifBlank { null } ?: DEFAULT_WEBHOOK
+      Credentials(haUrl, access, refresh, client, device, webhook)
     } catch (_: Exception) {
       null
     }

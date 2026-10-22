@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { haUrl } from '#/config/ha'
 import {
+  getLocationWebhookId,
   getOrCreateLocationDeviceId,
   isTauri,
   setLocationDeviceId,
@@ -15,6 +16,7 @@ export type NativeTrackingCredentials = {
   refreshToken: string
   clientId: string
   deviceId: string
+  webhookId: string
 }
 
 /** Resolve Android Settings device name and use it as the HA device_tracker id. */
@@ -48,6 +50,7 @@ function buildCredentials(): NativeTrackingCredentials {
     refreshToken: auth.refresh_token ?? '',
     clientId: getHaClientId(auth),
     deviceId: getOrCreateLocationDeviceId(),
+    webhookId: getLocationWebhookId(),
   }
 }
 

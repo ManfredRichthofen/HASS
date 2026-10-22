@@ -1,5 +1,6 @@
 const ENABLED_KEY = 'casa.location.enabled'
 const DEVICE_ID_KEY = 'casa.location.device_id'
+const WEBHOOK_ID_KEY = 'casa.location.webhook_id'
 const LAST_REPORT_KEY = 'casa.location.last_report'
 
 /** True when running inside the Tauri shell (Android / desktop). */
@@ -52,7 +53,42 @@ export function slugifyDeviceId(name: string): string {
   return slug || 'casa_device'
 }
 
-/** Stable slug for `device_tracker.<dev_id>` (creates the entity on first see). */
+/**
+ * Per-device webhook id so multiple household members can each have a tracker.
+ * `pixel_8` → `casa_pixel_8`; `casa_web_ab12` stays `casa_web_ab12`.
+ */
+export function locationWebhookIdForDevice(deviceId: string) {
+  return deviceId.startsWith('casa_') ? deviceId : `casa_${deviceId}`
+}
+
+export function locationTrackerEntityId(deviceId: string) {
+  return `device_tracker.${deviceId}`
+}
+
+export function getLocationWebhookId(deviceId = getOrCreateLocationDeviceId()): string {
+  try {
+    const raw = localStorage.getItem(WEBHOOK_ID_KEY)?.trim()
+    if (raw && /^[a-zA-Z0-9_-]+$/.test(raw)) return raw
+  } catch {
+    /* private mode */
+  }
+  return locationWebhookIdForDevice(deviceId)
+}
+
+export function setLocationWebhookId(id: string): void {
+  const cleaned = id.trim()
+  try {
+    if (!cleaned) {
+      localStorage.removeItem(WEBHOOK_ID_KEY)
+    } else {
+      localStorage.setItem(WEBHOOK_ID_KEY, cleaned)
+    }
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Stable slug identifying this device in webhook payloads (not the HA entity id). */
 export function getOrCreateLocationDeviceId(): string {
   try {
     const existing = localStorage.getItem(DEVICE_ID_KEY)

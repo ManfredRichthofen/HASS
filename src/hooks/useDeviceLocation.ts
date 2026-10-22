@@ -1,8 +1,9 @@
-import { useHAConnection, useServiceCall } from 'hass-react'
+import { useHAConnection } from 'hass-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   formatCoords,
   getLocationDeviceName,
+  getLocationWebhookId,
   getOrCreateLocationDeviceId,
   isLocationSharingEnabled,
   isTauri,
@@ -13,6 +14,13 @@ import {
   shouldReportLocation,
   writeLastLocationReport,
 } from '#/lib/deviceLocation'
+import {
+  buildLocationTemplateYaml,
+  locationTrackerEntityId,
+  locationWebhookErrorMessage,
+  reportLocationViaWebhook,
+  resolveLocationReportTarget,
+} from '#/lib/locationReport'
 import { readHaAuth } from '#/lib/haAuthStorage'
 import {
   resolveAndroidTrackerIdentity,
@@ -67,7 +75,6 @@ async function loadTauriGeo(): Promise<TauriGeolocation> {
 
 export function useDeviceLocation() {
   const { connected } = useHAConnection()
-  const { callService } = useServiceCall()
   const native = isTauri()
 
   const [enabled, setEnabledState] = useState(false)
@@ -143,7 +150,10 @@ export function useDeviceLocation() {
 
   const reportToHa = useCallback(
     async (lat: number, lon: number, accuracy: number | null, force: boolean) => {
-      if (!connected || reportingRef.current) return
+      if (reportingRef.current) return
+      // Prefer an active HA session so we know the instance is reachable; webhooks
+      // themselves do not require a bearer token.
+      if (!connected && !native) return
 
       if (!shouldReportLocation({ lat, lon, accuracy }, lastReportRef.current, force)) {
         return
@@ -159,15 +169,17 @@ export function useDeviceLocation() {
         const hostName = native
           ? (getLocationDeviceName() ?? 'Android')
           : 'Casa Web'
-        const serviceData: Record<string, unknown> = {
-          dev_id: id,
-          gps: [lat, lon],
-          host_name: hostName,
-        }
-        if (accuracy != null) serviceData.gps_accuracy = Math.round(accuracy)
-        if (battery != null) serviceData.battery = battery
+        const target = resolveLocationReportTarget(id)
 
-        await callService('device_tracker', 'see', serviceData)
+        await reportLocationViaWebhook({
+          ...target,
+          lat,
+          lon,
+          accuracy,
+          battery,
+          hostName,
+          deviceId: id,
+        })
 
         const snapshot = toSnapshot(lat, lon, accuracy, battery)
         lastReportRef.current = snapshot
@@ -175,15 +187,15 @@ export function useDeviceLocation() {
         setLastReport(snapshot)
         setDeviceId(id)
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to report location to HA'
+        const message = locationWebhookErrorMessage(e)
         setError(message)
-        throw e
+        throw e instanceof Error ? e : new Error(message)
       } finally {
         reportingRef.current = false
         setReporting(false)
       }
     },
-    [callService, connected, native],
+    [connected, native],
   )
 
   const ensureNativePermissions = useCallback(async () => {
@@ -442,12 +454,25 @@ export function useDeviceLocation() {
     }
   }, [enabled, native])
 
+  const hostName = native ? (getLocationDeviceName() ?? 'Android') : 'Casa Web'
+  const webhookId = deviceId ? getLocationWebhookId(deviceId) : ''
+  const entityId = deviceId ? locationTrackerEntityId(deviceId) : null
+  const templateYaml = deviceId
+    ? buildLocationTemplateYaml({
+        deviceId,
+        displayName: hostName,
+        webhookId,
+      })
+    : ''
+
   return {
     enabled,
     setEnabled,
     permission,
     deviceId,
-    entityId: deviceId ? `device_tracker.${deviceId}` : null,
+    webhookId,
+    entityId,
+    templateYaml,
     lastReport,
     lastCoords: lastReport ? formatCoords(lastReport.lat, lastReport.lon) : null,
     reporting,

@@ -44,6 +44,9 @@ export const entityLabels: Record<string, string> = {
 
   // Security / appliances / yard
   'lock.level_lock_pro': 'Front door',
+  'camera.doorbell': 'Doorbell',
+  'binary_sensor.doorbell_visitor': 'Doorbell',
+  'binary_sensor.doorbell_motion': 'Doorbell motion',
   'vacuum.x40_ultra': 'Robot vacuum',
   'switch.washer_power': 'Washer',
   'switch.washtower_power': 'Dryer',

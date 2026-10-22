@@ -11,7 +11,6 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -47,14 +46,11 @@ class LocationWorker(context: Context, params: WorkerParameters) :
         }
 
         val battery = readBatteryPercent()
-        if (!postSee(creds, finalLat, finalLon, finalAccuracy, battery)) {
-            val refreshed = refreshToken(creds) ?: return Result.retry()
-            LocationCredentialStore.updateAccessToken(applicationContext, refreshed)
-            if (!postSee(creds.copy(accessToken = refreshed), finalLat, finalLon, finalAccuracy, battery)) {
-                return Result.retry()
-            }
+        return if (postWebhook(creds, finalLat, finalLon, finalAccuracy, battery)) {
+            Result.success()
+        } else {
+            Result.retry()
         }
-        return Result.success()
     }
 
     private suspend fun getLocation(): Location? {
@@ -72,7 +68,11 @@ class LocationWorker(context: Context, params: WorkerParameters) :
         }
     }
 
-    private fun postSee(
+    /**
+     * POST GPS to a trigger-based Template device_tracker webhook
+     * (Home Assistant's replacement for deprecated device_tracker.see).
+     */
+    private fun postWebhook(
         creds: LocationCredentialStore.Credentials,
         lat: Double,
         lon: Double,
@@ -81,17 +81,18 @@ class LocationWorker(context: Context, params: WorkerParameters) :
     ): Boolean {
         val deviceName = readDeviceName()
         val body = JSONObject().apply {
-            put("dev_id", creds.deviceId)
-            put("gps", JSONArray().put(lat).put(lon))
+            put("latitude", lat)
+            put("longitude", lon)
             if (accuracy != null) put("gps_accuracy", accuracy.toInt())
             put("host_name", deviceName)
+            put("device_id", creds.deviceId)
             if (battery != null) put("battery", battery)
         }
         return try {
-            val url = URL("${creds.haUrl}/api/services/device_tracker/see")
+            val webhookId = URLEncoder.encode(creds.webhookId, "UTF-8")
+            val url = URL("${creds.haUrl}/api/webhook/$webhookId")
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
-                setRequestProperty("Authorization", "Bearer ${creds.accessToken}")
                 setRequestProperty("Content-Type", "application/json")
                 doOutput = true
                 connectTimeout = 15_000
@@ -103,38 +104,6 @@ class LocationWorker(context: Context, params: WorkerParameters) :
             code in 200..299
         } catch (_: Exception) {
             false
-        }
-    }
-
-    private fun refreshToken(creds: LocationCredentialStore.Credentials): String? {
-        if (creds.refreshToken.isBlank()) return null
-        return try {
-            val url = URL("${creds.haUrl}/auth/token")
-            val form = listOf(
-                "grant_type" to "refresh_token",
-                "refresh_token" to creds.refreshToken,
-                "client_id" to creds.clientId,
-            ).joinToString("&") { (k, v) ->
-                "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}"
-            }
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                doOutput = true
-                connectTimeout = 15_000
-                readTimeout = 15_000
-            }
-            OutputStreamWriter(conn.outputStream).use { it.write(form) }
-            val code = conn.responseCode
-            val text = (if (code in 200..299) conn.inputStream else conn.errorStream)
-                ?.bufferedReader()
-                ?.use { it.readText() }
-                .orEmpty()
-            conn.disconnect()
-            if (code !in 200..299) return null
-            JSONObject(text).optString("access_token").takeIf { it.isNotBlank() }
-        } catch (_: Exception) {
-            null
         }
     }
 

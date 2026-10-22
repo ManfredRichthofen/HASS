@@ -40,10 +40,41 @@ On first run, grant **Location → Allow all the time**.
 
 Uses Fused Location PendingIntents + WorkManager (no foreground service notification).
 
+Location is posted to a **per-device trigger-based Template device_tracker** webhook — Home Assistant’s recommended replacement for deprecated `device_tracker.see`.
+
+Each person/phone gets its own webhook + tracker (e.g. phone named “Pixel 8” → webhook `casa_pixel_8`, entity `device_tracker.pixel_8`). Open **Settings → This device** in the app for the exact YAML for that install.
+
+Example (your snippet will differ):
+
+```yaml
+template:
+  - triggers:
+      - trigger: webhook
+        webhook_id: casa_pixel_8
+        allowed_methods:
+          - POST
+        local_only: false
+    device_tracker:
+      - name: "Pixel 8"
+        unique_id: casa_location_pixel_8
+        default_entity_id: device_tracker.pixel_8
+        latitude: "{{ trigger.json.latitude }}"
+        longitude: "{{ trigger.json.longitude }}"
+        location_accuracy: "{{ trigger.json.gps_accuracy | default(0) }}"
+        attributes:
+          battery: "{{ trigger.json.battery }}"
+          host_name: "{{ trigger.json.host_name }}"
+          device_id: "{{ trigger.json.device_id }}"
+```
+
+Then:
+
 1. Sign in to Home Assistant in the app.
-2. Open **Settings → This device → Enable location based automations**.
-3. Minimize / lock the phone — Home Assistant creates a tracker from the Android device name (e.g. `device_tracker.pixel_8`).
-4. Assign that tracker to a Person in HA for presence.
+2. Paste that device’s Template YAML into HA (or create a Template helper).
+3. Open **Settings → This device → Enable location based automations**.
+4. Assign that phone’s `device_tracker.*` entity to the correct Person.
+
+See: https://www.home-assistant.io/integrations/template/#device-tracker
 
 ## Release / sideload APK
 

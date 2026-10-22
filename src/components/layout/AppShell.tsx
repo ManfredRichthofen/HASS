@@ -4,6 +4,7 @@ import { BottomNav } from '#/components/layout/BottomNav'
 import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
 import { SideNav } from '#/components/layout/SideNav'
 import { LocationProvider } from '#/components/location/LocationProvider'
+import { DoorbellPopup } from '#/components/security/DoorbellPopup'
 import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
@@ -63,6 +64,7 @@ function ConnectedShell({ children }: { children: React.ReactNode }) {
     return (
       <LocationProvider>
         <UpdateChecker />
+        <DoorbellPopup />
         {children}
       </LocationProvider>
     )

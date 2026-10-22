@@ -32,6 +32,8 @@ class TrackingCredentials {
   lateinit var refreshToken: String
   lateinit var clientId: String
   lateinit var deviceId: String
+  @JvmField
+  var webhookId: String = "casa_location"
 }
 
 @TauriPlugin
@@ -58,6 +60,7 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
         args.refreshToken,
         args.clientId,
         args.deviceId,
+        args.webhookId.ifBlank { "casa_location" },
       )
     } catch (e: Exception) {
       invoke.reject("Failed to store credentials: ${e.message}")
@@ -116,6 +119,7 @@ class LocationTrackingPlugin(private val activity: Activity) : Plugin(activity) 
         args.refreshToken,
         args.clientId,
         args.deviceId,
+        args.webhookId.ifBlank { "casa_location" },
       )
       invoke.resolve()
     } catch (e: Exception) {
