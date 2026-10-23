@@ -80,7 +80,9 @@ function MusicPage() {
     setPanel('queue')
   }
 
-  const speakersPanel = current ? <SpeakersPanel current={current} onControl={control} /> : null
+  const speakersPanel = current ? (
+    <SpeakersPanel current={current} onControl={control} onFollow={setPicked} />
+  ) : null
 
   const sheetProps = (id: Panel) => ({
     open: sheet === id,

@@ -22,7 +22,9 @@ type ServiceResponseBag =
 export function normalizeMassQueueItem(raw: MassQueueServiceItem, index: number): QueueItem {
   const title = raw.media_title?.trim() || raw.name?.trim() || undefined
   const artist = raw.media_artist?.trim() || undefined
-  const imageUrl = raw.local_image_encoded || raw.media_image || null
+  // Keep flat image fields only — do not stuff into image.url (that skips imageproxy).
+  const mediaImage = raw.media_image ?? null
+  const localEncoded = raw.local_image_encoded ?? null
 
   return {
     queue_item_id: raw.queue_item_id,
@@ -31,14 +33,13 @@ export function normalizeMassQueueItem(raw: MassQueueServiceItem, index: number)
     duration: typeof raw.duration === 'number' ? raw.duration : null,
     media_title: title,
     media_artist: artist,
-    media_image: imageUrl,
-    local_image_encoded: raw.local_image_encoded ?? null,
+    media_image: mediaImage,
+    local_image_encoded: localEncoded,
     media_item: {
       name: title,
       uri: raw.media_content_id,
       artists: artist ? [{ name: artist }] : undefined,
       album: raw.media_album_name ? { name: raw.media_album_name } : undefined,
-      image: imageUrl ? { url: imageUrl, path: imageUrl } : null,
     },
   }
 }

@@ -5,7 +5,9 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Toggle } from '#/components/ui/toggle'
 import { notify } from '#/components/ui/toast'
+import { haUrl } from '#/config/ha'
 import { cn } from '#/lib/cn'
+import { getMassBaseUrl } from '#/lib/massConfig'
 import {
   type EnqueueMode,
   enqueueModes,
@@ -13,6 +15,7 @@ import {
   mediaClassFilters,
   mediaClassLabel,
   parseSearchResults,
+  resolveMediaThumbnail,
 } from '#/lib/musicAssistant'
 
 const GROUP_ORDER = ['track', 'album', 'artist', 'playlist', 'radio'] as const
@@ -33,9 +36,10 @@ function ModeIcon({ mode, className }: { mode: EnqueueMode; className?: string }
 
 function Thumb({ item, round }: { item: MediaSearchItem; round?: boolean }) {
   const [failed, setFailed] = useState(false)
-  return item.thumbnail && !failed ? (
+  const src = resolveMediaThumbnail(item.thumbnail, haUrl, getMassBaseUrl())
+  return src && !failed ? (
     <img
-      src={item.thumbnail}
+      src={src}
       alt=""
       className="size-full object-cover"
       loading="lazy"

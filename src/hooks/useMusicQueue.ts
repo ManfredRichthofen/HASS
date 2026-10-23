@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHAConnection, useMediaPlayer, useServiceCall } from 'hass-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ensureMassFromHomeAssistant } from '#/lib/massAuth'
+import { discoverMassUrl, ensureMassFromHomeAssistant } from '#/lib/massAuth'
 import {
   clearQueue,
   deleteQueueItem,
@@ -16,7 +16,7 @@ import {
   setQueueRepeat,
   setQueueShuffle,
 } from '#/lib/massClient'
-import { isMassConfigured, readMassConfig } from '#/lib/massConfig'
+import { getMassBaseUrl, isMassConfigured, setDiscoveredMassUrl } from '#/lib/massConfig'
 import { massQueueEntityData, parseMassQueueItemsResponse } from '#/lib/massQueue'
 import {
   type MusicQueue,
@@ -70,6 +70,9 @@ export type MusicQueueState = {
   repeatMode: string
 }
 
+/** Cache entity_id → unique_id so we don't re-list the registry every poll. */
+const playerIdCache = new Map<string, string>()
+
 async function resolvePlayerId(
   connection: HaConnection | null,
   entityId: string,
@@ -78,13 +81,19 @@ async function resolvePlayerId(
   const activeQueue = attributes.active_queue
   if (typeof activeQueue === 'string' && activeQueue) return activeQueue
 
+  const cached = playerIdCache.get(entityId)
+  if (cached) return cached
+
   if (!connection) return null
   try {
     const entries = await connection.sendMessagePromise<EntityRegistryEntry[]>({
       type: 'config/entity_registry/list',
     })
     const match = entries.find((entry) => entry.entity_id === entityId)
-    if (match?.unique_id) return match.unique_id
+    if (match?.unique_id) {
+      playerIdCache.set(entityId, match.unique_id)
+      return match.unique_id
+    }
   } catch {
     /* ignore */
   }
@@ -183,7 +192,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   const player = useMediaPlayer(entityId)
   const queryClient = useQueryClient()
   const [massApiConfigured, setMassApiConfigured] = useState(() => isMassConfigured())
-  const [massUrl, setMassUrl] = useState(() => readMassConfig()?.url ?? null)
+  const [massUrl, setMassUrl] = useState(() => getMassBaseUrl())
   const [massQueueAvailable, setMassQueueAvailable] = useState<boolean | null>(null)
   const [ensuring, setEnsuring] = useState(false)
   const active = player.isPlaying || player.isPaused
@@ -192,7 +201,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   useEffect(() => {
     const sync = () => {
       setMassApiConfigured(isMassConfigured())
-      setMassUrl(readMassConfig()?.url ?? null)
+      setMassUrl(getMassBaseUrl())
     }
     window.addEventListener('mass-config-changed', sync)
     window.addEventListener('storage', sync)
@@ -214,6 +223,21 @@ export function useMusicQueue(entityId: string): MusicQueueState {
     }
   }, [connected, connection])
 
+  // Always resolve a MA base URL for artwork (imageproxy), even when mass_queue
+  // handles queue mutations and full MA API auth is not required.
+  useEffect(() => {
+    if (!connected || !connection || massUrl) return
+    let cancelled = false
+    void discoverMassUrl(connection).then((url) => {
+      if (cancelled || !url) return
+      setDiscoveredMassUrl(url)
+      setMassUrl(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [connected, connection, massUrl])
+
   // Optional fallback: reuse HA music_assistant integration token for direct MA API.
   useEffect(() => {
     if (!connected || !connection || massApiConfigured) return
@@ -225,6 +249,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         if (cancelled) return
         if (result.status === 'ready' || result.status === 'already') {
           setMassApiConfigured(true)
+          setDiscoveredMassUrl(result.config.url)
           setMassUrl(result.config.url)
           void queryClient.invalidateQueries({ queryKey: ['music-queue'] })
         }
@@ -237,21 +262,28 @@ export function useMusicQueue(entityId: string): MusicQueueState {
     }
   }, [connected, connection, massApiConfigured, massQueueAvailable, queryClient])
 
+  const activeQueueId = (player.attributes as { active_queue?: string }).active_queue
+
+  // Drive freshness from HA media_player state without thrashing the query key.
+  useEffect(() => {
+    if (!entityId || !connected || massQueueAvailable === null) return
+    void queryClient.invalidateQueries({ queryKey: ['music-queue', entityId] })
+  }, [
+    entityId,
+    connected,
+    massQueueAvailable,
+    player.mediaTitle,
+    player.state,
+    activeQueueId,
+    queryClient,
+  ])
+
   const query = useQuery({
-    queryKey: [
-      'music-queue',
-      entityId,
-      massQueueAvailable,
-      massApiConfigured,
-      massUrl,
-      player.mediaTitle,
-      player.state,
-      (player.attributes as { active_queue?: string }).active_queue,
-    ],
+    queryKey: ['music-queue', entityId, massQueueAvailable, massApiConfigured],
     enabled: Boolean(entityId) && connected && massQueueAvailable !== null,
     staleTime: 8_000,
-    // Drive freshness mainly from media_player state in the query key; poll as a backstop.
-    refetchInterval: configured ? (active ? 10_000 : 15_000) : active ? 12_000 : 20_000,
+    // HA-driven invalidation above; poll as a backstop.
+    refetchInterval: configured ? (active ? 15_000 : 30_000) : active ? 15_000 : 30_000,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<{
       queueId: string | null
@@ -265,6 +297,53 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         (typeof attrs.active_queue === 'string' && attrs.active_queue) ||
         (await resolvePlayerId(connection, entityId, attrs))
 
+      // Primary path: Music Assistant Queue Actions on Home Assistant.
+      if (massQueueAvailable) {
+        try {
+          const [haSettled, itemsSettled] = await Promise.allSettled([
+            callServiceWithResponse('music_assistant', 'get_queue', {
+              entity_id: entityId,
+            }),
+            callServiceWithResponse('mass_queue', 'get_queue_items', {
+              ...massQueueEntityData(entityId),
+              limit: 500,
+              limit_before: 50,
+              limit_after: 450,
+            }),
+          ])
+
+          let haQueue: MusicQueue | null = null
+          if (haSettled.status === 'fulfilled') {
+            haQueue = parseQueueResponse(haSettled.value, entityId)
+            if (haQueue?.queue_id) queueId = haQueue.queue_id
+          }
+
+          if (itemsSettled.status === 'fulfilled') {
+            const items = parseMassQueueItemsResponse(itemsSettled.value, entityId)
+            // HA get_queue often omits dont_stop_the_music / autoplay — pull flags from MA when configured.
+            let queue = haQueue
+            const id = queueId ?? haQueue?.queue_id ?? null
+            if (massApiConfigured && id) {
+              try {
+                const queueRaw = await getActiveQueue(id).catch(() => getQueue(id))
+                if (queueRaw) queue = normalizeQueue(queueRaw)
+              } catch {
+                /* keep haQueue */
+              }
+            }
+            return {
+              queueId: queue?.queue_id ?? id,
+              queue,
+              items: items.length > 0 ? items : queueItemsFromHaSummary(queue),
+              haQueueAvailable: Boolean(queue ?? haQueue) || items.length > 0,
+              viaMassQueue: true,
+            }
+          }
+        } catch {
+          // Fall through to MA API / HA summary.
+        }
+      }
+
       let haQueue: MusicQueue | null = null
       try {
         const haResponse = await callServiceWithResponse('music_assistant', 'get_queue', {
@@ -274,28 +353,6 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         if (haQueue?.queue_id) queueId = haQueue.queue_id
       } catch {
         /* idle / no active queue via HA */
-      }
-
-      // Primary path: Music Assistant Queue Actions on Home Assistant.
-      if (massQueueAvailable) {
-        try {
-          const itemsResponse = await callServiceWithResponse('mass_queue', 'get_queue_items', {
-            ...massQueueEntityData(entityId),
-            limit: 500,
-            limit_before: 50,
-            limit_after: 450,
-          })
-          const items = parseMassQueueItemsResponse(itemsResponse, entityId)
-          return {
-            queueId: queueId ?? haQueue?.queue_id ?? null,
-            queue: haQueue,
-            items: items.length > 0 ? items : queueItemsFromHaSummary(haQueue),
-            haQueueAvailable: Boolean(haQueue) || items.length > 0,
-            viaMassQueue: true,
-          }
-        } catch {
-          // Fall through to MA API / HA summary.
-        }
       }
 
       if (massApiConfigured && queueId) {
@@ -480,12 +537,10 @@ export function useMusicQueue(entityId: string): MusicQueueState {
 
   const setEndlessMix = useCallback(
     async (enabled: boolean) => {
+      // Optimistic only — do not patch the query cache. Patching made serverEndless
+      // match immediately so the clear-effect dropped optimistic, then HA refetch
+      // (often missing dont_stop_the_music) snapped the switch back to off.
       setOptimistic((prev) => ({ ...prev, endlessMix: enabled }))
-      patchQueueFlags({
-        autoplay_enabled: enabled,
-        dont_stop_the_music_enabled: enabled,
-        is_dynamic: enabled,
-      })
       try {
         if (massApiConfigured && queueId) {
           try {
@@ -525,11 +580,6 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         afterMutation()
       } catch (e) {
         setOptimistic((prev) => ({ ...prev, endlessMix: !enabled }))
-        patchQueueFlags({
-          autoplay_enabled: !enabled,
-          dont_stop_the_music_enabled: !enabled,
-          is_dynamic: !enabled,
-        })
         throw e
       }
     },
@@ -538,7 +588,6 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       callService,
       entityId,
       massApiConfigured,
-      patchQueueFlags,
       player.attributes,
       queue?.current_item?.media_item?.media_type,
       queue?.current_item?.media_item?.uri,

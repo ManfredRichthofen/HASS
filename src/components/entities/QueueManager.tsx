@@ -43,17 +43,41 @@ import {
   resolveHaMediaUrl,
 } from '#/lib/musicAssistant'
 
+function uniqueArtCandidates(...candidates: Array<string | null | undefined>) {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const candidate of candidates) {
+    if (!candidate || seen.has(candidate)) continue
+    seen.add(candidate)
+    out.push(candidate)
+  }
+  return out
+}
+
 function Artwork({
   src,
+  sources,
   label,
   size = 'md',
 }: {
-  src: string | null | undefined
+  src?: string | null | undefined
+  /** Tried in order; on error advances to the next candidate. */
+  sources?: Array<string | null | undefined>
   label: string
   size?: 'md' | 'hero'
 }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null)
-  const showImage = Boolean(src) && src !== failedSrc
+  const candidates = useMemo(
+    () => (sources ? uniqueArtCandidates(...sources) : uniqueArtCandidates(src)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- compare by value
+    [sources?.join('|'), src],
+  )
+  const candidatesKey = candidates.join('|')
+  const [failed, setFailed] = useState<Set<string>>(() => new Set())
+  const activeSrc = candidates.find((candidate) => !failed.has(candidate)) ?? null
+
+  useEffect(() => {
+    setFailed(new Set())
+  }, [candidatesKey])
 
   return (
     <div
@@ -64,16 +88,22 @@ function Artwork({
         size === 'md' && 'size-12 rounded-control',
       )}
     >
-      {showImage && src ? (
+      {activeSrc ? (
         <img
-          key={src}
-          src={src}
+          key={activeSrc}
+          src={activeSrc}
           alt=""
           className="size-full object-cover"
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailedSrc(src)}
+          onError={() => {
+            setFailed((prev) => {
+              const next = new Set(prev)
+              next.add(activeSrc)
+              return next
+            })
+          }}
         />
       ) : (
         <div
@@ -465,7 +495,11 @@ export function QueueManager({
   const attrs = player.attributes as { entity_picture?: unknown }
   const entityPicture =
     typeof attrs.entity_picture === 'string' ? resolveHaMediaUrl(attrs.entity_picture, haUrl) : null
-  const currentArt = entityPicture ?? queueItemImage(queue?.current_item, massUrl, 256)
+  const queueArt = queueItemImage(queue?.current_item, massUrl, 256)
+  const currentArtSources = useMemo(
+    () => uniqueArtCandidates(entityPicture, queueArt),
+    [entityPicture, queueArt],
+  )
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
   const { position, pct } = useLivePosition(player.mediaPosition, duration, isPlaying)
 
@@ -558,8 +592,8 @@ export function QueueManager({
     )
   }
 
-  function toggleEndless() {
-    const next = !endlessMixEnabled
+  function toggleEndless(next = !endlessMixEnabled) {
+    if (next === endlessMixEnabled) return
     runToggle(async () => {
       await queueApi.setEndlessMix(next)
       notify(
@@ -591,7 +625,7 @@ export function QueueManager({
             aria-label="Endless Mix"
             checked={endlessMixEnabled}
             disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
-            onCheckedChange={() => toggleEndless()}
+            onCheckedChange={(checked) => toggleEndless(checked)}
           />
         </div>
       ) : null}
@@ -645,12 +679,12 @@ export function QueueManager({
               // The artwork takes whatever height is left, so the player always fits.
               <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size] @xl:portrait:col-start-1 @xl:portrait:row-span-4 @xl:portrait:row-start-1 @xl:portrait:self-center">
                 <div className="size-[calc(min(100cqw,100cqh)-12px)]">
-                  <Artwork src={currentArt} label="Now playing artwork" size="hero" />
+                  <Artwork sources={currentArtSources} label="Now playing artwork" size="hero" />
                 </div>
               </div>
             ) : (
               <div className={cn('relative mx-auto w-full', artClassName)}>
-                <Artwork src={currentArt} label="Now playing artwork" size="hero" />
+                <Artwork sources={currentArtSources} label="Now playing artwork" size="hero" />
               </div>
             )}
 
@@ -846,7 +880,7 @@ export function QueueManager({
               disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
               aria-label={endlessMixEnabled ? 'Turn off Endless Mix' : 'Turn on Endless Mix'}
               aria-pressed={endlessMixEnabled}
-              onClick={toggleEndless}
+              onClick={() => toggleEndless()}
             >
               <Radio className="size-3.5 @xl:size-4" />
               Endless Mix

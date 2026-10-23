@@ -602,8 +602,8 @@ svg.lucide {
   .card,
   .bg-canvas-elevated\/92
 ) {
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 [data-theme="glass"] body {
@@ -622,7 +622,9 @@ svg.lucide {
     radial-gradient(28% 26% at 30% 30%, var(--blob-a), transparent 70%),
     radial-gradient(26% 24% at 72% 62%, var(--blob-b), transparent 70%),
     radial-gradient(30% 28% at 40% 85%, var(--blob-c), transparent 70%);
-  filter: blur(50px);
+  /* No filter: blur — the gradients already fade to transparent, and a
+     blurred full-screen layer behind every backdrop-filter is costly. */
+  will-change: transform;
   animation: glass-drift 40s ease-in-out infinite alternate;
 }
 

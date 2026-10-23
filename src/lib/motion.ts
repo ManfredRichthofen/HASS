@@ -67,14 +67,13 @@ export const tap = {
 } as const
 
 /**
- * Page route enter/exit (AppShell AnimatedOutlet).
- * Keep exit absolute so the entering page owns layout immediately — avoids a
- * blank canvas flash when popLayout would collapse height under opacity: 0.
+ * Page route enter (AppShell AnimatedOutlet). Enter-only, opacity-only: no exit
+ * (an exiting Outlet renders the new route, doubling the mount) and no
+ * transform (page sections already rise via staggerItem).
  */
 export const pageFade = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -4 },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
   transition: { duration: duration.fast, ease: easeOut },
 }
 

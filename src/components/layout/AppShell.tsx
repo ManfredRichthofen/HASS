@@ -1,5 +1,6 @@
 import { Outlet, useRouterState } from '@tanstack/react-router'
 import { useHAConnection } from 'hass-react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { BottomNav } from '#/components/layout/BottomNav'
 import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
 import { SideNav } from '#/components/layout/SideNav'
@@ -9,7 +10,7 @@ import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
 import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
-import { AnimatePresence, domMax, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+import { domMax, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
 
 function ConnectingSplash({ label }: { label: string }) {
   return (
@@ -49,7 +50,54 @@ function ConnectionAction({
   )
 }
 
-function ConnectedShell({ children }: { children: React.ReactNode }) {
+function ReconnectBanner({
+  label,
+  detail,
+  onRetry,
+}: {
+  label: string
+  detail?: string
+  onRetry: () => void
+}) {
+  const handleRetry = () => {
+    onRetry()
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onRetry()
+    }
+  }
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="sticky top-0 z-40 border-b border-border-subtle bg-surface/95 px-page py-2 backdrop-blur-sm sm:px-6 md:px-8 lg:px-10"
+    >
+      <div className="mx-auto flex max-w-[80rem] items-center gap-3">
+        <div className="size-2.5 shrink-0 animate-pulse rounded-pill bg-accent" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-ink">{label}</p>
+          {detail ? <p className="truncate text-xs text-ink-muted">{detail}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={handleRetry}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          aria-label="Retry Home Assistant connection"
+          className="press touch-target shrink-0 rounded-pill bg-accent px-3 text-xs font-semibold text-on-accent brutal:font-label brutal:uppercase brutal:shadow-press"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ConnectedShell({ children }: { children: ReactNode }) {
   const {
     connected,
     connecting,
@@ -63,35 +111,52 @@ function ConnectedShell({ children }: { children: React.ReactNode }) {
 
   useHAResumeReconnect()
 
-  if (connected) {
+  const hasBeenConnected = Boolean(lastConnectedAt)
+  const retrySeconds = typeof nextRetryIn === 'number' ? Math.ceil(nextRetryIn / 1000) : null
+  const reconnectDetail = error
+    ? error.message
+    : retrySeconds != null
+      ? `Retrying in ${retrySeconds}s…`
+      : undefined
+
+  // After a successful session, keep the shell mounted and reconnect quietly
+  // in the background (phone wake / network blip) instead of a full-screen splash.
+  if (connected || hasBeenConnected) {
+    const showReconnectBanner =
+      !connected && (connecting || isAutoRetrying || Boolean(error) || connectionState === 'disconnected')
+
     return (
       <LocationProvider>
         <UpdateChecker />
         <DoorbellPopup />
+        {showReconnectBanner ? (
+          <ReconnectBanner
+            label={
+              error && !isAutoRetrying && !connecting
+                ? 'Connection lost'
+                : 'Reconnecting to Home Assistant…'
+            }
+            detail={reconnectDetail}
+            onRetry={reconnect}
+          />
+        ) : null}
         {children}
       </LocationProvider>
     )
   }
 
   if (error || isAutoRetrying) {
-    const retrySeconds = typeof nextRetryIn === 'number' ? Math.ceil(nextRetryIn / 1000) : null
-    const detail = error
-      ? error.message
-      : retrySeconds != null
-        ? `Retrying in ${retrySeconds}s…`
-        : 'Retrying shortly…'
-
     return (
       <ConnectionAction
         title={isAutoRetrying ? 'Reconnecting to Home Assistant…' : 'Connection failed'}
-        detail={detail}
+        detail={reconnectDetail ?? 'Retrying shortly…'}
         actionLabel="Retry"
         onAction={reconnect}
       />
     )
   }
 
-  if (connecting || (connectionState === 'idle' && !lastConnectedAt)) {
+  if (connecting || connectionState === 'idle') {
     return <ConnectingSplash label="Connecting to Home Assistant…" />
   }
 
@@ -120,30 +185,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function AnimatedOutlet() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  // Top-level section only, so /rooms → /rooms/x keeps the rooms layout mounted.
+  const section = useRouterState({ select: (s) => s.location.pathname.split('/')[1] ?? '' })
 
+  // Enter-only: an exiting <Outlet /> re-renders the *new* route, which mounted
+  // every page twice per navigation. Opacity-only keeps backdrop-filter surfaces
+  // (glass theme) off a moving transform.
   return (
-    <div className="relative w-full">
-      <AnimatePresence initial={false}>
-        <m.div
-          key={pathname}
-          className="w-full"
-          initial={pageFade.initial}
-          animate={pageFade.animate}
-          exit={{
-            ...pageFade.exit,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: 'none',
-          }}
-          transition={pageFade.transition}
-        >
-          <Outlet />
-        </m.div>
-      </AnimatePresence>
-    </div>
+    <m.div
+      key={section}
+      className="w-full"
+      initial={pageFade.initial}
+      animate={pageFade.animate}
+      transition={pageFade.transition}
+    >
+      <Outlet />
+    </m.div>
   )
 }
 

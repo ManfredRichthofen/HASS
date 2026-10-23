@@ -20,7 +20,7 @@ export type MusicSession = {
   state: SessionState
   title: string | null
   artist: string | null
-  /** "Living Room", "Living Room + Kitchen", or "Everywhere". */
+  /** The speakers by name: "Living Room", "Living Room + Kitchen", "Living Room + 2". */
   label: string
 }
 
@@ -40,8 +40,11 @@ function asState(state: string | undefined): SessionState {
 }
 
 export function sessionLabel(members: string[]) {
-  if (members.length === roomIds.length && roomIds.length > 1) return 'Everywhere'
-  return members.map(labelOf).join(' + ')
+  const [first, ...rest] = members.map(labelOf)
+  if (!first) return 'Speakers'
+  if (rest.length === 0) return first
+  if (rest.length === 1) return `${first} + ${rest[0]}`
+  return `${first} + ${rest.length}`
 }
 
 /**
@@ -127,24 +130,50 @@ export function useGroupActions() {
           `Playing in ${labelOf(id)}`,
           'Couldn’t add room',
         ),
-      /** Take a room out of its group (it stops playing). */
+      /** Take a speaker out of its group (it stops playing). */
       remove: (id: string) =>
         run(
           () => callService('media_player', 'unjoin', { entity_id: id }),
-          `${labelOf(id)} stopped`,
+          `${labelOf(id)} removed`,
           'Couldn’t remove room',
         ),
-      /** Every room plays what `leader` is playing. */
-      everywhere: (leader: string) =>
+      /** Select every speaker: all rooms join `leader`. */
+      selectAll: (leader: string) =>
         run(
           () =>
             callService('media_player', 'join', {
               entity_id: leader,
               group_members: roomIds.filter((id) => id !== leader),
             }),
-          'Playing everywhere',
+          'All speakers selected',
           'Grouping failed',
         ),
+      /**
+       * Deselect the group's main speaker: the music (if any) moves to the next
+       * speaker, which then leads the rest. Returns the new leader.
+       */
+      dropLeader: async (members: string[], playing: boolean) => {
+        const [leader, next, ...others] = members
+        if (!leader || !next) return leader
+        try {
+          await callService('media_player', 'unjoin', { entity_id: [next, ...others] })
+          if (playing) {
+            await callService('music_assistant', 'transfer_queue', {
+              entity_id: next,
+              source_player: leader,
+              auto_play: true,
+            })
+          }
+          if (others.length) {
+            await callService('media_player', 'join', { entity_id: next, group_members: others })
+          }
+          notify(`${labelOf(leader)} removed`)
+        } catch (e) {
+          notify('Couldn’t remove speaker', e instanceof Error ? e.message : 'Error')
+          throw e
+        }
+        return next
+      },
       /** Move the whole queue to another room and keep playing there. */
       moveTo: (from: string, to: string) =>
         run(

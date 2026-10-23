@@ -1,3 +1,5 @@
+import { readHaAuth } from '#/lib/haAuthStorage'
+
 export interface MediaSearchItem {
   title: string
   media_class: string
@@ -253,16 +255,84 @@ function isMixedContent(url: string) {
   }
 }
 
-/** Resolve HA `entity_picture` (often `/api/media_player_proxy/...`) against the HA base URL. */
+/** Append HA access token for `<img>` / `<video>` (browser cannot send Authorization). */
+function withHaAuth(url: string) {
+  const token = readHaAuth()?.access_token
+  if (!token || !url) return url
+  if (/[?&]auth=/.test(url)) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}auth=${encodeURIComponent(token)}`
+}
+
+function isHaOriginUrl(url: string, haBaseUrl?: string | null) {
+  if (!haBaseUrl) return false
+  try {
+    return new URL(url).origin === new URL(haBaseUrl).origin
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Resolve HA `entity_picture` / search thumbnails (often `/api/media_player_proxy/...`)
+ * against the HA base URL and attach the access token for browser media loads.
+ */
 export function resolveHaMediaUrl(path: string | null | undefined, haBaseUrl?: string | null) {
   if (!path) return null
   if (path.startsWith('data:')) return path
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    return isMixedContent(path) ? null : path
+    if (isMixedContent(path)) return null
+    return isHaOriginUrl(path, haBaseUrl) ? withHaAuth(path) : path
   }
   if (!haBaseUrl) return path.startsWith('/') ? path : null
   const absolute = `${trimBase(haBaseUrl)}${path.startsWith('/') ? path : `/${path}`}`
-  return isMixedContent(absolute) ? null : absolute
+  if (isMixedContent(absolute)) return null
+  return withHaAuth(absolute)
+}
+
+/** Absolutize a path against a base URL (MA imageproxy, CDN paths, etc.). */
+export function resolveAgainstBase(path: string | null | undefined, baseUrl?: string | null) {
+  if (!path) return null
+  return absoluteAgainst(path, baseUrl)
+}
+
+/**
+ * Resolve a search/result thumbnail: HA media proxy (+ auth), else MA base for
+ * relative / imageproxy paths, else absolute CDN URLs.
+ */
+export function resolveMediaThumbnail(
+  thumbnail: string | null | undefined,
+  haBaseUrl?: string | null,
+  massBaseUrl?: string | null,
+) {
+  if (!thumbnail) return null
+  if (thumbnail.startsWith('data:')) return thumbnail
+
+  const looksLikeMassProxy =
+    thumbnail.includes('/imageproxy') ||
+    thumbnail.startsWith('imageproxy') ||
+    thumbnail.startsWith('/imageproxy')
+
+  if (looksLikeMassProxy) {
+    return absoluteAgainst(thumbnail, massBaseUrl)
+  }
+
+  // Absolute non-HA URLs (CDN) — leave alone; HA-origin gets auth via resolveHaMediaUrl.
+  if (thumbnail.startsWith('http://') || thumbnail.startsWith('https://')) {
+    return resolveHaMediaUrl(thumbnail, haBaseUrl)
+  }
+
+  // Relative HA media paths (`/api/media_player_proxy/...`, `/api/...`)
+  if (thumbnail.startsWith('/api/') || thumbnail.includes('media_player_proxy')) {
+    return resolveHaMediaUrl(thumbnail, haBaseUrl)
+  }
+
+  // Prefer HA when we have a base; otherwise try MA for other relative paths.
+  const haResolved = resolveHaMediaUrl(thumbnail, haBaseUrl)
+  if (haResolved && (haResolved.startsWith('http://') || haResolved.startsWith('https://'))) {
+    return haResolved
+  }
+  return absoluteAgainst(thumbnail, massBaseUrl) ?? haResolved
 }
 
 /**
@@ -348,28 +418,23 @@ export function mediaImageUrl(
   size = 160,
 ): string | null {
   if (!image) return null
-  if (typeof image.url === 'string' && image.url) {
-    return absoluteAgainst(image.url, massBaseUrl)
-  }
-  if (!image.path && !image.proxy_id) return null
   if (image.path?.startsWith('data:')) return image.path
 
   const normalizedSize = normalizeProxySize(size)
-  const needsProxy =
-    Boolean(image.proxy_id) ||
-    !image.remotely_accessible ||
-    Boolean(normalizedSize) ||
-    (typeof image.path === 'string' &&
-      image.path.includes('://') &&
-      image.path.split('://')[0] !== pageProtocol())
 
-  if (needsProxy && image.proxy_id && massBaseUrl) {
+  // Prefer sized imageproxy when proxy_id is available (before raw url short-circuit).
+  if (image.proxy_id && massBaseUrl) {
     const base = trimBase(massBaseUrl)
     const url = normalizedSize
       ? `${base}/imageproxy/${image.proxy_id}?size=${normalizedSize}`
       : `${base}/imageproxy/${image.proxy_id}`
     return isMixedContent(url) ? null : url
   }
+
+  if (typeof image.url === 'string' && image.url) {
+    return absoluteAgainst(image.url, massBaseUrl)
+  }
+  if (!image.path) return null
 
   // Remotely accessible direct URL (Spotify CDN, etc.)
   if (image.remotely_accessible && image.path) {
@@ -388,8 +453,7 @@ export function mediaImageUrl(
     return isMixedContent(url) ? null : url
   }
 
-  if (image.path) return absoluteAgainst(image.path, massBaseUrl)
-  return null
+  return absoluteAgainst(image.path, massBaseUrl)
 }
 
 function absoluteAgainst(path: string, baseUrl?: string | null) {

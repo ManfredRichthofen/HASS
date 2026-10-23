@@ -90,6 +90,22 @@ export function isMassConfigured() {
   return readMassConfig() !== null
 }
 
+/** URL-only cache for artwork (imageproxy) when full MA API auth is not configured. */
+let discoveredMassUrl: string | null = null
+
+export function getMassBaseUrl(): string | null {
+  return readMassConfig()?.url ?? discoveredMassUrl
+}
+
+export function setDiscoveredMassUrl(url: string | null) {
+  const next = url ? trimSlash(url) : null
+  if (discoveredMassUrl === next) return
+  discoveredMassUrl = next
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mass-config-changed'))
+  }
+}
+
 export function massReturnUrl() {
   if (typeof window === 'undefined') return '/'
   return `${window.location.origin}/settings?mass_oauth=1`

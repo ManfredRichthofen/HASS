@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Check, Pause, Play, Plus, Speaker } from 'lucide-react'
+import { ArrowRightLeft, Check, Pause, Play, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import {
@@ -14,22 +14,28 @@ import { m, snappy, tap } from '#/lib/motion'
 /**
  * Every grouping decision in one place:
  * - what else is playing (tap to control it instead),
- * - which rooms play the current music (tick to add, untick to remove),
- * - each room's volume, "Everywhere", and moving the music to another room.
+ * - which speakers play together: tick to add, untick to remove — any time,
+ *   playing or not (one speaker always stays selected),
+ * - each speaker's volume, select all / clear, and moving the music elsewhere.
  */
 export function SpeakersPanel({
   current,
   onControl,
+  onFollow = onControl,
 }: {
   current: MusicSession
-  /** Control another session (pass its leader) or, when nothing plays, pick a room. */
+  /** Control another session instead (pass its leader). */
   onControl: (id: string) => void
+  /** Keep following the music when its main speaker changes, without leaving this panel. */
+  onFollow?: (id: string) => void
 }) {
   const { rooms, active } = useMusicSessions()
   const actions = useGroupActions()
-  const playing = current.state !== 'idle'
   const others = active.filter((s) => s.leader !== current.leader)
-  const everywhere = current.members.length === rooms.length
+  const allSelected = current.members.length === rooms.length
+  const clear = () => {
+    for (const id of current.members.slice(1)) void actions.remove(id)
+  }
 
   return (
     <div className="grid gap-6">
@@ -44,14 +50,16 @@ export function SpeakersPanel({
 
       <section className="grid gap-2" aria-label="Rooms">
         <div className="flex min-h-9 items-center justify-between gap-3">
-          <span className="text-label">{playing ? 'Playing in' : 'Play in'}</span>
-          {playing && !everywhere ? (
+          <span className="text-label">
+            Selected · {current.members.length} of {rooms.length}
+          </span>
+          {rooms.length > 1 ? (
             <button
               type="button"
-              onClick={() => void actions.everywhere(current.leader)}
+              onClick={() => (allSelected ? clear() : void actions.selectAll(current.leader))}
               className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
             >
-              Play everywhere
+              {allSelected ? 'Clear' : 'Select all'}
             </button>
           ) : null}
         </div>
@@ -66,7 +74,7 @@ export function SpeakersPanel({
                   ? (active.find((s) => s.leader === room.leader)?.title ?? 'Something else')
                   : null
               }
-              onControl={onControl}
+              onFollow={onFollow}
             />
           ))}
         </div>
@@ -107,13 +115,13 @@ function RoomRow({
   room,
   current,
   otherTitle,
-  onControl,
+  onFollow,
 }: {
   room: RoomInfo
   current: MusicSession
   /** Set when this room is playing something else. */
   otherTitle: string | null
-  onControl: (id: string) => void
+  onFollow: (id: string) => void
 }) {
   const actions = useGroupActions()
   const playing = current.state !== 'idle'
@@ -121,29 +129,31 @@ function RoomRow({
   const { value: on, commit } = useOptimisticValue(inSession)
   const [volume, setVolume] = useState(room.volume)
   useEffect(() => setVolume(room.volume), [room.volume])
+  // Something has to play the music: the last selected speaker stays on.
+  const locked = on && current.members.length === 1
 
-  const status = on
-    ? current.members.length > 1 && room.id === current.leader
-      ? 'Main speaker'
-      : playing
-        ? null
-        : 'Ready'
-    : otherTitle
-      ? `Playing ${otherTitle}`
-      : 'Not playing'
+  const status = locked
+    ? 'Add another speaker to switch'
+    : on
+      ? null
+      : otherTitle
+        ? `Playing ${otherTitle}`
+        : room.state === 'idle'
+          ? 'Off'
+          : null
 
   function toggle() {
-    if (!playing) {
-      // Nothing is playing: tapping a room just chooses where to play.
-      if (!inSession) onControl(room.id)
-      return
-    }
-    if (on) {
-      commit(false, () =>
-        current.members.length > 1 ? actions.remove(room.id) : actions.pause(room.id),
-      )
-    } else {
+    if (locked) return
+    if (!on) {
       commit(true, () => actions.add(current.leader, room.id))
+    } else if (room.id === current.leader) {
+      // The main speaker leaves: the music carries on from the next one.
+      commit(false, async () => {
+        const next = await actions.dropLeader(current.members, playing)
+        if (next) onFollow(next)
+      })
+    } else {
+      commit(false, () => actions.remove(room.id))
     }
   }
 
@@ -164,7 +174,8 @@ function RoomRow({
           type="button"
           role="checkbox"
           aria-checked={on}
-          aria-label={`${room.label}${playing ? (on ? ', playing' : ', add') : ''}`}
+          aria-label={room.label}
+          aria-disabled={locked || undefined}
           disabled={room.unavailable}
           onClick={toggle}
           className="flex min-h-14 min-w-0 flex-1 items-center gap-3 pl-2.5 text-left"
@@ -173,16 +184,11 @@ function RoomRow({
             className={cn(
               'grid size-8 shrink-0 place-items-center rounded-pill border-2 border-border-strong text-ink-muted transition-state',
               on && 'border-accent bg-accent text-on-accent',
+              locked && 'opacity-60',
               on && 'brutal:border-ink brutal:bg-ink brutal:text-on-from',
             )}
           >
-            {on ? (
-              <Check className="size-4" />
-            ) : playing ? (
-              <Plus className="size-4" />
-            ) : (
-              <Speaker className="size-4" />
-            )}
+            {on ? <Check className="size-4" /> : <Plus className="size-4" />}
           </span>
           <span className="min-w-0">
             <span
