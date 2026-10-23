@@ -24,27 +24,21 @@ function HomePage() {
             <HouseSummary />
           </m.div>
 
-          <m.div variants={staggerItem} className="min-w-0">
-            <Section title="Scenes">
-              <SceneStrip />
-            </Section>
-          </m.div>
+          <Section title="Scenes">
+            <SceneStrip />
+          </Section>
 
-          <m.div variants={staggerItem} className="min-w-0">
-            <Section title="Favourites" action={<Link to="/rooms">All rooms</Link>}>
-              <EntityGrid>
-                {entities.favorites.lights.filter(isRoomLight).map((id) => (
-                  <LightTile key={id} entityId={id} />
-                ))}
-              </EntityGrid>
-            </Section>
-          </m.div>
+          <Section title="Favourites" action={<Link to="/rooms">All rooms</Link>}>
+            <EntityGrid>
+              {entities.favorites.lights.filter(isRoomLight).map((id) => (
+                <LightTile key={id} entityId={id} />
+              ))}
+            </EntityGrid>
+          </Section>
 
-          <m.div variants={staggerItem} className="min-w-0">
-            <Section title="Around the house">
-              <QuickDeviceRow />
-            </Section>
-          </m.div>
+          <Section title="Around the house">
+            <QuickDeviceRow />
+          </Section>
         </div>
       </Page>
     </m.div>

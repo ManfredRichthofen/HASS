@@ -31,13 +31,30 @@ function fixtureIcon(name: string): LucideIcon {
   return Lightbulb
 }
 
-const DRAG_THRESHOLD = 6
+/** Hold briefly before a vertical drag can dim — otherwise scroll always wins. */
+const DIM_HOLD_MS = 200
+
+type DragGesture = {
+  pointerId: number
+  x: number
+  y: number
+  start: number
+  level: number
+  /** True after DIM_HOLD_MS without leaving the press — dimming is allowed. */
+  armed: boolean
+  dimming: boolean
+  cancelled: boolean
+}
 
 /**
- * The tile IS the light: tap to toggle, drag up or down to dim. When on, the
- * tile fills with light and the part above the brightness level is shaded,
- * like liquid in a glass (Modern shows a level bar instead). The small "more"
- * target opens a sheet for colour and white temperature.
+ * The tile IS the light: tap to toggle, hold then drag up or down to dim.
+ * When on, the tile fills with light and the part above the brightness level
+ * is shaded, like liquid in a glass (Modern shows a level bar instead). The
+ * small "more" target opens a sheet for colour and white temperature.
+ *
+ * Scroll wins by default: no pointer capture / touch-action lock until a held
+ * vertical dim starts, and any early movement cancels the tap so scrolling
+ * over lights does not toggle them.
  */
 export function LightTile({ entityId, className }: { entityId: string; className?: string }) {
   // useLight only accepts light.* — callers must not pass switch.* or other domains.
@@ -45,7 +62,8 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const [open, setOpen] = useState(false)
   const haLevel = Math.max(1, Math.round(light.brightnessPercent) || 1)
   const [level, setLevel] = useState(haLevel)
-  const drag = useRef<{ y: number; start: number; moved: boolean } | null>(null)
+  const drag = useRef<DragGesture | null>(null)
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tileRef = useRef<HTMLDivElement>(null)
 
   const name = entityName(entityId, light.attributes.friendly_name)
@@ -70,6 +88,22 @@ export function LightTile({ entityId, className }: { entityId: string; className
     if (!drag.current) setLevel(haLevel)
   }, [haLevel])
 
+  const clearHoldTimer = () => {
+    if (holdTimer.current == null) return
+    clearTimeout(holdTimer.current)
+    holdTimer.current = null
+  }
+
+  const clearTouchLock = () => {
+    tileRef.current?.style.removeProperty('touch-action')
+  }
+
+  const endGesture = () => {
+    clearHoldTimer()
+    clearTouchLock()
+    drag.current = null
+  }
+
   async function toggle() {
     try {
       await light.toggle()
@@ -88,26 +122,72 @@ export function LightTile({ entityId, className }: { entityId: string; className
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if (unavailable) return
-    drag.current = { y: e.clientY, start: level, moved: false }
-    e.currentTarget.setPointerCapture(e.pointerId)
+    // Do not capture yet — the page must still be able to scroll.
+    drag.current = {
+      pointerId: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      start: level,
+      level,
+      armed: false,
+      dimming: false,
+      cancelled: false,
+    }
+    clearHoldTimer()
+    holdTimer.current = setTimeout(() => {
+      if (drag.current && !drag.current.cancelled) drag.current.armed = true
+    }, DIM_HOLD_MS)
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
-    if (!d || !on || !canDim) return
+    if (!d || d.cancelled || d.pointerId !== e.pointerId) return
+
+    const dx = e.clientX - d.x
     const dy = d.y - e.clientY
-    if (!d.moved && Math.abs(dy) < DRAG_THRESHOLD) return
-    d.moved = true
+    const absX = Math.abs(dx)
+    const absY = Math.abs(e.clientY - d.y)
+
+    if (!d.dimming) {
+      if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return
+
+      // Held vertical drag on a dimmable on light → start dimming.
+      // Early movement is treated as scroll and cancels the tap.
+      if (d.armed && on && canDim && absY > absX) {
+        clearHoldTimer()
+        d.dimming = true
+        e.currentTarget.setPointerCapture(e.pointerId)
+        tileRef.current?.style.setProperty('touch-action', 'none')
+      } else {
+        d.cancelled = true
+        clearHoldTimer()
+        return
+      }
+    }
+
     const height = tileRef.current?.offsetHeight ?? 160
-    setLevel(Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100))))
+    const next = Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100)))
+    d.level = next
+    setLevel(next)
   }
 
-  function onPointerUp() {
+  function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
-    drag.current = null
-    if (!d || unavailable) return
-    if (d.moved) void commitLevel(level)
-    else void toggle()
+    const wasDimming = d?.dimming ?? false
+    const wasCancelled = d?.cancelled ?? false
+    const levelToCommit = d?.level ?? level
+    const samePointer = d?.pointerId === e.pointerId
+    endGesture()
+    if (!d || unavailable || !samePointer || wasCancelled) return
+    if (wasDimming) {
+      void commitLevel(levelToCommit)
+      return
+    }
+    void toggle()
+  }
+
+  function onPointerCancel() {
+    endGesture()
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -133,18 +213,16 @@ export function LightTile({ entityId, className }: { entityId: string; className
         tabIndex={unavailable ? -1 : 0}
         aria-checked={on}
         aria-disabled={unavailable}
-        aria-label={`${name}, ${state}${on && canDim ? '. Drag or use arrow keys to dim' : ''}`}
+        aria-label={`${name}, ${state}${on && canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => {
-          drag.current = null
-        }}
+        onPointerCancel={onPointerCancel}
         onKeyDown={onKeyDown}
         style={{ '--lvl': `${on ? level : 100}%` } as React.CSSProperties}
         className={cn(
-          'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 cursor-pointer touch-none flex-col justify-between overflow-hidden p-4.5 text-left select-none',
-          'transition-[background-color,box-shadow,transform] duration-slow active:scale-[0.97]',
+          'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
+          'transition-[background-color,box-shadow,transform] duration-slow ease-out active:scale-[0.97]',
           'walnut:aspect-[1/1.2]',
           'modern:aspect-auto modern:min-h-34 modern:pb-8',
           'brutal:active:translate-x-[3px] brutal:active:translate-y-[3px] brutal:active:scale-100 brutal:active:shadow-none',

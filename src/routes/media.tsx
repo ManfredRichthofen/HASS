@@ -6,6 +6,7 @@ import { QueueManager } from '#/components/entities/QueueManager'
 import { SpeakerPicker, speakers, useGroupAll } from '#/components/media/SpeakerPicker'
 import { Segmented } from '#/components/ui/segmented'
 import { cn } from '#/lib/cn'
+import { AnimatePresence, m, panelFade, staggerContainer, staggerItem } from '#/lib/motion'
 import { mediaTargets } from '#/lib/musicAssistant'
 
 export const Route = createFileRoute('/media')({ component: MusicPage })
@@ -35,70 +36,90 @@ function MusicPage() {
   }, [queryClient, target])
 
   return (
-    <div
+    <m.div
+      initial="initial"
+      animate="animate"
+      variants={staggerContainer}
       className={cn(
         '@container flex min-h-[32rem] flex-col gap-4',
         // Page height minus shell padding + bottom nav (phone) / padding (tablet).
         'h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-8rem)]',
       )}
     >
-      <header className="flex shrink-0 items-end justify-between gap-3 pt-[max(0.25rem,env(safe-area-inset-top))]">
+      <m.header
+        variants={staggerItem}
+        className="flex shrink-0 items-end justify-between gap-3 pt-[max(0.25rem,env(safe-area-inset-top))]"
+      >
         <h1 className="text-display text-[2.25rem] leading-none text-ink walnut:font-light md:text-[2.75rem]">
           Music
         </h1>
-      </header>
+      </m.header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 @xl:grid @xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] @xl:gap-8">
-        <div className="min-h-0 shrink @xl:flex @xl:min-h-0 @xl:shrink @xl:flex-col @xl:justify-center">
+        <m.div
+          variants={staggerItem}
+          className="min-h-0 shrink @xl:flex @xl:min-h-0 @xl:shrink @xl:flex-col @xl:justify-center"
+        >
           <QueueManager
             view="player"
             target={target}
             onTargetChange={setTarget}
             artClassName="@xl:max-w-[min(100%,calc(100dvh-26rem))]"
           />
-        </div>
+        </m.div>
 
-        <section
+        <m.section
+          variants={staggerItem}
           aria-label="Music panel"
           className="flex min-h-[40%] flex-1 flex-col gap-3 @xl:min-h-0"
         >
           <Segmented label="Show" options={panels} value={panel} onChange={setPanel} />
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-card">
-            {panel === 'queue' ? (
-              <QueueManager view="queue" target={target} onTargetChange={setTarget} />
-            ) : null}
+          <div className="no-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-card">
+            <AnimatePresence mode="wait" initial={false}>
+              <m.div
+                key={panel}
+                initial={panelFade.initial}
+                animate={panelFade.animate}
+                exit={panelFade.exit}
+                transition={panelFade.transition}
+              >
+                {panel === 'queue' ? (
+                  <QueueManager view="queue" target={target} onTargetChange={setTarget} />
+                ) : null}
 
-            {panel === 'rooms' ? (
-              <div className="grid gap-5">
-                <div className="grid gap-2">
-                  <span className="text-label">Controlling</span>
-                  <Segmented
-                    label="Controlling"
-                    value={target}
-                    onChange={setTarget}
-                    options={mediaTargets.map((t) => ({ value: t.id, label: t.label }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-label">Playing in</span>
-                    <button
-                      type="button"
-                      onClick={() => void groupAll()}
-                      className="min-h-11 text-sm font-semibold text-ink-muted hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
-                    >
-                      Group all
-                    </button>
+                {panel === 'rooms' ? (
+                  <div className="grid gap-5">
+                    <div className="grid gap-2">
+                      <span className="text-label">Controlling</span>
+                      <Segmented
+                        label="Controlling"
+                        value={target}
+                        onChange={setTarget}
+                        options={mediaTargets.map((t) => ({ value: t.id, label: t.label }))}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-label">Playing in</span>
+                        <button
+                          type="button"
+                          onClick={() => void groupAll()}
+                          className="min-h-11 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+                        >
+                          Group all
+                        </button>
+                      </div>
+                      <SpeakerPicker leader={leader} />
+                    </div>
                   </div>
-                  <SpeakerPicker leader={leader} />
-                </div>
-              </div>
-            ) : null}
+                ) : null}
 
-            {panel === 'search' ? <MusicSearch target={target} onQueued={refreshQueue} /> : null}
+                {panel === 'search' ? <MusicSearch target={target} onQueued={refreshQueue} /> : null}
+              </m.div>
+            </AnimatePresence>
           </div>
-        </section>
+        </m.section>
       </div>
-    </div>
+    </m.div>
   )
 }

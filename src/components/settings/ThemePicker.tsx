@@ -1,6 +1,7 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
 import { Segmented } from '#/components/ui/segmented'
 import { cn } from '#/lib/cn'
+import { m, snappy, tap } from '#/lib/motion'
 import { type Mode, type ModeSetting, type ThemeId, themes, useAppearance } from '#/lib/theme'
 
 const modes: { value: ModeSetting; label: string }[] = [
@@ -37,13 +38,15 @@ export function ThemePicker() {
           const selected = theme === t.id
           return (
             // biome-ignore lint/a11y/useSemanticElements: swatch buttons; a native radio cannot hold this layout
-            <button
+            <m.button
               key={t.id}
               type="button"
               role="radio"
               aria-checked={selected}
               aria-label={`${t.name}: ${t.description}`}
               onClick={() => setTheme(t.id as ThemeId)}
+              whileTap={tap.medium}
+              transition={snappy}
               className="group grid min-w-0 gap-1.5 text-center"
             >
               <span
@@ -67,7 +70,7 @@ export function ThemePicker() {
               >
                 {t.name}
               </span>
-            </button>
+            </m.button>
           )
         })}
       </div>

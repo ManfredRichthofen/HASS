@@ -3,6 +3,7 @@ import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
+import { LayoutGroup, m, snappy, tap } from '#/lib/motion'
 
 function modeMatches(current: string, label: string) {
   return current.trim().toLowerCase() === label.trim().toLowerCase()
@@ -21,11 +22,13 @@ function ModeRow({
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: styled radio rows; a native radio cannot hold this layout
-    <button
+    <m.button
       type="button"
       role="radio"
       aria-checked={selected}
       {...press}
+      whileTap={tap.soft}
+      transition={snappy}
       className={cn(
         'flex min-h-16 items-center justify-between gap-4 border-b border-border-subtle py-3 text-left last:border-b-0',
         '@xl:min-h-14 @xl:py-2.5',
@@ -36,13 +39,19 @@ function ModeRow({
       <span
         aria-hidden
         className={cn(
-          'grid size-6 shrink-0 place-items-center rounded-pill border-2 border-border-strong',
+          'grid size-6 shrink-0 place-items-center rounded-pill border-2 border-border-strong transition-ui',
           selected && 'border-accent',
         )}
       >
-        {selected ? <span className="size-3 rounded-pill bg-accent" /> : null}
+        {selected ? (
+          <m.span
+            layoutId="house-mode-dot"
+            transition={snappy}
+            className="size-3 rounded-pill bg-accent"
+          />
+        ) : null}
       </span>
-    </button>
+    </m.button>
   )
 }
 
@@ -63,16 +72,18 @@ export function HouseModeGrid({ onPicked }: { onPicked?: () => void }) {
   }
 
   return (
-    <div role="radiogroup" aria-label="House mode" className="grid">
-      {entities.houseModes.map((item) => (
-        <ModeRow
-          key={item.id}
-          label={item.label}
-          selected={modeMatches(current, item.label)}
-          onSelect={() => void runScript(item.id, item.label)}
-        />
-      ))}
-    </div>
+    <LayoutGroup id="house-mode">
+      <div role="radiogroup" aria-label="House mode" className="grid">
+        {entities.houseModes.map((item) => (
+          <ModeRow
+            key={item.id}
+            label={item.label}
+            selected={modeMatches(current, item.label)}
+            onSelect={() => void runScript(item.id, item.label)}
+          />
+        ))}
+      </div>
+    </LayoutGroup>
   )
 }
 

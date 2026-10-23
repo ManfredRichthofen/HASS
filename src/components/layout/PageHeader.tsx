@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '#/lib/cn'
+import { m, staggerItem } from '#/lib/motion'
 
 /** A page's title block: optional back link, a large display title, a muted line, one action. */
 export function PageHeader({
@@ -28,7 +29,10 @@ export function PageHeader({
   children?: ReactNode
 }) {
   return (
-    <header className={cn('grid gap-3 pt-[max(0.5rem,env(safe-area-inset-top))]', className)}>
+    <m.header
+      variants={staggerItem}
+      className={cn('grid gap-3 pt-[max(0.5rem,env(safe-area-inset-top))]', className)}
+    >
       {backTo ? (
         <Link
           to={backTo}
@@ -54,6 +58,6 @@ export function PageHeader({
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
-    </header>
+    </m.header>
   )
 }

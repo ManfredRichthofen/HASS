@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
 import { cn } from '#/lib/cn'
+import { m, staggerItem } from '#/lib/motion'
 
 /**
  * A titled block on a page. Walnut: italic serif title. Modern: small
  * semibold label. Brutalist: a 2px rule and a mono uppercase label.
+ *
+ * When nested under a staggerContainer parent, sections rise in sequence.
  */
 export function Section({
   title,
@@ -17,7 +20,7 @@ export function Section({
   className?: string
 }) {
   return (
-    <section className={cn('min-w-0', className)}>
+    <m.section variants={staggerItem} className={cn('min-w-0', className)}>
       {(title || action) && (
         <div className="mb-3.5 flex min-h-11 items-end justify-between gap-3 brutal:mb-4 brutal:border-t-2 brutal:border-ink brutal:pt-2 brutal:items-center">
           {title ? (
@@ -43,6 +46,6 @@ export function Section({
         </div>
       )}
       {children}
-    </section>
+    </m.section>
   )
 }

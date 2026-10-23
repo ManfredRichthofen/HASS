@@ -3,6 +3,7 @@ import { Check, Plus, Volume1 } from 'lucide-react'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
+import { m, snappy, tap } from '#/lib/motion'
 import { mediaTargets } from '#/lib/musicAssistant'
 
 export const speakers = mediaTargets.filter((t) => t.id !== 'media_player.all')
@@ -60,7 +61,9 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
   }
 
   return (
-    <div
+    <m.div
+      whileTap={unavailable ? undefined : tap.soft}
+      transition={snappy}
       className={cn(
         'flex min-h-15 flex-wrap items-center gap-x-3 gap-y-1 rounded-control border-ui border-border-subtle transition-state',
         on && 'border-transparent bg-surface shadow-card',
@@ -120,7 +123,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
           Idle
         </span>
       )}
-    </div>
+    </m.div>
   )
 }
 

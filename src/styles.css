@@ -83,7 +83,7 @@
   --duration-fast: 150ms;
   --duration-normal: 220ms;
   --duration-slow: 300ms;
-  --default-transition-duration: var(--duration-fast);
+  --default-transition-duration: var(--duration-normal);
   --default-transition-timing-function: var(--ease-out);
 }
 
@@ -504,7 +504,7 @@
 @utility transition-ui {
   transition-property:
     color, background-color, border-color, opacity, box-shadow, transform, filter;
-  transition-duration: var(--duration-fast);
+  transition-duration: var(--duration-normal);
   transition-timing-function: var(--ease-out);
 }
 
@@ -576,10 +576,19 @@ svg.lucide {
     scroll-behavior: auto;
   }
 
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .animate-spin,
   .animate-pulse,
   .animate-ping {
-    animation: none;
+    animation: none !important;
   }
 }
 

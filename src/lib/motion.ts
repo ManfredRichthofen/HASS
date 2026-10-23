@@ -9,33 +9,51 @@ export {
   motion,
 } from 'motion/react'
 
-/** Shared ease-out curve — matches CSS `--ease-out` */
+/**
+ * Motion system — keep CSS tokens in styles.css in sync:
+ * `--ease-out`, `--ease-in`, `--duration-fast|normal|slow`
+ *
+ * Prefer these presets over one-off springs/durations so the app feels
+ * like one continuous motion language.
+ */
+
+/** Shared ease curves — match CSS `--ease-out` / `--ease-in` */
 export const easeOut = [0.22, 1, 0.36, 1] as const
 export const easeIn = [0.4, 0, 1, 1] as const
 
-/** Fast tap / press feedback */
+/** Durations in seconds — match CSS `--duration-*` */
+export const duration = {
+  fast: 0.15,
+  normal: 0.22,
+  slow: 0.3,
+} as const
+
+/** Fast press / icon swaps — short travel, quick settle */
 export const snappy = {
   type: 'spring' as const,
-  stiffness: 520,
-  damping: 32,
-  mass: 0.7,
+  stiffness: 480,
+  damping: 34,
+  mass: 0.65,
 }
 
-/** Layout expand/collapse (dimmers, fan controls) */
+/** Sheets, expand/collapse, floating chrome — buttery, low bounce */
 export const soft = {
   type: 'spring' as const,
-  stiffness: 380,
-  damping: 34,
-  mass: 0.85,
+  stiffness: 340,
+  damping: 36,
+  mass: 0.9,
 }
 
-/** Bottom-nav active indicator */
-export const indicator = {
+/** Shared layout morphs (nav pills, segmented, indicators) */
+export const fluid = {
   type: 'spring' as const,
-  stiffness: 420,
-  damping: 36,
+  stiffness: 380,
+  damping: 38,
   mass: 0.8,
 }
+
+/** Alias used by nav indicators — same as fluid for one language */
+export const indicator = fluid
 
 /**
  * Press feedback scales — pass to `whileTap`.
@@ -47,26 +65,36 @@ export const tap = {
   hard: { scale: 0.92 },
 } as const
 
-export const fadeUp = {
-  initial: { opacity: 0, y: 10 },
+/** Page route enter/exit (AppShell AnimatedOutlet) */
+export const pageFade = {
+  initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 6 },
-  transition: { duration: 0.22, ease: easeOut },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: duration.normal, ease: easeOut },
 }
 
-export const pageFade = {
-  initial: { opacity: 0, y: 6 },
+/** Generic fade-up for standalone entrances */
+export const fadeUp = {
+  initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0 },
-  transition: { duration: 0.16, ease: easeOut },
+  exit: { opacity: 0, y: 6 },
+  transition: { duration: duration.normal, ease: easeOut },
 }
 
 /** Floating sheet / now-playing bar entrance */
 export const slideUp = {
-  initial: { opacity: 0, y: 20, scale: 0.97 },
+  initial: { opacity: 0, y: 24, scale: 0.97 },
   animate: { opacity: 1, y: 0, scale: 1 },
   exit: { opacity: 0, y: 16, scale: 0.97 },
   transition: soft,
+}
+
+/** Panel / tab content swap (Music segmented panels, etc.) */
+export const panelFade = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: duration.fast, ease: easeOut },
 }
 
 /** Label / status text swap (AnimatePresence mode="popLayout") */
@@ -74,7 +102,7 @@ export const swapText = {
   initial: { opacity: 0, y: 4 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -4 },
-  transition: { duration: 0.16, ease: easeOut },
+  transition: { duration: duration.fast, ease: easeOut },
 }
 
 /** Icon / control crossfade (play↔pause) */
@@ -85,25 +113,28 @@ export const swapIcon = {
   transition: snappy,
 }
 
+/** Parent for staggered page sections / grids */
 export const staggerContainer = {
   initial: {},
   animate: {
     transition: {
-      staggerChildren: 0.03,
-      delayChildren: 0,
+      staggerChildren: 0.045,
+      delayChildren: 0.02,
     },
   },
 }
 
+/** Child of staggerContainer — soft rise */
 export const staggerItem = {
-  initial: { opacity: 0, y: 8 },
+  initial: { opacity: 0, y: 10 },
   animate: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.2, ease: easeOut },
+    transition: { duration: duration.normal, ease: easeOut },
   },
 }
 
+/** Height auto expand/collapse (dimmers, fan controls) */
 export const expandCollapse = {
   initial: { opacity: 0, height: 0 },
   animate: {
@@ -114,6 +145,6 @@ export const expandCollapse = {
   exit: {
     opacity: 0,
     height: 0,
-    transition: { duration: 0.16, ease: easeIn },
+    transition: { duration: duration.fast, ease: easeIn },
   },
 }

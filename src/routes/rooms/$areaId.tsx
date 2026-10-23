@@ -21,6 +21,7 @@ import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { entityName } from '#/lib/entityName'
+import { m, staggerContainer } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/$areaId')({
   component: RoomDetailPage,
@@ -107,6 +108,7 @@ function RoomDetailPage() {
     0
 
   return (
+    <m.div initial="initial" animate="animate" variants={staggerContainer}>
     <Page>
       <PageHeader
         title={area.name}
@@ -232,5 +234,6 @@ function RoomDetailPage() {
         </div>
       </div>
     </Page>
+    </m.div>
   )
 }
