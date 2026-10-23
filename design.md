@@ -1,6 +1,6 @@
 # Design — Mobile & Tablet Layout
 
-Casa is a Home Assistant dashboard built for phones and tablets. This document is the layout contract: shell chrome, breakpoints, page primitives, and per-route grids as implemented today.
+Casa is a Home Assistant dashboard built for phones and tablets. This document is the layout contract: shell chrome, breakpoints, page primitives, motion, and per-route grids as implemented today.
 
 There is no separate desktop layout. Wide viewports are tablet tiers (`lg` labelled sidebar, `xl` Rooms list-detail).
 
@@ -13,6 +13,7 @@ There is no separate desktop layout. Wide viewports are tablet tiers (`lg` label
 3. **Content follows available width, not viewport.** Most page grids use container queries (`@xl:`, `@2xl:`, …) on `Page` (or nested `@container` wrappers) so columns adapt beside the sidebar or inside Rooms list-detail.
 4. **Shell uses viewport breakpoints.** Nav switch, sidebar width, and main offsets use `md` / `lg` / `xl` on the viewport.
 5. **Limit horizontal scrolling.** The page shell and route layouts must not introduce document-level sideways scroll. Prefer wrapping, truncation, or shrinking so content stays within the available width. Intentional, contained strips (e.g. Home Scenes edge-bleed) are fine when they scroll *inside* a bounded row—not when they widen the viewport.
+6. **Motion is one language.** Route changes, section entrances, presses, and layout morphs all share the same easing, durations, and springs from [`src/lib/motion.ts`](src/lib/motion.ts) and CSS tokens in [`styles.css`](src/styles.css). Prefer presets over one-off values.
 
 ---
 
