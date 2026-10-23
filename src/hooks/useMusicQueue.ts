@@ -11,6 +11,8 @@ import {
   moveQueueItem,
   moveQueueItemEnd,
   playQueueIndex,
+  setDontStopTheMusic,
+  setQueueAutoplay,
   setQueueRepeat,
   setQueueShuffle,
 } from '#/lib/massClient'
@@ -60,6 +62,9 @@ export type MusicQueueState = {
   playIndex: (index: number | string) => Promise<void>
   setShuffle: (enabled: boolean) => Promise<void>
   setRepeat: (mode: string) => Promise<void>
+  /** Endless Mix / Don’t stop the music — similar tracks when the queue runs low. */
+  setEndlessMix: (enabled: boolean) => Promise<void>
+  endlessMixEnabled: boolean
 }
 
 async function resolvePlayerId(
@@ -249,6 +254,10 @@ export function useMusicQueue(entityId: string): MusicQueueState {
 
   const queueId = query.data?.queueId ?? null
   const viaMassQueue = Boolean(query.data?.viaMassQueue ?? massQueueAvailable)
+  const queue = query.data?.queue ?? null
+  const endlessMixEnabled = Boolean(
+    queue?.autoplay_enabled || queue?.dont_stop_the_music_enabled || queue?.is_dynamic,
+  )
 
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['music-queue', entityId] })
@@ -261,7 +270,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   return useMemo(
     () => ({
       queueId,
-      queue: query.data?.queue ?? null,
+      queue,
       items: query.data?.items ?? [],
       configured,
       viaMassQueue,
@@ -278,6 +287,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
             : null,
       refresh,
       player,
+      endlessMixEnabled,
       clear: async () => {
         if (massApiConfigured && queueId && !viaMassQueue) {
           await clearQueue(queueId)
@@ -399,6 +409,44 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         }
         await afterMutation()
       },
+      setEndlessMix: async (enabled: boolean) => {
+        if (massApiConfigured && queueId) {
+          try {
+            await setDontStopTheMusic(queueId, enabled)
+          } catch {
+            await setQueueAutoplay(queueId, enabled)
+          }
+          await afterMutation()
+          return
+        }
+
+        if (!enabled) {
+          throw new Error(
+            'Turn off Endless Mix from Music Assistant, or connect the Music Assistant API in Settings',
+          )
+        }
+
+        const attrs = player.attributes as Record<string, unknown>
+        const mediaId =
+          queue?.current_item?.media_item?.uri?.trim() ||
+          (typeof attrs.media_content_id === 'string' ? attrs.media_content_id : null)
+        if (!mediaId) {
+          throw new Error('Nothing playing to start Endless Mix from')
+        }
+
+        const mediaType =
+          queue?.current_item?.media_item?.media_type ||
+          (typeof attrs.media_content_type === 'string' ? attrs.media_content_type : 'track')
+
+        await callService('music_assistant', 'play_media', {
+          entity_id: entityId,
+          media_id: mediaId,
+          media_type: mediaType,
+          enqueue: 'replace',
+          radio_mode: true,
+        })
+        await afterMutation()
+      },
     }),
     [
       afterMutation,
@@ -406,14 +454,15 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       queryClient,
       configured,
       ensuring,
+      endlessMixEnabled,
       entityId,
       massApiConfigured,
       massQueueAvailable,
       massUrl,
       player,
+      queue,
       query.data?.haQueueAvailable,
       query.data?.items,
-      query.data?.queue,
       query.error,
       query.isFetching,
       query.isLoading,

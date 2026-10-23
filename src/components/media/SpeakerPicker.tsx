@@ -1,5 +1,7 @@
 import { useMediaPlayer, useServiceCall } from 'hass-react'
-import { Check, Plus, Volume1 } from 'lucide-react'
+import { Check, Plus, Volume1, Volume2 } from 'lucide-react'
+import { useState } from 'react'
+import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
@@ -13,6 +15,40 @@ function useSpeaker(id: string) {
   const members = (player.attributes as { group_members?: string[] }).group_members ?? []
   const active = player.isPlaying || player.isPaused
   return { player, members, active }
+}
+
+async function toggleSpeaker(
+  callService: ReturnType<typeof useServiceCall>['callService'],
+  id: string,
+  label: string,
+  leader: string,
+  on: boolean,
+  members: string[],
+  leadMembers: string[],
+  leadActive: boolean,
+  pause: () => Promise<void>,
+  play: () => Promise<void>,
+) {
+  try {
+    if (on) {
+      if (members.length > 1 || leadMembers.includes(id)) {
+        await callService('media_player', 'unjoin', { entity_id: id })
+      } else {
+        await pause()
+      }
+      notify(`${label} stopped`)
+      return
+    }
+    const leaderId = leadActive && leader !== id ? leader : null
+    if (leaderId) {
+      await callService('media_player', 'join', { entity_id: leaderId, group_members: [id] })
+    } else {
+      await play()
+    }
+    notify(`Playing in ${label}`)
+  } catch (e) {
+    notify('Speaker failed', e instanceof Error ? e.message : 'Error')
+  }
 }
 
 /**
@@ -37,28 +73,19 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
   const on = active || (lead.members.includes(id) && lead.active)
   const unavailable = player.isUnavailable
 
-  async function toggle() {
-    try {
-      if (on) {
-        if (members.length > 1 || lead.members.includes(id)) {
-          await callService('media_player', 'unjoin', { entity_id: id })
-        } else {
-          await player.pause()
-        }
-        notify(`${label} stopped`)
-      } else {
-        const leaderId = lead.active && leader !== id ? leader : null
-        if (leaderId) {
-          await callService('media_player', 'join', { entity_id: leaderId, group_members: [id] })
-        } else {
-          await player.play()
-        }
-        notify(`Playing in ${label}`)
-      }
-    } catch (e) {
-      notify('Speaker failed', e instanceof Error ? e.message : 'Error')
-    }
-  }
+  const handleToggle = () =>
+    void toggleSpeaker(
+      callService,
+      id,
+      label,
+      leader,
+      on,
+      members,
+      lead.members,
+      lead.active,
+      () => player.pause(),
+      () => player.play(),
+    )
 
   return (
     <m.div
@@ -80,7 +107,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
         aria-checked={on}
         aria-label={`Play in ${label}`}
         disabled={unavailable}
-        onClick={() => void toggle()}
+        onClick={handleToggle}
         className="flex min-h-14 min-w-0 flex-1 basis-36 items-center gap-3 pr-2 pl-2.5 text-left"
       >
         <span
@@ -124,6 +151,99 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
         </span>
       )}
     </m.div>
+  )
+}
+
+function SpeakerChip({ id, label, leader }: { id: string; label: string; leader: string }) {
+  const { callService } = useServiceCall()
+  const { player, members, active } = useSpeaker(id)
+  const lead = useSpeaker(leader)
+  const on = active || (lead.members.includes(id) && lead.active)
+  const unavailable = player.isUnavailable
+
+  return (
+    <m.button
+      type="button"
+      whileTap={unavailable ? undefined : tap.soft}
+      transition={snappy}
+      role="checkbox"
+      aria-checked={on}
+      aria-label={`Play in ${label}`}
+      disabled={unavailable}
+      onClick={() =>
+        void toggleSpeaker(
+          callService,
+          id,
+          label,
+          leader,
+          on,
+          members,
+          lead.members,
+          lead.active,
+          () => player.pause(),
+          () => player.play(),
+        )
+      }
+      className={cn(
+        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-sm font-medium transition-state',
+        on
+          ? 'border-transparent bg-accent text-on-accent brutal:border-ink brutal:bg-ink brutal:text-on-from'
+          : 'text-ink-muted hover:text-ink',
+        unavailable && 'opacity-45',
+      )}
+    >
+      {on ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
+      {label}
+    </m.button>
+  )
+}
+
+/** Compact chip strip + Group all + volumes drawer. Always visible on the Music page. */
+export function SpeakerChips({ leader }: { leader: string }) {
+  const [volumesOpen, setVolumesOpen] = useState(false)
+  const groupAll = useGroupAll(leader)
+
+  return (
+    <>
+      <div className="grid gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-label">Playing in</span>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setVolumesOpen(true)}
+              className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+              aria-label="Adjust speaker volumes"
+            >
+              <Volume2 className="size-3.5" />
+              Volumes
+            </button>
+            <button
+              type="button"
+              onClick={() => void groupAll()}
+              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+            >
+              Group all
+            </button>
+          </div>
+        </div>
+        <div
+          role="group"
+          aria-label="Speakers"
+          className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {speakers.map((s) => (
+            <SpeakerChip key={s.id} id={s.id} label={s.label} leader={leader} />
+          ))}
+        </div>
+      </div>
+
+      <Drawer open={volumesOpen} onOpenChange={setVolumesOpen}>
+        <DrawerContent title="Volumes" description="Adjust each room that’s playing">
+          <SpeakerPicker leader={leader} />
+        </DrawerContent>
+      </Drawer>
+    </>
   )
 }
 

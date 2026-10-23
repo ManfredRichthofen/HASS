@@ -146,3 +146,18 @@ export function setQueueRepeat(queueId: string, repeatMode: string) {
     repeat_mode: repeatMode,
   })
 }
+
+/** Keep filling similar tracks when the queue runs low (Endless Mix companion). */
+export function setDontStopTheMusic(queueId: string, enabled: boolean) {
+  return massCommand<void>('player_queues/dont_stop_the_music', {
+    queue_id: queueId,
+    dont_stop_the_music_enabled: enabled,
+  })
+}
+
+export function setQueueAutoplay(queueId: string, autoplayEnabled: boolean) {
+  return massCommand<void>('player_queues/autoplay', {
+    queue_id: queueId,
+    autoplay_enabled: autoplayEnabled,
+  })
+}

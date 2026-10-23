@@ -1,7 +1,7 @@
 import { entities } from '#/config/dashboard'
 import {
-  type MassConfig,
   isMassConfigured,
+  type MassConfig,
   massReturnUrl,
   readMassConfig,
   suggestedMassUrl,

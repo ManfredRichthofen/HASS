@@ -168,10 +168,10 @@ Only route with true **master-detail**, and only at **viewport `xl` (≥1280px)*
 
 | | Layout |
 |---|--------|
-| **Mobile** | Full-height column: compact player above segmented panel (Up next / Rooms / Search) |
-| **Wide content (`@xl`)** | Side-by-side `1fr \| 1.1fr` — player left, panel right |
+| **Mobile** | Fixed-height column via CSS grid `auto \| minmax(0,1fr)`: compact player + speaker chips sized to content, then Up next / Search fills the rest (no overlap) |
+| **Wide content (`@xl`)** | Side-by-side `1fr \| 1.1fr` — left rail scrolls if short (landscape); panel right |
 
-Height accounts for shell: phone clears bottom nav; tablet uses shorter chrome (`md:h-[calc(100dvh-8rem)]`). NowPlayingBar is hidden on this route.
+Speaker grouping stays under the player (chip strip + Volumes drawer). Endless Mix sits under transport. Compact controls/art below `@xl`. Height accounts for shell: phone clears bottom nav; tablet uses shorter chrome (`md:h-[calc(100dvh-8rem)]`). NowPlayingBar is hidden on this route.
 
 ### Settings — `/settings`
 
@@ -207,6 +207,86 @@ Themes (`walnut` / `modern` / `brutalist` / `glass`) change radii, borders, and 
 
 ---
 
+## Motion
+
+Casa uses **Motion** (`motion/react`) for springs, layout morphs, and enter/exit, plus CSS transitions for colour / shadow state. Everything routes through shared presets so presses, page fades, and indicators feel like one system.
+
+Key files: [`src/lib/motion.ts`](src/lib/motion.ts), [`styles.css`](src/styles.css) (`--ease-*`, `--duration-*`, `transition-ui` / `transition-state`), [`AppShell.tsx`](src/components/layout/AppShell.tsx) (`LazyMotion features={domMax}` so `layoutId` morphs work, plus `MotionConfig reducedMotion="user"`).
+
+### Principles
+
+1. **One curve.** CSS and JS share `--ease-out` / `easeOut` `[0.22, 1, 0.36, 1]` for fades and colour; springs for press, layout, and sheets.
+2. **Short travel.** Entrances move a few pixels (6–12px), not half the screen. Scale taps stay in the 0.92–0.98 range.
+3. **Stagger sections, not every pixel.** Pages wrap content in `staggerContainer`; `Section` and `PageHeader` carry `staggerItem` so blocks rise in sequence (~45ms apart).
+4. **Layout morphs for choice.** Active nav pills and Segmented controls use `layoutId` + the `fluid` spring so the highlight slides instead of popping.
+5. **Respect reduced motion.** `MotionConfig reducedMotion="user"` plus a CSS `@media (prefers-reduced-motion: reduce)` kill-switch on animations/transitions.
+
+### Tokens (CSS ↔ JS)
+
+| Role | CSS | JS (`motion.ts`) |
+|------|-----|------------------|
+| Ease out | `--ease-out` | `easeOut` |
+| Ease in | `--ease-in` | `easeIn` |
+| Fast | `--duration-fast` (150ms) | `duration.fast` (0.15) |
+| Normal | `--duration-normal` (220ms) | `duration.normal` (0.22) |
+| Slow | `--duration-slow` (300ms) | `duration.slow` (0.3) |
+
+Utilities: `transition-ui` (colour / opacity / transform, normal), `transition-state` (on/off fills, slow), `press` (CSS tap scale for plain buttons).
+
+### Springs
+
+| Preset | Use |
+|--------|-----|
+| `snappy` | Tap feedback, icon swaps, small controls |
+| `soft` | Sheets, expand/collapse, NowPlayingBar |
+| `fluid` / `indicator` | Shared layout morphs (nav, Segmented, mode dots) |
+
+### Presets
+
+| Preset | Where |
+|--------|--------|
+| `pageFade` | Route change in `AppShell` `AnimatedOutlet` |
+| `fadeUp` | Standalone entrances |
+| `slideUp` | Floating chrome (NowPlayingBar) |
+| `panelFade` | In-page panel swaps (Music Up next / Search) |
+| `swapText` / `swapIcon` | Status / play-pause crossfades (`AnimatePresence`) |
+| `staggerContainer` + `staggerItem` | Page sections and room grids |
+| `expandCollapse` | Fan / light control drawers |
+| `tap.soft` / `.medium` / `.hard` | `whileTap` scales by control size |
+
+### Where it runs
+
+| Surface | Behaviour |
+|---------|-----------|
+| **Route change** | Soft fade + 8px rise (`pageFade`) |
+| **Page load** | Header + sections stagger in (Home, Rooms, Climate, Music, Security, Settings, room detail) |
+| **BottomNav / SideNav** | Active indicator slides via `layoutId` + `fluid` spring (requires `domMax`). Walnut: top tick. Modern/Glass/Brutalist: sliding pill/fill. SideNav includes Settings in the same morph group. |
+| **Segmented** | Selected pill slides via `layoutId` + `fluid` |
+| **Tiles / scenes / rooms** | `whileTap` press scale |
+| **House mode** | Selected radio dot morphs between rows |
+| **Music panels** | `AnimatePresence` + `panelFade` on panel switch |
+| **Dialogs / drawers** | CSS enter/exit (`duration-slow`, scale / translate) |
+| **Light tiles** | CSS `active:scale` (pointer-drag dimming; keep off Motion `whileTap`) |
+
+### Authoring rules
+
+**Do**
+
+- Import presets from `#/lib/motion` (`m`, `AnimatePresence`, springs, `tap`, enter/exit objects)
+- Wrap new routes in `staggerContainer`; rely on `Section` / `PageHeader` for `staggerItem`
+- Use `tap.soft` on large cards/rows, `tap.medium` on tiles/chips, `tap.hard` on icon buttons
+- Give each Segmented / layout morph its own `layoutId` (e.g. `useId()`) when multiple instances share a page
+- Keep CSS state transitions on `transition-ui` / `transition-state` so theme on/off fills stay smooth
+
+**Don’t**
+
+- Invent one-off springs or cubic-beziers in components
+- Animate large layout shifts or full-screen slides on every navigation
+- Stack Motion `whileTap` on controls that already drag (e.g. LightTile dimming)
+- Skip reduced-motion: new animations must be fine when Motion / CSS reduce kicks in
+
+---
+
 ## Do / don’t
 
 **Do**
@@ -216,6 +296,7 @@ Themes (`walnut` / `modern` / `brutalist` / `glass`) change radii, borders, and 
 - Clear BottomNav + safe area on phone; use `md:pb-10` (or route-specific height) on tablet
 - Use `EntityGrid` for square tiles and `CardGrid` for wide cards
 - Keep layouts free of document-level horizontal scroll; contain any intentional horizontal strips
+- Use shared motion presets from `#/lib/motion` for entrances, presses, and layout morphs
 
 **Don’t**
 
@@ -224,5 +305,6 @@ Themes (`walnut` / `modern` / `brutalist` / `glass`) change radii, borders, and 
 - Invent a third “desktop” shell; extend tablet tiers instead
 - Forget NowPlayingBar sit heights, spacer, or left offsets when changing bottom chrome
 - Let fixed widths, negative margins, or wide children push the viewport sideways
+- Hand-roll animation timings that diverge from the motion tokens above
 
 **Exception:** Rooms list-detail **must** use viewport `xl` (≥1280px) plus `useMediaQuery('(min-width: 1280px)')` so the master list and auto-navigation stay in sync.

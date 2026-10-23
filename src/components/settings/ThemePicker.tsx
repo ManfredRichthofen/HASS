@@ -37,7 +37,6 @@ export function ThemePicker() {
         {themes.map((t) => {
           const selected = theme === t.id
           return (
-            // biome-ignore lint/a11y/useSemanticElements: swatch buttons; a native radio cannot hold this layout
             <m.button
               key={t.id}
               type="button"

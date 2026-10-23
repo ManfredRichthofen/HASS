@@ -170,9 +170,7 @@ function SecurityPage() {
                     tone={wet ? 'danger' : 'info'}
                     name={leak.label}
                     caption="Leak sensor"
-                    trailing={
-                      <StateWord value={wet ? 'Leak!' : 'Dry'} tone={wet ? 'bad' : 'ok'} />
-                    }
+                    trailing={<StateWord value={wet ? 'Leak!' : 'Dry'} tone={wet ? 'bad' : 'ok'} />}
                   />
                 )
               })}

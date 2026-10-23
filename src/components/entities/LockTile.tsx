@@ -83,12 +83,7 @@ export function LockTile({
           {changed ? ` · ${changed}` : ''}
         </span>
       </div>
-      <Button
-        size="sm"
-        variant={open ? 'primary' : 'secondary'}
-        disabled={unavailable}
-        {...press}
-      >
+      <Button size="sm" variant={open ? 'primary' : 'secondary'} disabled={unavailable} {...press}>
         {open ? 'Lock' : 'Unlock'}
       </Button>
     </div>

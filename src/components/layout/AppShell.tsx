@@ -9,7 +9,7 @@ import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
 import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
-import { AnimatePresence, domAnimation, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+import { AnimatePresence, domMax, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
 
 function ConnectingSplash({ label }: { label: string }) {
   return (
@@ -141,7 +141,7 @@ export function AppShell() {
   return (
     <ToastProvider>
       <MotionConfig reducedMotion="user">
-        <LazyMotion features={domAnimation} strict>
+        <LazyMotion features={domMax} strict>
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />

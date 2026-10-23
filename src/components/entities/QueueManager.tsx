@@ -10,16 +10,22 @@ import {
   MoreHorizontal,
   Pause,
   Play,
+  Radio,
   Repeat,
   Repeat1,
   Shuffle,
   SkipBack,
   SkipForward,
   Trash2,
+  Volume1,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
+import { Slider } from '#/components/ui/slider'
+import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { haUrl } from '#/config/ha'
 import { useMusicQueue } from '#/hooks/useMusicQueue'
@@ -136,38 +142,43 @@ function PlayerSkeleton({
   view: 'all' | 'player' | 'queue'
   artClassName?: string
 }) {
+  if (view === 'player') {
+    return (
+      <section
+        className="flex min-h-0 flex-1 flex-col justify-center gap-4"
+        aria-busy="true"
+        aria-label="Loading now playing"
+      >
+        <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size]">
+          <div className="size-[calc(min(100cqw,100cqh)-12px)] animate-pulse rounded-card bg-surface-hover glass:rounded-pill" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover" />
+          <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
+        </div>
+        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover brutal:h-2.5" />
+        <div className="flex items-center justify-between px-1">
+          <div className="size-11 animate-pulse rounded-pill bg-surface-hover" />
+          <div className="size-14 animate-pulse rounded-pill bg-surface-hover" />
+          <div className="size-[4.5rem] animate-pulse rounded-pill bg-surface-hover" />
+          <div className="size-14 animate-pulse rounded-pill bg-surface-hover" />
+          <div className="size-11 animate-pulse rounded-pill bg-surface-hover" />
+        </div>
+        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover" />
+      </section>
+    )
+  }
   return (
     <section className="grid gap-4" aria-busy="true" aria-label="Loading now playing">
-      <div
-        className={cn(
-          'grid gap-4',
-          view === 'player' &&
-            'grid-cols-[5.5rem_minmax(0,1fr)] items-end @xl:grid-cols-1 @xl:items-stretch',
-        )}
-      >
-        <div
-          className={cn(
-            'relative mx-auto w-full',
-            view === 'player'
-              ? cn(
-                  '@max-xl:w-[5.5rem] @max-xl:[&_*]:rounded-control glass:@max-xl:[&_*]:rounded-pill',
-                  artClassName,
-                )
-              : artClassName,
-          )}
-        >
+      <div className="grid gap-4">
+        <div className={cn('relative mx-auto w-full', artClassName)}>
           <div className="aspect-square w-full animate-pulse rounded-card bg-surface-hover glass:rounded-pill" />
         </div>
 
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="h-3 w-20 animate-pulse rounded-control bg-surface-hover" />
-            <div
-              className={cn(
-                'h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover',
-                view === 'player' ? '@max-xl:h-6 @xl:h-8' : 'h-8',
-              )}
-            />
+            <div className="h-8 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover" />
             <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
           </div>
           <div className="size-11 shrink-0 animate-pulse rounded-pill bg-surface-hover" />
@@ -373,18 +384,23 @@ function QueueRow({
 /**
  * The music player and its queue. `view` lets the Music page place the player
  * and the up-next list in different panels; `artClassName` sizes the artwork
- * so the player fits the screen without scrolling.
+ * so the player fits the screen without scrolling. In `player` view the
+ * artwork instead fills whatever height is left, so the player always fits.
+ * `endlessToggle` puts the Endless Mix switch at the top of the queue (used by
+ * the phone's Up next sheet, where the player itself stays uncluttered).
  */
 export function QueueManager({
   target,
   onTargetChange,
   view = 'all',
   artClassName = 'max-w-[22rem]',
+  endlessToggle = false,
 }: {
   target: string
   onTargetChange: (id: string) => void
   view?: 'all' | 'player' | 'queue'
   artClassName?: string
+  endlessToggle?: boolean
 }) {
   const showPlayer = view !== 'queue'
   const showQueue = view !== 'player'
@@ -402,6 +418,7 @@ export function QueueManager({
     error,
     refresh,
     player,
+    endlessMixEnabled,
   } = queueApi
   const [busy, setBusy] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -483,8 +500,47 @@ export function QueueManager({
     )
   }
 
+  function toggleEndless() {
+    void run(
+      'endless',
+      async () => {
+        await queueApi.setEndlessMix(!endlessMixEnabled)
+        notify(
+          endlessMixEnabled ? 'Endless Mix off' : 'Endless Mix on',
+          endlessMixEnabled ? 'Queue will stop when it ends' : 'Similar tracks will keep playing',
+        )
+      },
+      'Endless Mix failed',
+    )
+  }
+
   return (
-    <div className={cn(view === 'all' ? 'space-y-5' : 'grid gap-5')}>
+    <div
+      className={cn(
+        view === 'all' ? 'space-y-5' : 'grid gap-5',
+        view === 'player' && 'flex h-full min-h-0 flex-col',
+      )}
+    >
+      {endlessToggle ? (
+        <div className="flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 py-2.5 shadow-card modern:border-transparent brutal:border-ink">
+          <div className="flex min-w-0 items-center gap-3">
+            <Radio className="size-5 shrink-0 text-ink-muted" />
+            <div className="min-w-0">
+              <p className="text-[0.9375rem] font-semibold text-ink">Endless Mix</p>
+              <p className="truncate text-[0.8125rem] text-ink-muted">
+                Keep playing similar tracks
+              </p>
+            </div>
+          </div>
+          <Switch
+            aria-label="Endless Mix"
+            checked={endlessMixEnabled}
+            disabled={unavailable || busy !== null}
+            onCheckedChange={() => toggleEndless()}
+          />
+        </div>
+      ) : null}
+
       {error ? (
         <div className="rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {error.message}{' '}
@@ -514,41 +570,43 @@ export function QueueManager({
       ) : null}
 
       {showPlayer && hasNowPlaying ? (
-        <section className="grid gap-4" aria-label="Now playing">
-          <div
-            className={cn(
-              'grid gap-4',
-              view === 'player' &&
-                'grid-cols-[5.5rem_minmax(0,1fr)] items-end @xl:grid-cols-1 @xl:items-stretch',
+        <section
+          className={cn(
+            'grid gap-4',
+            view === 'player' && 'flex min-h-0 flex-1 flex-col justify-center',
+          )}
+          aria-label="Now playing"
+        >
+          <div className={cn('grid gap-4', view === 'player' && 'flex min-h-0 shrink flex-col')}>
+            {view === 'player' ? (
+              // The artwork takes whatever height is left, so the player always fits.
+              <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size]">
+                <div className="size-[calc(min(100cqw,100cqh)-12px)]">
+                  <Artwork src={currentArt} label="Now playing artwork" size="hero" />
+                </div>
+              </div>
+            ) : (
+              <div className={cn('relative mx-auto w-full', artClassName)}>
+                <Artwork src={currentArt} label="Now playing artwork" size="hero" />
+              </div>
             )}
-          >
-            <div
-              className={cn(
-                'relative mx-auto w-full',
-                view === 'player'
-                  ? cn(
-                      '@max-xl:w-[5.5rem] @max-xl:[&_*]:rounded-control glass:@max-xl:[&_*]:rounded-pill',
-                      artClassName,
-                    )
-                  : artClassName,
-              )}
-            >
-              <Artwork src={currentArt} label="Now playing artwork" size="hero" />
-            </div>
 
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-label">{player.isPlaying ? 'Now playing' : 'Paused'}</p>
+                {view === 'player' ? null : (
+                  <p className="text-label mb-1">{player.isPlaying ? 'Now playing' : 'Paused'}</p>
+                )}
                 <p
                   className={cn(
-                    'text-display mt-1.5 line-clamp-2 text-[1.75rem] leading-[1.1] text-ink',
-                    view === 'player' && '@max-xl:text-xl',
+                    'text-display line-clamp-2 text-[1.75rem] leading-[1.1] text-ink',
+                    view === 'player' &&
+                      'line-clamp-none truncate pb-0.5 text-[1.625rem] leading-[1.2]',
                   )}
                 >
                   {currentTitle ?? 'Unknown track'}
                 </p>
                 {currentArtist ? (
-                  <p className="mt-1 truncate text-[0.9375rem] text-ink-muted">{currentArtist}</p>
+                  <p className="mt-0.5 truncate text-[0.9375rem] text-ink-muted">{currentArtist}</p>
                 ) : null}
               </div>
               <div className="relative shrink-0">
@@ -639,7 +697,7 @@ export function QueueManager({
             </button>
             <button
               type="button"
-              className="press grid size-19 place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 brutal:border-2 brutal:border-ink brutal:shadow-press"
+              className="press grid size-[4.5rem] place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 brutal:border-2 brutal:border-ink brutal:shadow-press @xl:size-19"
               disabled={unavailable || busy !== null}
               aria-label={player.isPlaying ? 'Pause' : 'Play'}
               onClick={() =>
@@ -691,6 +749,58 @@ export function QueueManager({
               )}
             </button>
           </div>
+
+          {view === 'player' ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink"
+                disabled={unavailable}
+                aria-label={player.isMuted ? 'Unmute' : 'Mute'}
+                aria-pressed={player.isMuted}
+                onClick={() => void run('mute', () => player.toggleMute(), 'Mute failed')}
+              >
+                {player.isMuted ? <VolumeX className="size-5" /> : <Volume1 className="size-5" />}
+              </button>
+              <Slider
+                size="thin"
+                className="min-w-0 flex-1"
+                aria-label="Volume"
+                min={0}
+                max={100}
+                step={1}
+                disabled={unavailable}
+                value={Math.round((player.volumeLevel ?? 0) * 100)}
+                onValueCommitted={(value) => {
+                  const next = Array.isArray(value) ? value[0] : value
+                  void run('volume', () => player.setVolume(next / 100), 'Volume failed')
+                }}
+              />
+              <Volume2 className="mx-3 size-5 shrink-0 text-ink-faint" aria-hidden />
+            </div>
+          ) : null}
+
+          <div className={cn('flex justify-center', view === 'player' && 'hidden @xl:flex')}>
+            <button
+              type="button"
+              className={cn(
+                'inline-flex h-9 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-xs font-semibold text-ink-muted transition-ui hover:text-ink @xl:h-11 @xl:gap-2 @xl:px-4 @xl:text-sm',
+                endlessMixEnabled &&
+                  'border-transparent bg-accent-soft text-ink brutal:border-ink brutal:bg-ink brutal:text-surface',
+              )}
+              disabled={unavailable || busy !== null || (!hasNowPlaying && !endlessMixEnabled)}
+              aria-label={endlessMixEnabled ? 'Turn off Endless Mix' : 'Turn on Endless Mix'}
+              aria-pressed={endlessMixEnabled}
+              onClick={toggleEndless}
+            >
+              {busy === 'endless' ? (
+                <Loader2 className="size-3.5 animate-spin @xl:size-4" />
+              ) : (
+                <Radio className="size-3.5 @xl:size-4" />
+              )}
+              Endless Mix
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -704,7 +814,7 @@ export function QueueManager({
               <p className="text-xs text-ink-muted">
                 {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}
                 {upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
-                {queue?.is_dynamic || queue?.autoplay_enabled ? ' · Radio' : ''}
+                {endlessMixEnabled ? ' · Endless Mix' : ''}
               </p>
             </div>
             <Button

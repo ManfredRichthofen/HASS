@@ -2,6 +2,7 @@ export type { Transition, Variants } from 'motion/react'
 export {
   AnimatePresence,
   domAnimation,
+  domMax,
   LayoutGroup,
   LazyMotion,
   MotionConfig,

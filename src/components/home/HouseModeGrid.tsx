@@ -21,7 +21,6 @@ function ModeRow({
   const press = useScrollSafePress(onSelect)
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: styled radio rows; a native radio cannot hold this layout
     <m.button
       type="button"
       role="radio"

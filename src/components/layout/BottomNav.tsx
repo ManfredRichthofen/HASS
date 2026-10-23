@@ -1,13 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { isNavActive, navItems } from '#/components/layout/navItems'
 import { cn } from '#/lib/cn'
-import { indicator, LayoutGroup, m } from '#/lib/motion'
+import { indicator, LayoutGroup, m, snappy, tap } from '#/lib/motion'
 
 /**
  * Phone navigation; tablets use SideNav.
  * Walnut: a bar with a short indicator along the top edge.
- * Modern: a floating pill bar; the active item expands to show its label.
- * Brutalist: ruled cells, the active one inverted.
+ * Modern / Glass: a floating pill bar; the active chip slides between items.
+ * Brutalist: ruled cells, the active fill slides.
  */
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -28,33 +28,62 @@ export function BottomNav() {
           {navItems.map(({ to, label, icon: Icon, match }) => {
             const active = isNavActive(pathname, to, match)
             return (
-              <Link
+              <m.div
                 key={to}
-                to={to}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 font-label text-xs font-medium transition-ui',
-                  active ? 'font-semibold text-ink' : 'text-ink-faint hover:text-ink-muted',
-                  'modern:min-h-12 modern:flex-none modern:flex-row modern:gap-2 modern:rounded-pill modern:px-3.5 modern:text-sm',
-                  active && 'modern:bg-accent modern:text-on-accent',
-                  'glass:min-h-12 glass:flex-none glass:flex-row glass:gap-2 glass:rounded-pill glass:px-3.5 glass:text-sm',
-                  active && 'glass:bg-accent glass:text-on-accent',
-                  'brutal:uppercase brutal:tracking-[0.04em] brutal:not-first:border-l-2 brutal:not-first:border-ink',
-                  active && 'brutal:bg-ink brutal:text-surface',
-                )}
+                className="relative flex min-h-14 min-w-0 flex-1 modern:min-h-12 modern:flex-none glass:min-h-12 glass:flex-none"
+                whileTap={tap.hard}
+                transition={snappy}
               >
-                {active ? (
-                  <m.span
-                    layoutId="bottom-nav-indicator"
-                    transition={indicator}
-                    className="absolute -top-1.5 h-[3px] w-6 rounded-b-[3px] bg-ink modern:hidden brutal:hidden glass:hidden"
-                  />
-                ) : null}
-                <Icon className="size-[22px] shrink-0" />
-                <span className={cn('truncate', !active && 'modern:sr-only glass:sr-only')}>
-                  {label}
-                </span>
-              </Link>
+                <Link
+                  to={to}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'relative flex size-full min-w-0 flex-col items-center justify-center gap-1 font-label text-xs font-medium transition-[color] duration-normal ease-out',
+                    active ? 'font-semibold text-ink' : 'text-ink-faint hover:text-ink-muted',
+                    'modern:flex-row modern:gap-2 modern:rounded-pill modern:px-3.5 modern:text-sm',
+                    active && 'modern:text-on-accent',
+                    'glass:flex-row glass:gap-2 glass:rounded-pill glass:px-3.5 glass:text-sm',
+                    active && 'glass:text-on-accent',
+                    'brutal:uppercase brutal:tracking-[0.04em] brutal:not-first:border-l-2 brutal:not-first:border-ink',
+                    active && 'brutal:text-surface',
+                  )}
+                >
+                  {/* Walnut: short top tick that slides between tabs */}
+                  {active ? (
+                    <m.span
+                      layoutId="bottom-nav-tick"
+                      transition={indicator}
+                      aria-hidden
+                      className="absolute -top-1.5 h-[3px] w-6 rounded-b-[3px] bg-ink modern:hidden brutal:hidden glass:hidden"
+                    />
+                  ) : null}
+
+                  {/* Modern / Glass / Brutalist: sliding active fill */}
+                  {active ? (
+                    <m.span
+                      layoutId="bottom-nav-pill"
+                      transition={indicator}
+                      aria-hidden
+                      className={cn(
+                        'absolute inset-0 -z-0 hidden rounded-pill',
+                        'modern:block modern:bg-accent',
+                        'glass:block glass:bg-accent',
+                        'brutal:block brutal:rounded-none brutal:bg-ink',
+                      )}
+                    />
+                  ) : null}
+
+                  <Icon className="relative z-[1] size-[22px] shrink-0" />
+                  <span
+                    className={cn(
+                      'relative z-[1] truncate',
+                      !active && 'modern:sr-only glass:sr-only',
+                    )}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              </m.div>
             )
           })}
         </div>

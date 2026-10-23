@@ -84,6 +84,8 @@ export interface MusicQueue {
   repeat_mode: string
   crossfade_enabled?: boolean
   autoplay_enabled?: boolean
+  /** MA “Don’t stop the music” — fills similar tracks near end of queue. */
+  dont_stop_the_music_enabled?: boolean
   is_dynamic?: boolean
   current_index: number | null
   elapsed_time: number
@@ -157,6 +159,7 @@ export function normalizeQueue(raw: MusicQueue): MusicQueue {
     repeat_mode: typeof raw.repeat_mode === 'string' ? raw.repeat_mode : 'off',
     crossfade_enabled: Boolean(raw.crossfade_enabled),
     autoplay_enabled: Boolean(raw.autoplay_enabled),
+    dont_stop_the_music_enabled: Boolean(raw.dont_stop_the_music_enabled),
     is_dynamic: Boolean(raw.is_dynamic),
     current_index: typeof raw.current_index === 'number' ? raw.current_index : null,
     elapsed_time: typeof raw.elapsed_time === 'number' ? raw.elapsed_time : 0,

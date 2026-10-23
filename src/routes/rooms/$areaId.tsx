@@ -109,131 +109,131 @@ function RoomDetailPage() {
 
   return (
     <m.div initial="initial" animate="animate" variants={staggerContainer}>
-    <Page>
-      <PageHeader
-        title={area.name}
-        subtitle={<RoomSubtitle ids={roomLights} />}
-        backTo="/rooms"
-        backLabel="Rooms"
-        backClassName="xl:hidden"
-      >
-        {firstReading || area.sensors.length > 0 ? (
-          <Readings className="mt-2">
-            {firstReading ? (
-              <SensorReading entityId={firstReading.tempId} label="Temperature" unit="°" />
-            ) : null}
-            {firstReading?.humidityId ? (
-              <SensorReading entityId={firstReading.humidityId} label="Humidity" unit="%" />
-            ) : null}
-            {area.sensors.slice(0, firstReading ? 1 : 3).map((id) => (
-              <SensorChip key={id} entityId={id} />
-            ))}
-          </Readings>
-        ) : null}
-        {roomLights.length > 0 ? (
-          <div className="mt-1 flex flex-wrap gap-2.5">
-            <RoomLightsButton ids={roomLights} name={area.name} />
-          </div>
-        ) : null}
-      </PageHeader>
-
-      {empty ? (
-        <p className="rounded-card border-ui border-dashed border-border p-8 text-center text-sm text-ink-muted">
-          Nothing set up for this room yet.
-        </p>
-      ) : null}
-
-      <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
-        <div className="grid min-w-0 gap-section">
-          {standaloneLights.length > 0 ? (
-            <Section title="Lights">
-              <EntityGrid>
-                {standaloneLights.map((id) => (
-                  <LightTile key={id} entityId={id} />
-                ))}
-              </EntityGrid>
-            </Section>
+      <Page>
+        <PageHeader
+          title={area.name}
+          subtitle={<RoomSubtitle ids={roomLights} />}
+          backTo="/rooms"
+          backLabel="Rooms"
+          backClassName="xl:hidden"
+        >
+          {firstReading || area.sensors.length > 0 ? (
+            <Readings className="mt-2">
+              {firstReading ? (
+                <SensorReading entityId={firstReading.tempId} label="Temperature" unit="°" />
+              ) : null}
+              {firstReading?.humidityId ? (
+                <SensorReading entityId={firstReading.humidityId} label="Humidity" unit="%" />
+              ) : null}
+              {area.sensors.slice(0, firstReading ? 1 : 3).map((id) => (
+                <SensorChip key={id} entityId={id} />
+              ))}
+            </Readings>
           ) : null}
-
-          {hasFans ? (
-            <Section
-              title={
-                fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'
-              }
-            >
-              <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
-                {fanLights.length > 0 ? (
-                  <CardGrid>
-                    {fanLights.map((kit) => (
-                      <FanLightTile key={kit.fanId} {...kit} />
-                    ))}
-                  </CardGrid>
-                ) : null}
-                {fanDevices.length > 0 || area.fans.length > 0 ? (
-                  <CardGrid>
-                    {fanDevices.map((device) => (
-                      <FanTile
-                        key={device.fanId}
-                        entityId={device.fanId}
-                        label={device.label}
-                        tempId={device.tempId}
-                        humidityId={device.humidityId}
-                      />
-                    ))}
-                    {area.fans.map((id) => (
-                      <FanTile key={id} entityId={id} />
-                    ))}
-                  </CardGrid>
-                ) : null}
-              </div>
-            </Section>
+          {roomLights.length > 0 ? (
+            <div className="mt-1 flex flex-wrap gap-2.5">
+              <RoomLightsButton ids={roomLights} name={area.name} />
+            </div>
           ) : null}
-        </div>
-        <div className="grid min-w-0 gap-section">
-          {extraReadings.length > 0 ? (
-            <Section title="Climate">
-              <div className="@container">
-                <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3">
-                  {extraReadings.map((reading) => (
-                    <ClimateReadingCard key={reading.tempId} {...reading} />
+        </PageHeader>
+
+        {empty ? (
+          <p className="rounded-card border-ui border-dashed border-border p-8 text-center text-sm text-ink-muted">
+            Nothing set up for this room yet.
+          </p>
+        ) : null}
+
+        <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
+          <div className="grid min-w-0 gap-section">
+            {standaloneLights.length > 0 ? (
+              <Section title="Lights">
+                <EntityGrid>
+                  {standaloneLights.map((id) => (
+                    <LightTile key={id} entityId={id} />
                   ))}
+                </EntityGrid>
+              </Section>
+            ) : null}
+
+            {hasFans ? (
+              <Section
+                title={
+                  fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'
+                }
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+                  {fanLights.length > 0 ? (
+                    <CardGrid>
+                      {fanLights.map((kit) => (
+                        <FanLightTile key={kit.fanId} {...kit} />
+                      ))}
+                    </CardGrid>
+                  ) : null}
+                  {fanDevices.length > 0 || area.fans.length > 0 ? (
+                    <CardGrid>
+                      {fanDevices.map((device) => (
+                        <FanTile
+                          key={device.fanId}
+                          entityId={device.fanId}
+                          label={device.label}
+                          tempId={device.tempId}
+                          humidityId={device.humidityId}
+                        />
+                      ))}
+                      {area.fans.map((id) => (
+                        <FanTile key={id} entityId={id} />
+                      ))}
+                    </CardGrid>
+                  ) : null}
                 </div>
-              </div>
-            </Section>
-          ) : null}
+              </Section>
+            ) : null}
+          </div>
+          <div className="grid min-w-0 gap-section">
+            {extraReadings.length > 0 ? (
+              <Section title="Climate">
+                <div className="@container">
+                  <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3">
+                    {extraReadings.map((reading) => (
+                      <ClimateReadingCard key={reading.tempId} {...reading} />
+                    ))}
+                  </div>
+                </div>
+              </Section>
+            ) : null}
 
-          {area.media.length > 0 ? (
-            <Section title="Music & TV">
-              <CardGrid>
-                {area.media.map((id) => (
-                  <MediaCard key={id} entityId={id} />
-                ))}
-              </CardGrid>
-            </Section>
-          ) : null}
+            {area.media.length > 0 ? (
+              <Section title="Music & TV">
+                <CardGrid>
+                  {area.media.map((id) => (
+                    <MediaCard key={id} entityId={id} />
+                  ))}
+                </CardGrid>
+              </Section>
+            ) : null}
 
-          {area.appliances?.length ? (
-            <Section title="Appliances">
-              <DeviceList>
-                {area.appliances.map((a) => (
-                  <ApplianceRow key={a.powerId} {...a} />
-                ))}
-              </DeviceList>
-            </Section>
-          ) : null}
+            {area.appliances?.length ? (
+              <Section title="Appliances">
+                <DeviceList>
+                  {area.appliances.map((a) => (
+                    <ApplianceRow key={a.powerId} {...a} />
+                  ))}
+                </DeviceList>
+              </Section>
+            ) : null}
 
-          {area.switches?.length ? (
-            <Section title="Irrigation">
-              <DeviceList>
-                {area.switches.map((id) => (
-                  <SwitchRow key={id} entityId={id} label={entityName(id)} icon={Droplets} />
-                ))}
-              </DeviceList>
-            </Section>
-          ) : null}
+            {area.switches?.length ? (
+              <Section title="Irrigation">
+                <DeviceList>
+                  {area.switches.map((id) => (
+                    <SwitchRow key={id} entityId={id} label={entityName(id)} icon={Droplets} />
+                  ))}
+                </DeviceList>
+              </Section>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </Page>
+      </Page>
     </m.div>
   )
 }

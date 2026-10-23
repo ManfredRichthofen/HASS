@@ -576,19 +576,17 @@ svg.lucide {
     scroll-behavior: auto;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-
   .animate-spin,
   .animate-pulse,
   .animate-ping {
-    animation: none !important;
+    animation: none;
+  }
+
+  /* JS motion respects this via MotionConfig reducedMotion="user" in AppShell. */
+  .transition-ui,
+  .transition-state,
+  .press {
+    transition-duration: 0.01ms;
   }
 }
 

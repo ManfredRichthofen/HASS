@@ -1,8 +1,9 @@
 import { useServiceCall } from 'hass-react'
-import { Disc3, ListPlus, ListStart, Loader2, Music2, Play, Search } from 'lucide-react'
+import { Disc3, ListPlus, ListStart, Loader2, Music2, Play, Radio, Search } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { Toggle } from '#/components/ui/toggle'
 import { notify } from '#/components/ui/toast'
 import { cn } from '#/lib/cn'
 import {
@@ -167,6 +168,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   const { callService, callServiceWithResponse } = useServiceCall()
   const [query, setQuery] = useState('')
   const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
+  const [endlessMix, setEndlessMix] = useState(false)
   const [filter, setFilter] = useState<string>('all')
   const [results, setResults] = useState<MediaSearchItem[]>([])
   const [searching, setSearching] = useState(false)
@@ -223,11 +225,25 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
         media_id: item.media_content_id,
         media_type: item.media_content_type || item.media_class || 'track',
         enqueue: mode,
+        ...(endlessMix ? { radio_mode: true } : {}),
       })
-      const label = mode === 'add' ? 'Queued' : mode === 'next' ? 'Playing next' : 'Playing'
+      const label = endlessMix
+        ? 'Endless Mix'
+        : mode === 'add'
+          ? 'Queued'
+          : mode === 'next'
+            ? 'Playing next'
+            : 'Playing'
       notify(label, item.title)
       onQueued?.()
     } catch (e) {
+      if (endlessMix) {
+        notify(
+          'Endless Mix failed',
+          e instanceof Error ? e.message : 'Provider may not support similar tracks',
+        )
+        return
+      }
       try {
         await callService('media_player', 'play_media', {
           entity_id: target,
@@ -292,6 +308,15 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
             </button>
           ))}
         </div>
+        <Toggle
+          pressed={endlessMix}
+          onPressedChange={setEndlessMix}
+          aria-label="Endless Mix — keep playing similar tracks"
+          className="w-full gap-2"
+        >
+          <Radio className="size-4" />
+          Endless Mix
+        </Toggle>
       </div>
 
       {results.length > 0 ? (

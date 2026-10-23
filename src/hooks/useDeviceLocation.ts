@@ -14,6 +14,7 @@ import {
   shouldReportLocation,
   writeLastLocationReport,
 } from '#/lib/deviceLocation'
+import { readHaAuth } from '#/lib/haAuthStorage'
 import {
   buildLocationTemplateYaml,
   locationTrackerEntityId,
@@ -21,7 +22,6 @@ import {
   reportLocationViaWebhook,
   resolveLocationReportTarget,
 } from '#/lib/locationReport'
-import { readHaAuth } from '#/lib/haAuthStorage'
 import {
   resolveAndroidTrackerIdentity,
   startNativeLocationTracking,

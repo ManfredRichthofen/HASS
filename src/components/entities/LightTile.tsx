@@ -7,7 +7,14 @@ import {
   Lightbulb,
   type LucideIcon,
 } from 'lucide-react'
-import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { ColorPicker } from '#/components/entities/ColorPicker'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { LabeledSlider } from '#/components/ui/slider'
@@ -43,6 +50,7 @@ type DragGesture = {
   /** True after DIM_HOLD_MS without leaving the press — dimming is allowed. */
   armed: boolean
   dimming: boolean
+  /** Scroll / swipe detected — do not toggle on the following click. */
   cancelled: boolean
 }
 
@@ -52,9 +60,9 @@ type DragGesture = {
  * is shaded, like liquid in a glass (Modern shows a level bar instead). The
  * small "more" target opens a sheet for colour and white temperature.
  *
- * Scroll wins by default: no pointer capture / touch-action lock until a held
- * vertical dim starts, and any early movement cancels the tap so scrolling
- * over lights does not toggle them.
+ * Mobile WebViews often scroll without delivering pointermove to the tile, then
+ * still fire pointerup — so we never toggle on pointerup. Toggle is click-only,
+ * and document touchmove + capture scroll listeners cancel the pending click.
  */
 export function LightTile({ entityId, className }: { entityId: string; className?: string }) {
   // useLight only accepts light.* — callers must not pass switch.* or other domains.
@@ -64,7 +72,12 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const [level, setLevel] = useState(haLevel)
   const drag = useRef<DragGesture | null>(null)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suppressClick = useRef(false)
+  const detachScrollGuards = useRef<(() => void) | null>(null)
   const tileRef = useRef<HTMLDivElement>(null)
+  // Live flags for scroll guards (closures from pointerdown must not go stale).
+  const onRef = useRef(false)
+  const canDimRef = useRef(false)
 
   const name = entityName(entityId, light.attributes.friendly_name)
   const unavailable = light.isUnavailable
@@ -83,10 +96,20 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const on = light.isOn && !unavailable
   const swatch = on && canColor ? rgbCss(light.rgbColor) : undefined
   const Icon = fixtureIcon(name)
+  onRef.current = on
+  canDimRef.current = canDim
 
   useEffect(() => {
     if (!drag.current) setLevel(haLevel)
   }, [haLevel])
+
+  useEffect(
+    () => () => {
+      detachScrollGuards.current?.()
+      if (holdTimer.current != null) clearTimeout(holdTimer.current)
+    },
+    [],
+  )
 
   const clearHoldTimer = () => {
     if (holdTimer.current == null) return
@@ -98,9 +121,18 @@ export function LightTile({ entityId, className }: { entityId: string; className
     tileRef.current?.style.removeProperty('touch-action')
   }
 
+  const cancelPress = () => {
+    const d = drag.current
+    if (d) d.cancelled = true
+    suppressClick.current = true
+    clearHoldTimer()
+  }
+
   const endGesture = () => {
     clearHoldTimer()
     clearTouchLock()
+    detachScrollGuards.current?.()
+    detachScrollGuards.current = null
     drag.current = null
   }
 
@@ -120,9 +152,81 @@ export function LightTile({ entityId, className }: { entityId: string; className
     }
   }
 
+  function applyDimFromPoint(clientY: number, target: HTMLElement) {
+    const d = drag.current
+    if (!d) return
+    const dy = d.y - clientY
+    const height = tileRef.current?.offsetHeight ?? 160
+    const next = Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100)))
+    d.level = next
+    setLevel(next)
+    if (!d.dimming) {
+      d.dimming = true
+      suppressClick.current = true
+      clearHoldTimer()
+      try {
+        target.setPointerCapture(d.pointerId)
+      } catch {
+        // Capture can fail if the pointer already ended.
+      }
+      tileRef.current?.style.setProperty('touch-action', 'none')
+    }
+  }
+
+  function considerMove(clientX: number, clientY: number, target: HTMLElement) {
+    const d = drag.current
+    if (!d || d.cancelled) return
+
+    const dx = clientX - d.x
+    const dy = d.y - clientY
+    const absX = Math.abs(dx)
+    const absY = Math.abs(clientY - d.y)
+
+    if (d.dimming) {
+      applyDimFromPoint(clientY, target)
+      return
+    }
+
+    if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return
+
+    // Held vertical drag on a dimmable on light → start dimming.
+    // Any other movement is a scroll/swipe — suppress the click.
+    if (d.armed && onRef.current && canDimRef.current && absY > absX) {
+      applyDimFromPoint(clientY, target)
+      return
+    }
+
+    cancelPress()
+  }
+
+  function attachScrollGuards(target: HTMLElement) {
+    detachScrollGuards.current?.()
+
+    const onScroll = () => {
+      cancelPress()
+    }
+
+    // touchmove keeps firing on Android/iOS WebViews while the page scrolls;
+    // pointermove on the tile often does not.
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      considerMove(t.clientX, t.clientY, target)
+    }
+
+    window.addEventListener('scroll', onScroll, true)
+    document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true })
+
+    detachScrollGuards.current = () => {
+      window.removeEventListener('scroll', onScroll, true)
+      document.removeEventListener('touchmove', onTouchMove, true)
+    }
+  }
+
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if (unavailable) return
     // Do not capture yet — the page must still be able to scroll.
+    suppressClick.current = false
     drag.current = {
       pointerId: e.pointerId,
       x: e.clientX,
@@ -133,6 +237,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
       dimming: false,
       cancelled: false,
     }
+    attachScrollGuards(e.currentTarget)
     clearHoldTimer()
     holdTimer.current = setTimeout(() => {
       if (drag.current && !drag.current.cancelled) drag.current.armed = true
@@ -141,53 +246,36 @@ export function LightTile({ entityId, className }: { entityId: string; className
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
-    if (!d || d.cancelled || d.pointerId !== e.pointerId) return
-
-    const dx = e.clientX - d.x
-    const dy = d.y - e.clientY
-    const absX = Math.abs(dx)
-    const absY = Math.abs(e.clientY - d.y)
-
-    if (!d.dimming) {
-      if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return
-
-      // Held vertical drag on a dimmable on light → start dimming.
-      // Early movement is treated as scroll and cancels the tap.
-      if (d.armed && on && canDim && absY > absX) {
-        clearHoldTimer()
-        d.dimming = true
-        e.currentTarget.setPointerCapture(e.pointerId)
-        tileRef.current?.style.setProperty('touch-action', 'none')
-      } else {
-        d.cancelled = true
-        clearHoldTimer()
-        return
-      }
-    }
-
-    const height = tileRef.current?.offsetHeight ?? 160
-    const next = Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100)))
-    d.level = next
-    setLevel(next)
+    if (!d || d.pointerId !== e.pointerId) return
+    considerMove(e.clientX, e.clientY, e.currentTarget)
   }
 
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
     const wasDimming = d?.dimming ?? false
-    const wasCancelled = d?.cancelled ?? false
     const levelToCommit = d?.level ?? level
     const samePointer = d?.pointerId === e.pointerId
+    // Keep suppressClick if we cancelled or dimmed — click may still arrive.
+    if (d?.cancelled || wasDimming) suppressClick.current = true
     endGesture()
-    if (!d || unavailable || !samePointer || wasCancelled) return
-    if (wasDimming) {
-      void commitLevel(levelToCommit)
-      return
-    }
-    void toggle()
+    // Never toggle here — mobile scroll often ends in pointerup without move events.
+    if (!d || unavailable || !samePointer || !wasDimming) return
+    void commitLevel(levelToCommit)
   }
 
   function onPointerCancel() {
+    suppressClick.current = true
     endGesture()
+  }
+
+  function onClick(e: MouseEvent<HTMLDivElement>) {
+    if (unavailable || suppressClick.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      suppressClick.current = false
+      return
+    }
+    void toggle()
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -218,6 +306,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
+        onClick={onClick}
         onKeyDown={onKeyDown}
         style={{ '--lvl': `${on ? level : 100}%` } as React.CSSProperties}
         className={cn(
