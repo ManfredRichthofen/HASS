@@ -390,6 +390,13 @@ function QueueRow({
  * `endlessToggle` puts the Endless Mix switch at the top of the queue, so the
  * player itself stays uncluttered.
  */
+export type GroupVolume = {
+  value: number
+  muted: boolean
+  set: (value: number) => Promise<void>
+  toggleMute: () => Promise<void>
+}
+
 export function QueueManager({
   target,
   onTargetChange,
@@ -397,6 +404,7 @@ export function QueueManager({
   artClassName = 'max-w-[22rem]',
   endlessToggle = false,
   heading = true,
+  groupVolume,
 }: {
   target: string
   onTargetChange: (id: string) => void
@@ -405,6 +413,11 @@ export function QueueManager({
   endlessToggle?: boolean
   /** Show the "Up next" title (off when a tab already says it). */
   heading?: boolean
+  /**
+   * When several rooms play together, the player's volume and mute act on the
+   * whole group instead of just the leader.
+   */
+  groupVolume?: GroupVolume
 }) {
   const showPlayer = view !== 'queue'
   const showQueue = view !== 'player'
@@ -430,8 +443,10 @@ export function QueueManager({
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const { value: isPlaying, commit: commitPlaying } = useOptimisticValue(player.isPlaying)
-  const { value: isMuted, commit: commitMuted } = useOptimisticValue(Boolean(player.isMuted))
-  const serverVolume = Math.round((player.volumeLevel ?? 0) * 100)
+  const { value: isMuted, commit: commitMuted } = useOptimisticValue(
+    Boolean(groupVolume ? groupVolume.muted : player.isMuted),
+  )
+  const serverVolume = groupVolume?.value ?? Math.round((player.volumeLevel ?? 0) * 100)
   const [volume, setVolume] = useState(serverVolume)
 
   // Drop the confirm prompt if it's ignored or the room changes.
@@ -477,8 +492,7 @@ export function QueueManager({
   )
 
   const unavailable = player.isUnavailable
-  const hasNowPlaying =
-    Boolean(currentTitle) && (isPlaying || player.isPaused || items.length > 0)
+  const hasNowPlaying = Boolean(currentTitle) && (isPlaying || player.isPaused || items.length > 0)
   const canManageItems = configured
   const transferTargets = useMemo(
     () => mediaTargets.filter((playerTarget) => playerTarget.id !== target),
@@ -519,7 +533,7 @@ export function QueueManager({
   const toggleMute = () => {
     commitMuted(!isMuted, async () => {
       try {
-        await player.toggleMute()
+        await (groupVolume ? groupVolume.toggleMute() : player.toggleMute())
       } catch (e) {
         notify('Mute failed', e instanceof Error ? e.message : 'Error')
         throw e
@@ -661,7 +675,7 @@ export function QueueManager({
               <div className="relative shrink-0">
                 {(fetching && !loading) || ensuring ? (
                   <Loader2 className="m-3 size-5 animate-spin text-ink-faint" />
-                ) : (
+                ) : view === 'player' ? null : (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -812,11 +826,9 @@ export function QueueManager({
                 onValueCommitted={(value) => {
                   const next = Array.isArray(value) ? value[0] : value
                   setVolume(next)
-                  void player
-                    .setVolume(next / 100)
-                    .catch((e) =>
-                      notify('Volume failed', e instanceof Error ? e.message : 'Error'),
-                    )
+                  void (groupVolume ? groupVolume.set(next) : player.setVolume(next / 100)).catch(
+                    (e) => notify('Volume failed', e instanceof Error ? e.message : 'Error'),
+                  )
                 }}
               />
               <Volume2 className="mx-3 size-5 shrink-0 text-ink-faint" aria-hidden />

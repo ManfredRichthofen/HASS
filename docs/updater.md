@@ -4,7 +4,7 @@ Desktop builds use the official Tauri updater. It reads:
 
 `https://github.com/ManfredRichthofen/HASS/releases/latest/download/latest.json`
 
-Android cannot use that plugin; the app compares its version to the latest GitHub release and opens the APK asset / release page.
+Android cannot use that plugin; the app compares its version to the latest GitHub release, downloads the APK in-app, then opens the system package installer.
 
 ## One-time signing setup
 

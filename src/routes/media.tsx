@@ -1,28 +1,23 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { ListMusic, Search, Speaker } from 'lucide-react'
-import { type ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 import { MusicSearch } from '#/components/entities/MusicSearch'
-import { QueueManager } from '#/components/entities/QueueManager'
-import {
-  SpeakerChips,
-  SpeakerPicker,
-  speakers,
-  useGroupAll,
-} from '#/components/media/SpeakerPicker'
+import { type GroupVolume, QueueManager } from '#/components/entities/QueueManager'
+import { SpeakersPanel } from '#/components/media/SpeakersPanel'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Segmented } from '#/components/ui/segmented'
+import { useGroupActions, useMusicSessions } from '#/hooks/useMusicSessions'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, panelFade, staggerContainer, staggerItem } from '#/lib/motion'
-import { mediaTargets } from '#/lib/musicAssistant'
 
 export const Route = createFileRoute('/media')({ component: MusicPage })
 
-type Panel = 'queue' | 'search'
-type Sheet = 'queue' | 'speakers' | 'search'
+type Panel = 'queue' | 'speakers' | 'search'
 
 const panels = [
   { value: 'queue' as const, label: 'Up next' },
+  { value: 'speakers' as const, label: 'Speakers' },
   { value: 'search' as const, label: 'Search' },
 ]
 
@@ -30,32 +25,64 @@ const panels = [
  * Music fits one screen.
  * Phone: only the player — art, title, scrubber, transport, volume. Up next,
  * Speakers and Search are three buttons underneath that open sheets.
- * Tablet (@xl): the room switcher beside the title, speaker chips under the
- * player, and Up next / Search (with Endless Mix) as a tabbed panel — beside
- * the player in landscape, below it in portrait.
+ * Tablet (@xl): Up next / Speakers / Search as a tabbed panel — beside the
+ * player in landscape, below it in portrait.
+ *
+ * The page always shows what is actually playing (a playing room beats a
+ * paused one beats an idle one) until you choose something else in Speakers.
  */
 function MusicPage() {
   const queryClient = useQueryClient()
-  const [target, setTarget] = useState<string>(mediaTargets[0].id)
+  const { rooms, sessions } = useMusicSessions()
+  const actions = useGroupActions()
+  const [picked, setPicked] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('queue')
-  const [sheet, setSheet] = useState<Sheet | null>(null)
-  const leader = target === 'media_player.all' ? (speakers[0]?.id ?? target) : target
-  const targetLabel = mediaTargets.find((t) => t.id === target)?.label ?? 'Speakers'
+  const [sheet, setSheet] = useState<Panel | null>(null)
+
+  // `picked` is a room; follow it to whichever group it is in now.
+  const pickedLeader = picked ? (rooms.find((r) => r.id === picked)?.leader ?? picked) : null
+  const current = sessions.find((s) => s.leader === pickedLeader) ?? sessions[0]
+  const target = current?.leader ?? rooms[0]?.id ?? 'media_player.all'
+  const label = current?.label ?? 'Speakers'
 
   const refreshQueue = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['music-queue', target] })
   }, [queryClient, target])
 
-  const controlling = (
-    <Segmented
-      label="Controlling"
-      value={target}
-      onChange={setTarget}
-      options={mediaTargets.map((t) => ({ value: t.id, label: t.label }))}
-    />
-  )
+  // Several rooms together: the player's volume moves them all, keeping their balance.
+  const groupVolume = useMemo<GroupVolume | undefined>(() => {
+    const members = rooms.filter((r) => current?.members.includes(r.id))
+    if (members.length < 2) return undefined
+    const average = members.reduce((sum, r) => sum + r.volume, 0) / members.length
+    const muted = members.every((r) => r.muted)
+    return {
+      value: Math.round(average),
+      muted,
+      set: async (value) => {
+        const delta = value - average
+        await Promise.all(
+          members.map((r) =>
+            actions.volume(r.id, Math.max(0, Math.min(100, Math.round(r.volume + delta)))),
+          ),
+        )
+      },
+      toggleMute: () =>
+        actions.mute(
+          members.map((r) => r.id),
+          !muted,
+        ),
+    }
+  }, [rooms, current, actions])
 
-  const sheetProps = (id: Sheet) => ({
+  const control = (id: string) => {
+    setPicked(id)
+    setSheet(null)
+    setPanel('queue')
+  }
+
+  const speakersPanel = current ? <SpeakersPanel current={current} onControl={control} /> : null
+
+  const sheetProps = (id: Panel) => ({
     open: sheet === id,
     onOpenChange: (open: boolean) => setSheet(open ? id : null),
   })
@@ -80,7 +107,14 @@ function MusicPage() {
         <h1 className="text-display text-[2rem] leading-none text-ink walnut:font-light md:text-[2.5rem]">
           Music
         </h1>
-        <div className="hidden w-full max-w-md @xl:block">{controlling}</div>
+        <button
+          type="button"
+          onClick={() => setPanel('speakers')}
+          className="hidden min-h-11 max-w-xs items-center gap-2 rounded-pill bg-surface px-4 text-sm font-semibold text-ink shadow-card transition-ui hover:bg-surface-hover @xl:inline-flex walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised brutal:rounded-none brutal:border-2 brutal:border-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:shadow-none"
+        >
+          <Speaker className="size-[18px] shrink-0 text-ink-muted glass:text-on-raised brutal:text-ink" />
+          <span className="truncate">{label}</span>
+        </button>
       </m.header>
 
       {/*
@@ -94,10 +128,12 @@ function MusicPage() {
           className="flex min-h-0 flex-1 flex-col gap-4 @xl:gap-5 @xl:portrait:flex-none"
         >
           <div className="flex min-h-0 flex-1 flex-col @xl:portrait:flex-none">
-            <QueueManager view="player" target={target} onTargetChange={setTarget} />
-          </div>
-          <div className="hidden shrink-0 @xl:block">
-            <SpeakerChips leader={leader} />
+            <QueueManager
+              view="player"
+              target={target}
+              onTargetChange={setPicked}
+              groupVolume={groupVolume}
+            />
           </div>
         </m.div>
 
@@ -108,12 +144,7 @@ function MusicPage() {
           className="flex shrink-0 items-center gap-2 @xl:hidden"
         >
           <SheetButton icon={<ListMusic />} label="Up next" onClick={() => setSheet('queue')} />
-          <SheetButton
-            wide
-            icon={<Speaker />}
-            label={targetLabel}
-            onClick={() => setSheet('speakers')}
-          />
+          <SheetButton wide icon={<Speaker />} label={label} onClick={() => setSheet('speakers')} />
           <SheetButton icon={<Search />} label="Search" onClick={() => setSheet('search')} />
         </m.nav>
 
@@ -124,7 +155,7 @@ function MusicPage() {
           className="hidden min-h-0 flex-1 flex-col gap-3 @xl:flex"
         >
           <Segmented label="Show" options={panels} value={panel} onChange={setPanel} />
-          <div className="no-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-card">
+          <div className="no-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <AnimatePresence mode="wait" initial={false}>
               <m.div
                 key={panel}
@@ -139,9 +170,11 @@ function MusicPage() {
                     endlessToggle
                     heading={false}
                     target={target}
-                    onTargetChange={setTarget}
+                    onTargetChange={setPicked}
                   />
                 ) : null}
+
+                {panel === 'speakers' ? speakersPanel : null}
 
                 {panel === 'search' ? (
                   <MusicSearch target={target} onQueued={refreshQueue} />
@@ -155,16 +188,14 @@ function MusicPage() {
       <Drawer {...sheetProps('queue')}>
         <DrawerContent>
           {sheet === 'queue' ? (
-            <QueueManager view="queue" endlessToggle target={target} onTargetChange={setTarget} />
+            <QueueManager view="queue" endlessToggle target={target} onTargetChange={setPicked} />
           ) : null}
         </DrawerContent>
       </Drawer>
 
       <Drawer {...sheetProps('speakers')}>
         <DrawerContent title="Speakers">
-          {sheet === 'speakers' ? (
-            <SpeakersSheet leader={leader} controlling={controlling} />
-          ) : null}
+          {sheet === 'speakers' ? speakersPanel : null}
         </DrawerContent>
       </Drawer>
 
@@ -204,31 +235,5 @@ function SheetButton({
       {icon}
       <span className={wide ? 'truncate' : 'sr-only'}>{label}</span>
     </button>
-  )
-}
-
-/** Which player you control, and every room it plays in with its own volume. */
-function SpeakersSheet({ leader, controlling }: { leader: string; controlling: ReactNode }) {
-  const groupAll = useGroupAll(leader)
-  return (
-    <div className="grid gap-5">
-      <div className="grid gap-2">
-        <span className="text-label">Controlling</span>
-        {controlling}
-      </div>
-      <div className="grid gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-label">Playing in</span>
-          <button
-            type="button"
-            onClick={() => void groupAll()}
-            className="min-h-11 text-sm font-semibold text-ink-muted hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
-          >
-            Group all
-          </button>
-        </div>
-        <SpeakerPicker leader={leader} />
-      </div>
-    </div>
   )
 }

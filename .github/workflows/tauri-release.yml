@@ -203,7 +203,7 @@ jobs:
           releaseBody: |
             Casa v__VERSION__
 
-            Android APK — sideload the `.apk` asset below.
+            Install from Settings → App updates (in-app download), or use the `.apk` asset below.
             Triggered by a version bump in `src-tauri/tauri.conf.json`.
           releaseDraft: false
           prerelease: false

@@ -11,18 +11,22 @@ export type UpdateCheckResult =
       notes?: string | null
       /** Desktop: Tauri updater. Android: in-app APK download + system installer prompt. */
       install: (onProgress?: (fraction: number | null) => void) => Promise<void>
-      /** Android / fallback — open GitHub release page. */
-      openRelease?: () => Promise<void>
     }
   | { status: 'error'; message: string }
 
+type GithubRelease = {
+  tag_name?: string
+  body?: string
+  assets?: Array<{ name: string; browser_download_url: string }>
+}
+
 /** Tauri Android WebView UA always includes Android; desktop shells do not. */
-function isAndroid(): boolean {
+const isAndroid = (): boolean => {
   if (typeof navigator === 'undefined') return false
   return /android/i.test(navigator.userAgent)
 }
 
-async function getCurrentVersion(): Promise<string> {
+const getCurrentVersion = async (): Promise<string> => {
   if (!isTauri()) return '0.0.0'
   try {
     const { getVersion } = await import('@tauri-apps/api/app')
@@ -32,7 +36,7 @@ async function getCurrentVersion(): Promise<string> {
   }
 }
 
-function compareSemver(a: string, b: string): number {
+const compareSemver = (a: string, b: string): number => {
   const pa = a
     .replace(/^v/, '')
     .split('.')
@@ -49,18 +53,25 @@ function compareSemver(a: string, b: string): number {
   return 0
 }
 
-async function openUrl(url: string): Promise<void> {
-  // window.open is a no-op in the Android WebView; hand the URL to the system (browser/downloader).
-  try {
-    const { openUrl: open } = await import('@tauri-apps/plugin-opener')
-    await open(url)
-  } catch {
-    window.open(url, '_blank', 'noopener,noreferrer')
+const fetchLatestRelease = async (): Promise<GithubRelease | null> => {
+  const res = await fetch(githubRepo.apiLatestReleaseUrl, {
+    headers: { Accept: 'application/vnd.github+json' },
+  })
+  // /releases/latest 404s until a non-draft release is published.
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new Error(`GitHub release check failed (${res.status})`)
   }
+  return (await res.json()) as GithubRelease
+}
+
+const findApkAssetUrl = (data: GithubRelease): string | null => {
+  const apk = data.assets?.find((a) => a.name.toLowerCase().endsWith('.apk'))
+  return apk?.browser_download_url ?? null
 }
 
 /** Desktop: official Tauri updater against GitHub `latest.json`. */
-async function checkDesktopUpdate(): Promise<UpdateCheckResult> {
+const checkDesktopUpdate = async (): Promise<UpdateCheckResult> => {
   const { check } = await import('@tauri-apps/plugin-updater')
   const { relaunch } = await import('@tauri-apps/plugin-process')
   const update = await check()
@@ -82,10 +93,10 @@ async function checkDesktopUpdate(): Promise<UpdateCheckResult> {
 }
 
 /** Android: download the APK in-app (polling native progress), then open the system installer. */
-async function downloadAndInstallApk(
+const downloadAndInstallApk = async (
   url: string,
   onProgress?: (fraction: number | null) => void,
-): Promise<void> {
+): Promise<void> => {
   let polling = true
   const poll = (async () => {
     while (polling) {
@@ -109,25 +120,14 @@ async function downloadAndInstallApk(
   await invoke('app_update_install')
 }
 
-/** Android: compare app version to latest GitHub release tag (APK sideload). */
-async function checkAndroidGithubRelease(): Promise<UpdateCheckResult> {
+/** Android: compare app version to latest GitHub release tag, then download + install the APK. */
+const checkAndroidGithubRelease = async (): Promise<UpdateCheckResult> => {
   const current = await getCurrentVersion()
-  const res = await fetch(githubRepo.apiLatestReleaseUrl, {
-    headers: { Accept: 'application/vnd.github+json' },
-  })
-  // /releases/latest 404s until a non-draft release is published.
-  if (res.status === 404) {
+  const data = await fetchLatestRelease()
+  if (!data) {
     return { status: 'upToDate', version: current }
   }
-  if (!res.ok) {
-    throw new Error(`GitHub release check failed (${res.status})`)
-  }
-  const data = (await res.json()) as {
-    tag_name?: string
-    body?: string
-    html_url?: string
-    assets?: Array<{ name: string; browser_download_url: string }>
-  }
+
   const remote = (data.tag_name ?? '').replace(/^app-v|^v/, '')
   if (!remote) {
     return { status: 'upToDate', version: current }
@@ -137,27 +137,28 @@ async function checkAndroidGithubRelease(): Promise<UpdateCheckResult> {
     return { status: 'upToDate', version: current }
   }
 
-  const apk = data.assets?.find((a) => a.name.toLowerCase().endsWith('.apk'))
-  const releaseUrl = apk?.browser_download_url ?? data.html_url ?? githubRepo.latestReleaseUrl
+  const apkUrl = findApkAssetUrl(data)
+  if (!apkUrl) {
+    return {
+      status: 'error',
+      message: `Version ${remote} is on GitHub but the APK asset is not ready yet. Try again in a minute.`,
+    }
+  }
 
   return {
     status: 'available',
     version: remote,
     notes: data.body ?? null,
     install: async (onProgress) => {
-      if (!apk) {
-        await openUrl(releaseUrl)
-        return
-      }
-      await downloadAndInstallApk(apk.browser_download_url, onProgress)
-    },
-    openRelease: async () => {
-      await openUrl(data.html_url ?? githubRepo.latestReleaseUrl)
+      // Re-fetch so install still works if assets finished uploading after the check.
+      const latest = await fetchLatestRelease()
+      const url = (latest && findApkAssetUrl(latest)) || apkUrl
+      await downloadAndInstallApk(url, onProgress)
     },
   }
 }
 
-export async function checkForAppUpdate(): Promise<UpdateCheckResult> {
+export const checkForAppUpdate = async (): Promise<UpdateCheckResult> => {
   if (!isTauri()) {
     return { status: 'unsupported' }
   }

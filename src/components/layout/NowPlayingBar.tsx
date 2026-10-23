@@ -45,11 +45,17 @@ export function NowPlayingBar() {
             animate={slideUp.animate}
             exit={slideUp.exit}
             transition={slideUp.transition}
-            className="fixed inset-x-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-[80rem] px-3 sm:px-5 md:bottom-4 md:left-[5.5rem] md:px-8 lg:left-60 lg:px-10 modern:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] glass:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:modern:bottom-4 md:glass:bottom-4"
+            className={cn(
+              // Use left/right (not inset-x): inset-inline fights md:left-* and spilled under the rail.
+              'fixed right-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-0 z-30 px-3 sm:px-5',
+              'md:right-0 md:bottom-4 md:left-[5.5rem] md:px-8 lg:left-60 lg:px-10',
+              'modern:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] glass:bottom-[calc(5.5rem+env(safe-area-inset-bottom))]',
+              'md:modern:bottom-4 md:glass:bottom-4',
+            )}
           >
             <div
               className={cn(
-                'relative flex items-center gap-3 overflow-hidden rounded-card border-ui border-border bg-canvas-elevated/92 p-2 shadow-sheet backdrop-blur-xl',
+                'relative mx-auto flex w-full max-w-[80rem] items-center gap-3 overflow-hidden rounded-card border-ui border-border bg-canvas-elevated/92 p-2 shadow-sheet backdrop-blur-xl',
                 'modern:rounded-pill modern:border-0 modern:bg-accent modern:text-on-accent',
                 'brutal:bg-surface brutal:backdrop-blur-none glass:rounded-pill',
               )}

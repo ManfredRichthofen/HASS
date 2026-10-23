@@ -56,9 +56,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink">App updates</p>
           <p className="mt-1 text-xs text-ink-muted">
-            Checks GitHub releases for Casa (
-            <code className="text-ink">ManfredRichthofen/HASS</code>). Desktop and Android both
-            update in-app. Android downloads the APK and asks you to confirm the install.
+            Downloads and installs inside Casa. On Android you confirm the system install prompt.
           </p>
         </div>
       </div>

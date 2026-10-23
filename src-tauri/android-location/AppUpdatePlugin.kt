@@ -24,7 +24,8 @@ class DownloadArgs {
 @TauriPlugin
 class AppUpdatePlugin(private val activity: Activity) : Plugin(activity) {
   companion object {
-    private const val ALLOWED_PREFIX = "https://github.com/"
+    private const val USER_AGENT = "Casa-Updater/1.0 (Android)"
+    private const val MAX_REDIRECTS = 8
   }
 
   @Volatile private var downloaded = 0L
@@ -32,6 +33,48 @@ class AppUpdatePlugin(private val activity: Activity) : Plugin(activity) {
   @Volatile private var running = false
 
   private fun apkFile() = File(File(activity.cacheDir, "updates"), "casa-update.apk")
+
+  private fun isAllowedDownloadUrl(url: String): Boolean {
+    if (!url.startsWith("https://")) return false
+    return url.startsWith("https://github.com/") ||
+      url.startsWith("https://objects.githubusercontent.com/") ||
+      url.startsWith("https://release-assets.githubusercontent.com/") ||
+      url.startsWith("https://github-releases.githubusercontent.com/")
+  }
+
+  private fun openDownload(url: String): HttpURLConnection {
+    var current = url
+    var redirects = 0
+    while (redirects <= MAX_REDIRECTS) {
+      if (!isAllowedDownloadUrl(current)) {
+        throw IllegalArgumentException("Refusing to download updates from $current")
+      }
+      val conn = URL(current).openConnection() as HttpURLConnection
+      conn.instanceFollowRedirects = false
+      conn.connectTimeout = 15_000
+      conn.readTimeout = 60_000
+      conn.setRequestProperty("User-Agent", USER_AGENT)
+      conn.setRequestProperty("Accept", "application/octet-stream,*/*")
+      conn.connect()
+      val code = conn.responseCode
+      if (code in 300..399) {
+        val next = conn.getHeaderField("Location")
+        conn.disconnect()
+        if (next.isNullOrBlank()) {
+          throw IllegalStateException("Redirect without Location ($code)")
+        }
+        current = if (next.startsWith("http")) next else URL(URL(current), next).toString()
+        redirects += 1
+        continue
+      }
+      if (code !in 200..299) {
+        conn.disconnect()
+        throw IllegalStateException("Download failed (HTTP $code)")
+      }
+      return conn
+    }
+    throw IllegalStateException("Too many redirects while downloading update")
+  }
 
   @Command
   fun download(invoke: Invoke) {
@@ -41,7 +84,7 @@ class AppUpdatePlugin(private val activity: Activity) : Plugin(activity) {
       invoke.reject("Invalid update URL: ${e.message}")
       return
     }
-    if (!args.url.startsWith(ALLOWED_PREFIX)) {
+    if (!isAllowedDownloadUrl(args.url)) {
       invoke.reject("Refusing to download updates from outside GitHub")
       return
     }
@@ -54,38 +97,37 @@ class AppUpdatePlugin(private val activity: Activity) : Plugin(activity) {
     downloaded = 0
     total = 0
     Thread {
+      var conn: HttpURLConnection? = null
       try {
         val target = apkFile()
         target.parentFile?.mkdirs()
         val part = File(target.parentFile, "casa-update.apk.part")
-        val conn = URL(args.url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 30_000
-        conn.instanceFollowRedirects = true
-        try {
-          if (conn.responseCode !in 200..299) {
-            invoke.reject("Download failed (HTTP ${conn.responseCode})")
-            return@Thread
-          }
-          total = conn.contentLengthLong
-          conn.inputStream.use { input ->
-            part.outputStream().use { out ->
-              val buf = ByteArray(64 * 1024)
-              while (true) {
-                val n = input.read(buf)
-                if (n < 0) break
-                out.write(buf, 0, n)
-                downloaded += n
-              }
+        conn = openDownload(args.url)
+        total = conn.contentLengthLong.coerceAtLeast(0L)
+        conn.inputStream.use { input ->
+          part.outputStream().use { out ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+              val n = input.read(buf)
+              if (n < 0) break
+              out.write(buf, 0, n)
+              downloaded += n
             }
           }
-        } finally {
-          conn.disconnect()
         }
         if (total > 0 && part.length() != total) {
           part.delete()
           invoke.reject("Download was incomplete")
           return@Thread
+        }
+        // APK/ZIP local file header magic — reject HTML error pages GitHub sometimes returns.
+        part.inputStream().use { input ->
+          val magic = ByteArray(2)
+          if (input.read(magic) != 2 || magic[0] != 'P'.code.toByte() || magic[1] != 'K'.code.toByte()) {
+            part.delete()
+            invoke.reject("Downloaded file is not a valid APK")
+            return@Thread
+          }
         }
         target.delete()
         if (!part.renameTo(target)) {
@@ -96,6 +138,10 @@ class AppUpdatePlugin(private val activity: Activity) : Plugin(activity) {
       } catch (e: Exception) {
         invoke.reject("Download failed: ${e.message}")
       } finally {
+        try {
+          conn?.disconnect()
+        } catch (_: Exception) {
+        }
         running = false
       }
     }.start()
