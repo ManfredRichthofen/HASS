@@ -14,9 +14,9 @@ export function ScrollArea({
       </BaseScrollArea.Viewport>
       <BaseScrollArea.Scrollbar
         orientation="vertical"
-        className="m-1 flex w-1.5 justify-center rounded-full bg-transparent data-hovering:bg-border/40"
+        className="m-1 flex w-1.5 justify-center rounded-pill bg-transparent data-hovering:bg-border/40"
       >
-        <BaseScrollArea.Thumb className="w-full rounded-full bg-border" />
+        <BaseScrollArea.Thumb className="w-full rounded-pill bg-border-strong" />
       </BaseScrollArea.Scrollbar>
     </BaseScrollArea.Root>
   )

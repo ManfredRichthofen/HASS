@@ -40,7 +40,7 @@ export function VacuumMap({
   const src = camera.imageUrl
 
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl bg-canvas', className)}>
+    <div className={cn('relative overflow-hidden rounded-card bg-canvas', className)}>
       {src && !camera.isUnavailable ? (
         <img src={src} alt="Vacuum map" className="aspect-[4/3] w-full object-contain" />
       ) : (

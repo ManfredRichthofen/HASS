@@ -226,7 +226,8 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           return {
             queueId: queue?.queue_id ?? queueId,
             queue,
-            items: Array.isArray(items) && items.length > 0 ? items : queueItemsFromHaSummary(queue),
+            items:
+              Array.isArray(items) && items.length > 0 ? items : queueItemsFromHaSummary(queue),
             haQueueAvailable: Boolean(queue ?? haQueue),
             viaMassQueue: false,
           }
@@ -292,7 +293,13 @@ export function useMusicQueue(entityId: string): MusicQueueState {
                   ...old,
                   items: [],
                   queue: old.queue
-                    ? { ...old.queue, items: 0, current_index: null, current_item: null, next_item: null }
+                    ? {
+                        ...old.queue,
+                        items: 0,
+                        current_index: null,
+                        current_item: null,
+                        next_item: null,
+                      }
                     : old.queue,
                 }
               : old,

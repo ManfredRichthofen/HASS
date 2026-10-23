@@ -10,18 +10,28 @@ const CameraStream = lazy(() =>
   import('#/components/entities/CameraStream').then((mod) => ({ default: mod.CameraStream })),
 )
 
-export function CameraTile({ entityId, label }: { entityId: string; label?: string }) {
+export function CameraTile({
+  entityId,
+  label,
+  /** When set, click opens this instead of the built-in live drawer (e.g. doorbell popup). */
+  onOpen,
+}: {
+  entityId: string
+  label?: string
+  onOpen?: () => void
+}) {
   const camera = useCamera(entityId)
   const [open, setOpen] = useState(false)
   const name = label ?? entityName(entityId, camera.attributes.friendly_name)
   const unavailable = camera.isUnavailable
   const src = camera.imageUrl
   const refreshImage = camera.refreshImage
+  const useCustomOpen = Boolean(onOpen)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || useCustomOpen) return
     void refreshImage().catch(() => undefined)
-  }, [open, refreshImage])
+  }, [open, refreshImage, useCustomOpen])
 
   return (
     <>
@@ -29,9 +39,15 @@ export function CameraTile({ entityId, label }: { entityId: string; label?: stri
         type="button"
         disabled={unavailable}
         whileTap={tap.soft}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (onOpen) {
+            onOpen()
+            return
+          }
+          setOpen(true)
+        }}
         className={cn(
-          'group relative flex min-h-[8.5rem] flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface text-left transition-ui',
+          'group relative flex min-h-[8.5rem] flex-col overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent text-left transition-ui',
           'hover:border-border hover:bg-surface-hover',
           unavailable && 'opacity-40',
         )}
@@ -57,21 +73,23 @@ export function CameraTile({ entityId, label }: { entityId: string; label?: stri
         </div>
       </m.button>
 
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent title={name} description="Live view" className="max-w-2xl">
-          {open ? (
-            <Suspense
-              fallback={
-                <div className="mt-1 grid aspect-video place-items-center rounded-2xl bg-canvas text-ink-faint">
-                  <Video className="size-7 opacity-40" />
-                </div>
-              }
-            >
-              <CameraStream entityId={entityId} className="mt-1" />
-            </Suspense>
-          ) : null}
-        </DrawerContent>
-      </Drawer>
+      {!useCustomOpen ? (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerContent title={name} description="Live view" className="max-w-2xl">
+            {open ? (
+              <Suspense
+                fallback={
+                  <div className="mt-1 grid aspect-video place-items-center rounded-card bg-canvas text-ink-faint">
+                    <Video className="size-7 opacity-40" />
+                  </div>
+                }
+              >
+                <CameraStream entityId={entityId} className="mt-1" />
+              </Suspense>
+            ) : null}
+          </DrawerContent>
+        </Drawer>
+      ) : null}
     </>
   )
 }

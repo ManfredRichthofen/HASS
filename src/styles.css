@@ -1,51 +1,524 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Themes
+   Three themes share one component structure. Each theme sets raw values
+   (--c-*, --r-*, --ui-*) on <html data-theme="…">; Tailwind utilities read
+   them through `@theme inline`, so `bg-surface`, `rounded-card`,
+   `font-display` etc. follow the active theme. Per-theme construction
+   (different shapes, not just colours) uses the `walnut:` `modern:`
+   `brutal:` variants below.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@custom-variant walnut (&:where([data-theme="walnut"], [data-theme="walnut"] *));
+@custom-variant modern (&:where([data-theme="modern"], [data-theme="modern"] *));
+@custom-variant brutal (&:where([data-theme="brutalist"], [data-theme="brutalist"] *));
+@custom-variant glass (&:where([data-theme="glass"], [data-theme="glass"] *));
+
+@theme inline {
+  --font-sans: var(--ui-text);
+  --font-display: var(--ui-display);
+  --font-label: var(--ui-label);
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-geist: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-grotesk: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --color-canvas: var(--c-canvas);
+  --color-canvas-elevated: var(--c-canvas-elevated);
+  --color-surface: var(--c-surface);
+  --color-surface-hover: var(--c-surface-hover);
+  --color-border: var(--c-border);
+  --color-border-subtle: var(--c-border-subtle);
+  --color-border-strong: var(--c-border-strong);
+
+  --color-ink: var(--c-ink);
+  --color-ink-muted: var(--c-ink-muted);
+  --color-ink-faint: var(--c-ink-faint);
+
+  /* Choice = inversion: the accent is the ink colour used as a fill. */
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-accent-strong: var(--c-accent-strong);
+  --color-on-accent: var(--c-on-accent);
+
+  /* Light: anything lit fills with these. */
+  --color-light: var(--c-light);
+  --color-light-soft: var(--c-light-soft);
+  --color-on-from: var(--c-on-from);
+  --color-on-to: var(--c-on-to);
+  --color-on-ink: var(--c-on-ink);
+  --color-on-ink-muted: var(--c-on-ink-muted);
+
+  --color-success: var(--c-success);
+  --color-success-muted: color-mix(in srgb, var(--c-success) 14%, var(--c-surface));
+  --color-danger: var(--c-danger);
+  --color-danger-muted: color-mix(in srgb, var(--c-danger) 14%, var(--c-surface));
+  --color-info: var(--c-info);
+  --color-icon-well: var(--c-icon-well);
+  /* A chip raised off the glass (Fluid Glass); elsewhere a lighter surface. */
+  --color-raised: var(--c-raised, var(--c-surface-hover));
+  --color-on-raised: var(--c-on-raised, var(--c-ink));
+
+  --radius-card: var(--r-card);
+  --radius-control: var(--r-control);
+  --radius-pill: var(--r-pill);
+  --radius-sheet: calc(var(--r-card) + 0.375rem);
+
+  --shadow-card: var(--s-card);
+  --shadow-on: var(--s-on);
+  --shadow-sheet: var(--s-sheet);
+  --shadow-press: var(--s-press);
+}
+
 @theme {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", "DM Sans", ui-sans-serif, sans-serif;
-
-  --color-canvas: #0b0f17;
-  --color-canvas-elevated: #10151f;
-  --color-surface: #151b27;
-  --color-surface-hover: #1d2433;
-  --color-border: #2a3447;
-  --color-border-subtle: #1c2433;
-
-  --color-ink: #f2f4f7;
-  --color-ink-muted: #8f9bb3;
-  --color-ink-faint: #8591aa;
-
-  /* Indigo — primary actions, nav, selected chips, anything "on" */
-  --color-accent: #5967f5;
-  --color-accent-soft: #6c7bff33;
-  --color-accent-strong: #9aa5ff;
-
-  /* "On" state for lights and scenes (shares the indigo family) */
-  --color-light: #9aa5ff;
-  --color-light-soft: #6c7bff26;
-  --color-on-from: #6f7dff;
-  --color-on-to: #4b57f2;
-
-  --color-success: #3ddba7;
-  --color-success-muted: #14261f;
-  --color-danger: #ff8a5b;
-  --color-danger-muted: #2e1a14;
-  --color-info: #6ea8fe;
-  --color-icon-well: #252e40;
-
   --spacing-touch: 2.75rem;
-  --radius-card: 1rem;
-  --radius-control: 0.75rem;
+  --spacing-page: 1.25rem;
+  --spacing-section: 2.5rem;
 
   /* Motion — keep in sync with src/lib/motion.ts */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --duration-fast: 150ms;
   --duration-normal: 220ms;
   --duration-slow: 300ms;
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-out);
 }
+
+/* ── Walnut & Cream (default): dark walnut, cream type, honey light, serif ── */
+:root,
+[data-theme="walnut"] {
+  color-scheme: dark;
+  --c-canvas: #17110d;
+  --c-canvas-elevated: #1d1611;
+  --c-surface: #231b15;
+  --c-surface-hover: #2d241c;
+  --c-border: #4a3b2e;
+  --c-border-subtle: #33281f;
+  --c-border-strong: #8a7764;
+  --c-ink: #f3e9d8;
+  --c-ink-muted: #c4b59e;
+  --c-ink-faint: #a89983;
+  --c-accent: #f3e9d8;
+  --c-accent-soft: #f3e9d81a;
+  --c-accent-strong: #fff8ec;
+  --c-on-accent: #1c140e;
+  --c-light: #f2c56b;
+  --c-light-soft: #f2c56b24;
+  --c-on-from: #f2c56b;
+  --c-on-to: #de9f45;
+  --c-on-ink: #2a1c0b;
+  --c-on-ink-muted: #4f3615;
+  --c-success: #a9cf9f;
+  --c-danger: #e8826a;
+  --c-info: #a7c0d4;
+  --c-icon-well: #33291f;
+
+  --ui-display: "Fraunces", ui-serif, Georgia, serif;
+  --ui-text: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-label: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 400;
+  --display-track: -0.015em;
+  --display-case: none;
+
+  --r-card: 1.625rem;
+  --r-control: 1rem;
+  --r-pill: 9999px;
+  --bw: 1px;
+  --icon-stroke: 1.6;
+
+  --s-card: 0 1px 0 #ffffff0a inset, 0 12px 32px -20px #000000cc;
+  --s-on: 0 18px 44px -18px #f2c56b8c;
+  --s-sheet: 0 -24px 60px -24px #000000;
+  --s-press: none;
+
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .9  0 0 0 0 .75  0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ── Modern: warm paper-white, near-black type, amber light, Geist ── */
+[data-theme="modern"] {
+  color-scheme: light;
+  --c-canvas: #f3f3ef;
+  --c-canvas-elevated: #ffffff;
+  --c-surface: #ffffff;
+  --c-surface-hover: #ebebe6;
+  --c-border: #d6d6cf;
+  --c-border-subtle: #e6e6e0;
+  --c-border-strong: #8c8c85;
+  --c-ink: #141413;
+  --c-ink-muted: #55554f;
+  --c-ink-faint: #6b6b64;
+  --c-accent: #141413;
+  --c-accent-soft: #1414130f;
+  --c-accent-strong: #000000;
+  --c-on-accent: #ffffff;
+  --c-light: #966000;
+  --c-light-soft: #ffc4433d;
+  --c-on-from: #ffd76e;
+  --c-on-to: #ffc443;
+  --c-on-ink: #1d1600;
+  --c-on-ink-muted: #5c4a10;
+  --c-success: #18794e;
+  --c-danger: #c23b1e;
+  --c-info: #2563c9;
+  --c-icon-well: #efefea;
+
+  --ui-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-text: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-label: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --display-track: -0.035em;
+  --display-case: none;
+
+  --r-card: 1.125rem;
+  --r-control: 0.75rem;
+  --r-pill: 9999px;
+  --bw: 1px;
+  --icon-stroke: 1.75;
+
+  --s-card: 0 1px 2px #1414130a;
+  --s-on: 0 14px 32px -16px #ffb3008c;
+  --s-sheet: 0 -12px 40px -16px #14141340;
+  --s-press: none;
+
+  --grain: none;
+}
+
+/* ── Fluid Glass: frosted white panels over a soft, drifting lavender–cream light ── */
+[data-theme="glass"] {
+  color-scheme: light;
+  --c-base: #e4e5ec;
+  --c-canvas: #ffffff59;
+  --c-canvas-elevated: #ffffffd1;
+  --c-surface: #ffffff73;
+  --c-surface-hover: #ffffffd9;
+  --c-border: #ffffffcc;
+  --c-border-subtle: #ffffff99;
+  --c-border-strong: #7d8090;
+  --c-ink: #141a2e;
+  --c-ink-muted: #5a5e6e;
+  --c-ink-faint: #5f6373;
+  --c-accent: #141a2e;
+  --c-accent-soft: #141a2e12;
+  --c-accent-strong: #000000;
+  --c-on-accent: #ffffff;
+  --c-light: #8a5a10;
+  --c-light-soft: #ffdca066;
+  --c-on-from: #ffffff;
+  --c-on-to: #f8e6c4;
+  --c-on-ink: #141a2e;
+  --c-on-ink-muted: #5a5e6e;
+  --c-success: #1b6e4c;
+  --c-danger: #b23a24;
+  --c-info: #2a58a6;
+  --c-icon-well: #ffffffcc;
+  --c-raised: #ffffff;
+  --c-on-raised: #141a2e;
+  --blob-a: #c9cdf0b3;
+  --blob-b: #f6e3c0b3;
+  --blob-c: #d5e2eeb3;
+
+  --ui-display: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-text: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-label: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --display-track: -0.025em;
+  --display-case: none;
+
+  --r-card: 1.5rem;
+  --r-control: 1.125rem;
+  --r-pill: 9999px;
+  --bw: 1px;
+  --icon-stroke: 1.75;
+
+  --s-card: inset 0 1px 0 #ffffff, 0 12px 32px -20px #1d224059;
+  --s-on: inset 0 1px 0 #ffffff, 0 0 0 1px #ffffff, 0 18px 48px -10px #ffc770b3;
+  --s-sheet: inset 0 1px 0 #ffffff, 0 -20px 50px -24px #1d224066;
+  --s-press: none;
+
+  /* Soft light: lavender at the top, warm cream low, a cool grey-blue in between. */
+  --grain:
+    radial-gradient(55% 45% at 85% 0%, #d3d6ee 0%, transparent 70%),
+    radial-gradient(50% 45% at 10% 15%, #dfe4ef 0%, transparent 70%),
+    radial-gradient(60% 50% at 80% 100%, #f2e6cf 0%, transparent 72%),
+    radial-gradient(45% 40% at 0% 90%, #ece2dc 0%, transparent 70%);
+}
+
+/* ── Brutalist: concrete, black rules, signal yellow, no curves ── */
+[data-theme="brutalist"] {
+  color-scheme: light;
+  --c-canvas: #e8e6df;
+  --c-canvas-elevated: #f6f5f0;
+  --c-surface: #f6f5f0;
+  --c-surface-hover: #dedcd4;
+  --c-border: #111111;
+  --c-border-subtle: #111111;
+  --c-border-strong: #111111;
+  --c-ink: #111111;
+  --c-ink-muted: #3b3b38;
+  --c-ink-faint: #4f4f4b;
+  --c-accent: #111111;
+  --c-accent-soft: #11111114;
+  --c-accent-strong: #000000;
+  --c-on-accent: #f6f5f0;
+  --c-light: #735b00;
+  --c-light-soft: #ffd400;
+  --c-on-from: #ffd400;
+  --c-on-to: #ffd400;
+  --c-on-ink: #111111;
+  --c-on-ink-muted: #3a3300;
+  --c-success: #0b6b45;
+  --c-danger: #b8250a;
+  --c-info: #1f47c4;
+  --c-icon-well: #e8e6df;
+
+  --ui-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --ui-text: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --ui-label: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --display-weight: 700;
+  --display-track: -0.04em;
+  --display-case: uppercase;
+
+  --r-card: 0px;
+  --r-control: 0px;
+  --r-pill: 0px;
+  --bw: 2px;
+  --icon-stroke: 2.25;
+
+  --s-card: 4px 4px 0 #111111;
+  --s-on: 4px 4px 0 #111111;
+  --s-sheet: 0 -4px 0 #111111;
+  --s-press: 3px 3px 0 #111111;
+
+  --grain: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Light / dark modes
+   Every theme has both. <html data-mode="light|dark"> is set from the user's
+   choice (or the system when set to Auto). Each block below flips one theme to
+   its other mode; shapes, type and construction stay the theme's own.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Walnut & Cream, light: cream paper, walnut type, the same honey light. */
+[data-theme="walnut"][data-mode="light"] {
+  color-scheme: light;
+  --c-canvas: #f5efe4;
+  --c-canvas-elevated: #fbf7f0;
+  --c-surface: #fffdf8;
+  --c-surface-hover: #efe6d6;
+  --c-border: #d9ccb6;
+  --c-border-subtle: #e8dfcf;
+  --c-border-strong: #8f7d66;
+  --c-ink: #2a1d12;
+  --c-ink-muted: #6b5a47;
+  --c-ink-faint: #75634e;
+  --c-accent: #2a1d12;
+  --c-accent-soft: #2a1d1212;
+  --c-accent-strong: #000000;
+  --c-on-accent: #fbf7f0;
+  --c-light: #8f5c0d;
+  --c-light-soft: #f2c56b40;
+  --c-on-from: #f6cd7a;
+  --c-on-to: #e3a24a;
+  --c-on-ink: #2a1c0b;
+  --c-on-ink-muted: #4f3615;
+  --c-success: #3a7537;
+  --c-danger: #ad3f27;
+  --c-info: #3a6688;
+  --c-icon-well: #f1e8d8;
+  --s-card: 0 1px 0 #ffffff inset, 0 10px 28px -20px #4a2f1559;
+  --s-on: 0 16px 40px -18px #e3a24ab3;
+  --s-sheet: 0 -20px 50px -24px #4a2f1566;
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .25  0 0 0 0 .15  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Modern, dark: graphite, off-white type, the same amber light. */
+[data-theme="modern"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-canvas: #111111;
+  --c-canvas-elevated: #1a1a1a;
+  --c-surface: #1c1c1c;
+  --c-surface-hover: #272727;
+  --c-border: #343434;
+  --c-border-subtle: #262626;
+  --c-border-strong: #8a8a85;
+  --c-ink: #f4f4f0;
+  --c-ink-muted: #b4b4ae;
+  --c-ink-faint: #9c9c96;
+  --c-accent: #f4f4f0;
+  --c-accent-soft: #ffffff14;
+  --c-accent-strong: #ffffff;
+  --c-on-accent: #111111;
+  --c-light: #ffc443;
+  --c-light-soft: #ffc44333;
+  --c-success: #4cc38a;
+  --c-danger: #ff7a5c;
+  --c-info: #6aa2ff;
+  --c-icon-well: #272727;
+  --s-card: 0 1px 0 #ffffff08 inset;
+  --s-on: 0 14px 32px -16px #ffb30066;
+  --s-sheet: 0 -12px 40px -16px #000000;
+}
+
+/* Brutalist, dark: black slab, bone rules, the same signal yellow. */
+[data-theme="brutalist"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-canvas: #121212;
+  --c-canvas-elevated: #1b1b1b;
+  --c-surface: #1b1b1b;
+  --c-surface-hover: #2a2a2a;
+  --c-border: #f2f0e8;
+  --c-border-subtle: #f2f0e8;
+  --c-border-strong: #f2f0e8;
+  --c-ink: #f2f0e8;
+  --c-ink-muted: #d0cec5;
+  --c-ink-faint: #b8b6ad;
+  --c-accent: #f2f0e8;
+  --c-accent-soft: #f2f0e81f;
+  --c-accent-strong: #ffffff;
+  --c-on-accent: #121212;
+  --c-light: #ffd400;
+  --c-success: #3fd18b;
+  --c-danger: #ff6a4d;
+  --c-info: #8aa8ff;
+  --c-icon-well: #121212;
+  --s-card: 4px 4px 0 #f2f0e8;
+  --s-on: 4px 4px 0 #f2f0e8;
+  --s-sheet: 0 -4px 0 #f2f0e8;
+  --s-press: 3px 3px 0 #f2f0e8;
+}
+
+/* Fluid Glass, dark: frosted glass over a deep, glowing colour mesh. */
+[data-theme="glass"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-base: #0c0f22;
+  --c-canvas: #0a0c2059;
+  --c-canvas-elevated: #161a3acc;
+  --c-surface: #ffffff17;
+  --c-surface-hover: #ffffff2b;
+  --c-border: #ffffff38;
+  --c-border-subtle: #ffffff24;
+  --c-border-strong: #ffffffa6;
+  --c-ink: #ffffff;
+  --c-ink-muted: #ffffffcc;
+  --c-ink-faint: #ffffffad;
+  --c-accent: #ffffff;
+  --c-accent-soft: #ffffff24;
+  --c-accent-strong: #ffffff;
+  --c-on-accent: #14152a;
+  --c-light: #ffd59a;
+  --c-light-soft: #ffc8793d;
+  --c-on-from: #fff3dc;
+  --c-on-to: #ffc879;
+  --c-on-ink: #2a1a05;
+  --c-on-ink-muted: #5a3d12;
+  --c-success: #8ef3c7;
+  --c-danger: #ffa392;
+  --c-info: #a6dcff;
+  --c-icon-well: #ffffff1a;
+  --c-raised: #ffffff38;
+  --c-on-raised: #ffffff;
+  --s-card: inset 0 1px 0 #ffffff40, 0 24px 48px -24px #04061a99;
+  --s-on: 0 0 0 1px #ffffff66, 0 18px 48px -12px #ffc879a6;
+  --s-sheet: inset 0 1px 0 #ffffff33, 0 -24px 60px -24px #04061acc;
+  --blob-a: #8b7bff99;
+  --blob-b: #ff86c299;
+  --blob-c: #3fd6e899;
+  --grain:
+    radial-gradient(42% 38% at 12% 8%, #6d5dfc 0%, transparent 70%),
+    radial-gradient(46% 40% at 92% 18%, #ff6fae 0%, transparent 70%),
+    radial-gradient(52% 46% at 78% 92%, #22c3d6 0%, transparent 72%),
+    radial-gradient(44% 42% at 6% 96%, #ff9f5a 0%, transparent 70%);
+}
+
+/* ── Utilities shared by every component ── */
+
+/* Theme border width: 1px, or 2px in Brutalist. */
+@utility border-ui {
+  border-width: var(--bw);
+}
+
+/* Display type: the theme's display face, weight, tracking and case. */
+@utility text-display {
+  font-family: var(--ui-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-case);
+}
+
+/* Small labels: Geist in Walnut/Modern, mono uppercase in Brutalist. */
+@utility text-label {
+  font-family: var(--ui-label);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  color: var(--c-ink-faint);
+  &:where([data-theme="brutalist"] *) {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Lit fill: honey / amber / flat signal yellow. Pair with `shadow-on` for the glow. */
+@utility bg-on {
+  background-image: linear-gradient(170deg, var(--c-on-from), var(--c-on-to));
+  color: var(--c-on-ink);
+}
+
+/* A surface card: fill, theme border, theme shadow, theme corners. */
+@utility card {
+  border-radius: var(--r-card);
+  border-width: var(--bw);
+  border-color: var(--c-border-subtle);
+  background-color: var(--c-surface);
+  box-shadow: var(--s-card);
+  &:where([data-theme="modern"] *) {
+    border-color: transparent;
+  }
+}
+
+/* Press feedback for plain buttons: Brutalist shifts into its shadow. */
+@utility press {
+  transition-property: transform, box-shadow, background-color, color, border-color;
+  transition-duration: var(--duration-fast);
+  &:active {
+    transform: scale(0.97);
+  }
+  &:where([data-theme="brutalist"] *):active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+  }
+}
+
+@utility touch-target {
+  min-height: var(--spacing-touch);
+  min-width: var(--spacing-touch);
+}
+
+@utility transition-ui {
+  transition-property:
+    color, background-color, border-color, opacity, box-shadow, transform, filter;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+@utility transition-state {
+  transition-property: color, background-color, border-color, background-image, box-shadow;
+  transition-duration: var(--duration-slow);
+  transition-timing-function: var(--ease-out);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Base ── */
 
 * {
   box-sizing: border-box;
@@ -58,17 +531,26 @@ body,
 }
 
 html {
-  color-scheme: dark;
+  background-color: var(--c-base, var(--c-canvas));
 }
 
 body {
   position: relative;
   margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-canvas);
-  color: var(--color-ink);
+  font-family: var(--ui-text);
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  background-color: var(--c-canvas);
+  background-image: var(--grain);
+  color: var(--c-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--duration-slow) var(--ease-out);
+}
+
+/* Lucide icons follow the theme's stroke weight. */
+svg.lucide {
+  stroke-width: var(--icon-stroke);
 }
 
 .root {
@@ -77,50 +559,15 @@ body {
 }
 
 ::selection {
-  background: var(--color-accent-soft);
-  color: var(--color-ink);
+  background: var(--c-light-soft);
+  color: var(--c-ink);
 }
 
-/* Soft ambient backdrop — cool teal wash, no glow clutter */
-body::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 45% at 0% -5%, #5967f514, transparent 55%),
-    radial-gradient(ellipse 50% 35% at 100% 5%, #6ea8fe0c, transparent 50%);
-  z-index: -1;
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 3px;
 }
 
-/* Solid indigo fill for "on" cards (lights, active toggles) */
-@utility bg-on {
-  background-image: linear-gradient(145deg, var(--color-on-from), var(--color-on-to));
-  box-shadow: 0 4px 14px #5b6cff33;
-  color: #fff;
-}
-
-@utility touch-target {
-  min-height: var(--spacing-touch);
-  min-width: var(--spacing-touch);
-}
-
-/* Color / opacity / transform — default interactive surface */
-@utility transition-ui {
-  transition-property:
-    color, background-color, border-color, opacity, box-shadow, transform, filter;
-  transition-duration: var(--duration-fast);
-  transition-timing-function: var(--ease-out);
-}
-
-/* State color changes on cards (on/off) */
-@utility transition-state {
-  transition-property: color, background-color, border-color, background-image, box-shadow;
-  transition-duration: var(--duration-slow);
-  transition-timing-function: var(--ease-out);
-}
-
-/* CSS keyframes only — MotionConfig reducedMotion="user" handles JS springs */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -129,6 +576,60 @@ body::before {
   .animate-spin,
   .animate-pulse,
   .animate-ping {
+    animation: none;
+  }
+}
+
+/* ── Fluid Glass extras ── */
+
+/* Frosted glass behind every translucent surface. */
+[data-theme="glass"]
+:is(
+  .bg-surface,
+  .bg-surface-hover,
+  .bg-canvas-elevated,
+  .bg-canvas,
+  .card,
+  .bg-canvas-elevated\/92
+) {
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+
+[data-theme="glass"] body {
+  background-color: var(--c-base);
+  background-attachment: fixed;
+}
+
+/* The light drifts slowly behind the glass. */
+[data-theme="glass"] body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(28% 26% at 30% 30%, var(--blob-a), transparent 70%),
+    radial-gradient(26% 24% at 72% 62%, var(--blob-b), transparent 70%),
+    radial-gradient(30% 28% at 40% 85%, var(--blob-c), transparent 70%);
+  filter: blur(50px);
+  animation: glass-drift 40s ease-in-out infinite alternate;
+}
+
+@keyframes glass-drift {
+  0% {
+    transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate3d(5%, 3%, 0) rotate(10deg) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-3%, 6%, 0) rotate(-6deg) scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="glass"] body::before {
     animation: none;
   }
 }

@@ -1,76 +1,64 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEntityGroup, useServiceCall } from 'hass-react'
-import { Lightbulb, Power } from 'lucide-react'
+import { Droplets, Lightbulb, LightbulbOff } from 'lucide-react'
 import { ApplianceRow } from '#/components/entities/ApplianceRow'
 import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
+import { DeviceList } from '#/components/entities/DeviceRow'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
 import { MediaCard } from '#/components/entities/MediaCard'
+import { Readings, SensorReading } from '#/components/entities/Readings'
 import { SensorChip } from '#/components/entities/SensorChip'
 import { SwitchRow } from '#/components/entities/SwitchRow'
 import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
+import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
-import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
-import { m, snappy, tap } from '#/lib/motion'
 
 export const Route = createFileRoute('/rooms/$areaId')({
   component: RoomDetailPage,
 })
 
-/** One-tap master switch for every light in the room. */
-function AllLightsCard({ ids }: { ids: string[] }) {
+/** Room-wide light switch for the header: "All lights off" when any are on, else "Lights on". */
+function RoomLightsButton({ ids, name }: { ids: string[]; name: string }) {
   const { callService } = useServiceCall()
   const lights = useEntityGroup([...ids])
   const on = lights.filter((l) => l.state === 'on').length
-  const isOn = on > 0
 
   async function toggle() {
     try {
-      await callService('light', isOn ? 'turn_off' : 'turn_on', {
-        entity_id: ids,
-      })
+      await callService('light', on > 0 ? 'turn_off' : 'turn_on', { entity_id: ids })
+      notify(on > 0 ? `${name} lights off` : `${name} lights on`)
     } catch (e) {
       notify('Lights failed', e instanceof Error ? e.message : 'Error')
     }
   }
 
   return (
-    <m.button
-      type="button"
-      onClick={() => void toggle()}
-      whileTap={tap.soft}
-      transition={snappy}
-      className={cn(
-        'flex min-h-16 w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition-state',
-        isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
-      )}
-    >
-      <span
-        className={cn(
-          'grid size-11 shrink-0 place-items-center rounded-2xl',
-          isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
-        )}
-      >
-        <Lightbulb className="size-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-base font-bold">All lights</span>
-        <span className={cn('block text-xs', isOn ? 'text-white/80' : 'text-ink-muted')}>
-          {isOn ? `${on} of ${ids.length} on` : 'All off'}
-        </span>
-      </span>
-      <Power className={cn('size-5', isOn ? 'text-white' : 'text-ink-muted')} />
-    </m.button>
+    <Button size="sm" variant={on > 0 ? 'secondary' : 'primary'} onClick={() => void toggle()}>
+      {on > 0 ? <LightbulbOff className="size-[18px]" /> : <Lightbulb className="size-[18px]" />}
+      {on > 0 ? 'All lights off' : 'Lights on'}
+    </Button>
   )
 }
 
+function RoomSubtitle({ ids }: { ids: string[] }) {
+  const lights = useEntityGroup([...ids])
+  const on = lights.filter((l) => l.state === 'on').length
+  if (ids.length === 0) return null
+  return <>{on === 0 ? 'Lights off' : `${on} of ${ids.length} lights on`}</>
+}
+
+/**
+ * One room's own page: header with readings and room-wide actions, then its
+ * lights, climate, fans and other devices. Empty sections are left out.
+ */
 function RoomDetailPage() {
   const { areaId } = Route.useParams()
   const area = getArea(areaId)
@@ -79,7 +67,7 @@ function RoomDetailPage() {
     return (
       <Page className="py-12 text-center">
         <p className="text-ink-muted">Room not found</p>
-        <Link to="/rooms" className="mt-3 inline-block text-accent">
+        <Link to="/rooms" className="mt-3 inline-block font-semibold text-ink underline">
           Back to rooms
         </Link>
       </Page>
@@ -92,6 +80,8 @@ function RoomDetailPage() {
   const fanLights = area.fanLights ?? []
   const fanDevices = area.fanDevices ?? []
   const hasFans = area.fans.length > 0 || fanDevices.length > 0 || fanLights.length > 0
+  const firstReading = climateReadings[0]
+  const extraReadings = climateReadings.slice(1)
   const empty =
     roomLights.length +
       area.fans.length +
@@ -108,102 +98,125 @@ function RoomDetailPage() {
     <Page>
       <PageHeader
         title={area.name}
-        subtitle="Lights, fans and media"
+        subtitle={<RoomSubtitle ids={roomLights} />}
         backTo="/rooms"
         backLabel="Rooms"
         backClassName="xl:hidden"
-      />
+      >
+        {firstReading || area.sensors.length > 0 ? (
+          <Readings className="mt-2">
+            {firstReading ? (
+              <SensorReading entityId={firstReading.tempId} label="Temperature" unit="°" />
+            ) : null}
+            {firstReading?.humidityId ? (
+              <SensorReading entityId={firstReading.humidityId} label="Humidity" unit="%" />
+            ) : null}
+            {area.sensors.slice(0, firstReading ? 1 : 3).map((id) => (
+              <SensorChip key={id} entityId={id} />
+            ))}
+          </Readings>
+        ) : null}
+        {roomLights.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-2.5">
+            <RoomLightsButton ids={roomLights} name={area.name} />
+          </div>
+        ) : null}
+      </PageHeader>
 
       {empty ? (
-        <p className="rounded-2xl border border-dashed border-border bg-surface/50 p-8 text-center text-sm text-ink-muted">
-          No curated devices for this room yet.
+        <p className="rounded-card border-ui border-dashed border-border p-8 text-center text-sm text-ink-muted">
+          Nothing set up for this room yet.
         </p>
       ) : null}
 
-      {climateReadings.length > 0 || area.sensors.length > 0 ? (
-        <Section title="Climate">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {climateReadings.map((reading) => (
-              <ClimateReadingCard key={reading.tempId} {...reading} />
-            ))}
-            {area.sensors.map((id) => (
-              <SensorChip key={id} entityId={id} />
-            ))}
-          </div>
-        </Section>
-      ) : null}
-
-      {roomLights.length > 1 ? <AllLightsCard ids={roomLights} /> : null}
-
-      {standaloneLights.length > 0 ? (
-        <Section title="Lights">
-          <EntityGrid>
-            {standaloneLights.map((id) => (
-              <LightTile key={id} entityId={id} />
-            ))}
-          </EntityGrid>
-        </Section>
-      ) : null}
-
-      {hasFans ? (
-        <Section
-          title={fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'}
-        >
-          {fanLights.length > 0 ? (
-            <CardGrid className="mb-2.5 sm:mb-3">
-              {fanLights.map((kit) => (
-                <FanLightTile key={kit.fanId} {...kit} />
-              ))}
-            </CardGrid>
+      <div className="grid items-start gap-section @2xl:grid-cols-2 @2xl:gap-8">
+        <div className="grid min-w-0 gap-section">
+          {standaloneLights.length > 0 ? (
+            <Section title="Lights">
+              <EntityGrid>
+                {standaloneLights.map((id) => (
+                  <LightTile key={id} entityId={id} />
+                ))}
+              </EntityGrid>
+            </Section>
           ) : null}
-          {fanDevices.length > 0 || area.fans.length > 0 ? (
-            <EntityGrid>
-              {fanDevices.map((device) => (
-                <FanTile
-                  key={device.fanId}
-                  entityId={device.fanId}
-                  label={device.label}
-                  tempId={device.tempId}
-                  humidityId={device.humidityId}
-                />
-              ))}
-              {area.fans.map((id) => (
-                <FanTile key={id} entityId={id} />
-              ))}
-            </EntityGrid>
+
+          {hasFans ? (
+            <Section
+              title={
+                fanLights.length && !area.fans.length && !fanDevices.length ? 'Ceiling' : 'Fans'
+              }
+            >
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+                {fanLights.length > 0 ? (
+                  <CardGrid>
+                    {fanLights.map((kit) => (
+                      <FanLightTile key={kit.fanId} {...kit} />
+                    ))}
+                  </CardGrid>
+                ) : null}
+                {fanDevices.length > 0 || area.fans.length > 0 ? (
+                  <CardGrid>
+                    {fanDevices.map((device) => (
+                      <FanTile
+                        key={device.fanId}
+                        entityId={device.fanId}
+                        label={device.label}
+                        tempId={device.tempId}
+                        humidityId={device.humidityId}
+                      />
+                    ))}
+                    {area.fans.map((id) => (
+                      <FanTile key={id} entityId={id} />
+                    ))}
+                  </CardGrid>
+                ) : null}
+              </div>
+            </Section>
           ) : null}
-        </Section>
-      ) : null}
+        </div>
+        <div className="grid min-w-0 gap-section">
+          {extraReadings.length > 0 ? (
+            <Section title="Climate">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {extraReadings.map((reading) => (
+                  <ClimateReadingCard key={reading.tempId} {...reading} />
+                ))}
+              </div>
+            </Section>
+          ) : null}
 
-      {area.appliances?.length ? (
-        <Section title="Appliances">
-          <CardGrid>
-            {area.appliances.map((a) => (
-              <ApplianceRow key={a.powerId} {...a} />
-            ))}
-          </CardGrid>
-        </Section>
-      ) : null}
+          {area.media.length > 0 ? (
+            <Section title="Music & TV">
+              <CardGrid>
+                {area.media.map((id) => (
+                  <MediaCard key={id} entityId={id} />
+                ))}
+              </CardGrid>
+            </Section>
+          ) : null}
 
-      {area.switches?.length ? (
-        <Section title="Irrigation">
-          <CardGrid>
-            {area.switches.map((id) => (
-              <SwitchRow key={id} entityId={id} label={entityName(id)} />
-            ))}
-          </CardGrid>
-        </Section>
-      ) : null}
+          {area.appliances?.length ? (
+            <Section title="Appliances">
+              <DeviceList>
+                {area.appliances.map((a) => (
+                  <ApplianceRow key={a.powerId} {...a} />
+                ))}
+              </DeviceList>
+            </Section>
+          ) : null}
 
-      {area.media.length > 0 ? (
-        <Section title="Media">
-          <CardGrid>
-            {area.media.map((id) => (
-              <MediaCard key={id} entityId={id} />
-            ))}
-          </CardGrid>
-        </Section>
-      ) : null}
+          {area.switches?.length ? (
+            <Section title="Irrigation">
+              <DeviceList>
+                {area.switches.map((id) => (
+                  <SwitchRow key={id} entityId={id} label={entityName(id)} icon={Droplets} />
+                ))}
+              </DeviceList>
+            </Section>
+          ) : null}
+        </div>
+      </div>
     </Page>
   )
 }

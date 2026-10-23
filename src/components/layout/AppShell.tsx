@@ -13,7 +13,7 @@ import { AnimatePresence, domAnimation, LazyMotion, MotionConfig, m, pageFade } 
 function ConnectingSplash({ label }: { label: string }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6">
-      <div className="size-10 animate-pulse rounded-full bg-accent/30" />
+      <div className="size-10 animate-pulse rounded-pill bg-on" />
       <p className="text-sm text-ink-muted">{label}</p>
     </div>
   )
@@ -32,15 +32,15 @@ function ConnectionAction({
 }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-      <div className="size-10 animate-pulse rounded-full bg-accent/30" />
+      <div className="size-10 animate-pulse rounded-pill bg-on" />
       <div className="space-y-1">
-        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="text-display text-xl text-ink">{title}</p>
         {detail ? <p className="text-sm text-ink-muted">{detail}</p> : null}
       </div>
       <button
         type="button"
         onClick={onAction}
-        className="touch-target rounded-xl bg-accent px-4 text-sm font-semibold text-canvas"
+        className="press touch-target rounded-pill bg-accent px-5 text-sm font-semibold text-on-accent brutal:font-label brutal:uppercase brutal:shadow-press"
       >
         {actionLabel}
       </button>
@@ -142,7 +142,7 @@ export function AppShell() {
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
-              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-4 md:px-8 md:pb-8 md:pt-6 lg:px-10">
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />

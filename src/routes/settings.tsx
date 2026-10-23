@@ -4,10 +4,11 @@ import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { LocationSettings } from '#/components/location/LocationSettings'
-import { MusicAssistantSettings } from '#/components/media/MusicAssistantSettings'
+import { ThemePicker } from '#/components/settings/ThemePicker'
 import { Button } from '#/components/ui/button'
 import { UpdateSettings } from '#/components/update/UpdateSettings'
 import { haUrl } from '#/config/ha'
+import { cn } from '#/lib/cn'
 import { isTauri } from '#/lib/deviceLocation'
 
 export const Route = createFileRoute('/settings')({ component: SettingsPage })
@@ -25,37 +26,47 @@ function SettingsPage() {
         backLabel="Home"
       />
 
-      <Section title="This device">
-        <LocationSettings />
+      <Section title="Theme">
+        <ThemePicker />
       </Section>
 
-      <Section title="Media">
-        <MusicAssistantSettings />
-      </Section>
-
-      {isTauri() ? (
-        <Section title="App updates">
-          <UpdateSettings />
+      <div className="grid items-start gap-section @2xl:grid-cols-2 @2xl:gap-8">
+        <Section title="This device">
+          <LocationSettings />
         </Section>
-      ) : null}
 
-      <Section title="Connection">
-        <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-4">
-          <div className="flex min-h-11 items-center justify-between text-sm">
-            <span className="text-ink-muted">Status</span>
-            <span className={connected ? 'text-success' : 'text-danger'}>
-              {connected ? 'Connected' : 'Disconnected'}
-            </span>
+        {isTauri() ? (
+          <Section title="App updates">
+            <UpdateSettings />
+          </Section>
+        ) : null}
+
+        <Section title="Connection">
+          <div className="grid gap-4 rounded-card border-ui border-border-subtle bg-surface p-5 shadow-card modern:border-transparent">
+            <div className="flex min-h-11 items-center justify-between gap-3">
+              <span className="text-label">Status</span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-2 text-sm font-semibold',
+                  connected ? 'text-success' : 'text-danger',
+                )}
+              >
+                <span
+                  className={cn('size-2 rounded-pill', connected ? 'bg-success' : 'bg-danger')}
+                />
+                {connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-label shrink-0 pt-0.5">Home Assistant</span>
+              <span className="min-w-0 text-right text-sm break-all text-ink">{haUrl}</span>
+            </div>
+            <Button variant="danger" className="w-full" onClick={() => logout()}>
+              Log out
+            </Button>
           </div>
-          <div className="flex items-start justify-between gap-3 text-sm">
-            <span className="shrink-0 text-ink-muted">Home Assistant</span>
-            <span className="min-w-0 break-all text-right text-ink">{haUrl}</span>
-          </div>
-          <Button variant="danger" className="w-full" onClick={() => logout()}>
-            Log out
-          </Button>
-        </div>
-      </Section>
+        </Section>
+      </div>
     </Page>
   )
 }

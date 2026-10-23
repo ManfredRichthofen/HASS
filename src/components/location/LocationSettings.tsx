@@ -7,7 +7,7 @@ export function LocationSettings() {
   const location = useLocationSharing()
 
   return (
-    <div className="rounded-2xl border border-border-subtle bg-surface p-4">
+    <div className="rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export function LocationSettings() {
         />
       </div>
 
-      <details className="mt-3 rounded-xl border border-border-subtle bg-canvas/40 px-3 py-2">
+      <details className="mt-3 rounded-control border border-border-subtle bg-canvas/40 px-3 py-2">
         <summary className="cursor-pointer text-xs font-medium text-ink-muted">
           Home Assistant setup for this device (one-time)
         </summary>
@@ -49,11 +49,10 @@ export function LocationSettings() {
             Every Casa user pastes <span className="text-ink">their</span> snippet below into Home
             Assistant, then assigns{' '}
             <code className="text-ink">{location.entityId ?? 'device_tracker.…'}</code> to their
-            Person. Webhook:{' '}
-            <code className="text-ink">{location.webhookId || '…'}</code>
+            Person. Webhook: <code className="text-ink">{location.webhookId || '…'}</code>
           </p>
           {location.templateYaml ? (
-            <pre className="overflow-x-auto rounded-lg border border-border-subtle bg-canvas p-2 text-[0.7rem] leading-relaxed text-ink">
+            <pre className="overflow-x-auto rounded-control border border-border-subtle bg-canvas p-2 text-[0.7rem] leading-relaxed text-ink">
               {location.templateYaml}
             </pre>
           ) : (

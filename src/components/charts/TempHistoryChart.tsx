@@ -6,8 +6,8 @@ import { useMemo } from 'react'
 import type { HistoryPoint } from '#/hooks/useEntityHistory'
 import { cn } from '#/lib/cn'
 
-const STROKE = 'var(--color-success)'
-const FILL = 'var(--color-success)'
+const STROKE = 'var(--c-on-to)'
+const FILL = 'var(--c-on-from)'
 
 type ChartRow = {
   t: number

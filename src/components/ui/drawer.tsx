@@ -18,6 +18,11 @@ export function Drawer({
   )
 }
 
+/**
+ * The bottom sheet behind every tile: a device's full controls.
+ * Walnut: attached to the bottom edge. Modern: a floating card inset from the
+ * edges. Brutalist: square, ruled, over a hatched scrim.
+ */
 export function DrawerContent({
   title,
   description,
@@ -25,27 +30,29 @@ export function DrawerContent({
   className,
 }: {
   title?: string
-  description?: string
+  description?: ReactNode
   children: ReactNode
   className?: string
 }) {
   return (
     <BaseDrawer.Portal>
-      <BaseDrawer.Backdrop className="fixed inset-0 bg-black/55 backdrop-blur-[2px] transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0" />
-      <BaseDrawer.Viewport className="fixed inset-0 flex items-end justify-center p-0 sm:items-end sm:p-4">
+      <BaseDrawer.Backdrop className="fixed inset-0 z-50 bg-black/55 transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0 modern:bg-ink/30 brutal:bg-[repeating-linear-gradient(45deg,#11111126_0_2px,transparent_2px_7px)]" />
+      <BaseDrawer.Viewport className="fixed inset-0 z-50 flex items-end justify-center modern:p-2.5 glass:p-2.5 sm:p-4">
         <BaseDrawer.Popup
           className={cn(
-            'relative flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-canvas-elevated shadow-2xl outline-none',
+            'relative flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-sheet border-ui border-b-0 border-border bg-canvas-elevated shadow-sheet outline-none',
+            'modern:rounded-[1.75rem] modern:border-0 glass:rounded-[2rem] glass:border-b',
+            'sm:rounded-b-sheet sm:border-b',
             'transition-ui duration-slow data-ending-style:translate-y-8 data-ending-style:opacity-0 data-starting-style:translate-y-8 data-starting-style:opacity-0',
-            'pb-[max(1.25rem,env(safe-area-inset-bottom))]',
+            'pb-[max(1.5rem,env(safe-area-inset-bottom))] modern:pb-6 glass:pb-6',
             className,
           )}
         >
-          <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
+          <div className="mx-auto mt-3 h-1 w-9 rounded-pill bg-border-strong brutal:h-1.5" />
           {(title || description) && (
-            <div className="px-5 pb-2 pt-4">
+            <div className="px-6 pt-5 pb-2">
               {title ? (
-                <BaseDrawer.Title className="font-display text-xl font-semibold tracking-tight text-ink">
+                <BaseDrawer.Title className="text-display text-2xl leading-tight text-ink">
                   {title}
                 </BaseDrawer.Title>
               ) : null}
@@ -56,7 +63,7 @@ export function DrawerContent({
               ) : null}
             </div>
           )}
-          <BaseDrawer.Content className="overflow-y-auto px-5 pb-2 pt-2">
+          <BaseDrawer.Content className="overflow-y-auto px-6 pt-3 pb-2">
             {children}
           </BaseDrawer.Content>
         </BaseDrawer.Popup>

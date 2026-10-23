@@ -23,7 +23,7 @@ function OccupancyBadge({ entityId }: { entityId: string }) {
   return (
     <span
       className={cn(
-        'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'shrink-0 rounded-control px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
         occupancy.isOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
       )}
     >
@@ -50,7 +50,7 @@ export function ClimateReadingCard({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-2xl border border-border-subtle bg-surface px-3.5 py-3 sm:px-4',
+        'min-w-0 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent px-3.5 py-3 sm:px-4',
         unavailable && 'opacity-40',
       )}
     >
@@ -59,7 +59,7 @@ export function ClimateReadingCard({
         {occupancyId ? <OccupancyBadge entityId={occupancyId} /> : null}
       </div>
       <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:mt-2 sm:gap-x-4">
-        <p className="font-display text-xl font-semibold text-ink sm:text-2xl">
+        <p className="text-display text-xl text-ink sm:text-2xl">
           <ReadingValue entityId={tempId} suffix="°" />
         </p>
         {humidityId ? (

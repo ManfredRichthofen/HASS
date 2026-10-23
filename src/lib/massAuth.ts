@@ -125,8 +125,7 @@ export async function ensureMassFromHomeAssistant(
   if (!token) {
     return {
       status: 'unavailable',
-      reason:
-        'Home Assistant has Music Assistant but did not expose an API token to this app',
+      reason: 'Home Assistant has Music Assistant but did not expose an API token to this app',
     }
   }
 
@@ -162,8 +161,7 @@ export async function ensureMassFromHomeAssistant(
 
   return {
     status: 'unavailable',
-    reason:
-      'Found Music Assistant in Home Assistant, but could not reach its API from this device',
+    reason: 'Found Music Assistant in Home Assistant, but could not reach its API from this device',
   }
 }
 

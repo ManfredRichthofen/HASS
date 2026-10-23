@@ -45,7 +45,7 @@ function Thumb({ item, round }: { item: MediaSearchItem; round?: boolean }) {
     <div
       className={cn(
         'grid size-full place-items-center bg-border text-ink-faint',
-        round && 'rounded-full',
+        round && 'rounded-pill',
       )}
     >
       {item.media_class === 'track' ? <Music2 className="size-5" /> : <Disc3 className="size-6" />}
@@ -66,8 +66,8 @@ function TrackRow({
 }) {
   const hint = enqueueModes.find((m) => m.id === mode)?.hint ?? 'Play'
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-2">
-      <div className="size-12 shrink-0 overflow-hidden rounded-xl">
+    <div className="flex items-center gap-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-2">
+      <div className="size-12 shrink-0 overflow-hidden rounded-control">
         <Thumb item={item} />
       </div>
       <div className="min-w-0 flex-1">
@@ -82,7 +82,11 @@ function TrackRow({
         aria-label={`${hint} ${item.title}`}
         onClick={onPlay}
       >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : <ModeIcon mode={mode} className="size-4" />}
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <ModeIcon mode={mode} className="size-4" />
+        )}
       </Button>
     </div>
   )
@@ -107,18 +111,18 @@ function MediaCard({
       disabled={busy}
       aria-label={`${hint} ${item.title}`}
       onClick={onPlay}
-      className="group min-w-0 rounded-2xl border border-border-subtle bg-surface p-2 text-left transition-ui hover:bg-surface-hover"
+      className="group min-w-0 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-2 text-left transition-ui hover:bg-surface-hover"
     >
       <div
         className={cn(
           'relative aspect-square w-full overflow-hidden',
-          round ? 'rounded-full' : 'rounded-xl',
+          round ? 'rounded-pill' : 'rounded-control',
         )}
       >
         <Thumb item={item} round={round} />
         <span
           className={cn(
-            'absolute right-1.5 bottom-1.5 grid size-8 place-items-center rounded-full bg-accent text-white shadow-md transition-ui',
+            'absolute right-1.5 bottom-1.5 grid size-8 place-items-center rounded-pill bg-accent text-on-accent shadow-md transition-ui',
             !busy && 'opacity-90 group-hover:opacity-100',
           )}
         >
@@ -139,13 +143,7 @@ function MediaCard({
   )
 }
 
-export function MusicSearch({
-  target,
-  onQueued,
-}: {
-  target: string
-  onQueued?: () => void
-}) {
+export function MusicSearch({ target, onQueued }: { target: string; onQueued?: () => void }) {
   const { callService, callServiceWithResponse } = useServiceCall()
   const [query, setQuery] = useState('')
   const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
@@ -235,8 +233,8 @@ export function MusicSearch({
   }
 
   return (
-    <div className="space-y-4 rounded-3xl border border-border-subtle bg-surface p-4 sm:p-5">
-      <h3 className="font-display text-lg font-semibold text-ink">Add music</h3>
+    <div className="space-y-4 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4 sm:p-5">
+      <h3 className="text-display text-lg text-ink">Add music</h3>
 
       <form onSubmit={(e) => void runSearch(e)} className="flex gap-2">
         <div className="relative min-w-0 flex-1">
@@ -256,10 +254,8 @@ export function MusicSearch({
       </form>
 
       <div className="space-y-1.5">
-        <p className="text-[11px] font-bold tracking-[0.08em] text-ink-faint uppercase">
-          Tapping a result will
-        </p>
-        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-canvas p-1">
+        <p className="text-label">Tapping a result will</p>
+        <div className="grid grid-cols-3 gap-1 rounded-card bg-canvas p-1">
           {enqueueModes.map((mode) => (
             <button
               key={mode.id}
@@ -267,10 +263,8 @@ export function MusicSearch({
               title={mode.hint}
               onClick={() => setEnqueue(mode.id)}
               className={cn(
-                'touch-target flex items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-medium transition-ui',
-                enqueue === mode.id
-                  ? 'bg-canvas-elevated text-accent shadow-sm'
-                  : 'text-ink-muted hover:text-ink',
+                'touch-target flex items-center justify-center gap-1.5 rounded-control px-2 text-xs font-medium transition-ui',
+                enqueue === mode.id ? 'bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
               )}
             >
               <ModeIcon mode={mode.id} className="size-3.5" />
@@ -288,9 +282,9 @@ export function MusicSearch({
               type="button"
               onClick={() => setFilter(item.id)}
               className={cn(
-                'touch-target shrink-0 rounded-full border px-3.5 text-xs font-medium transition-ui',
+                'touch-target shrink-0 rounded-pill border px-3.5 text-xs font-medium transition-ui',
                 filter === item.id
-                  ? 'border-accent/40 bg-accent-soft text-accent'
+                  ? 'border-accent bg-accent text-on-accent'
                   : 'border-border-subtle text-ink-muted hover:text-ink',
               )}
             >
@@ -301,9 +295,7 @@ export function MusicSearch({
       ) : null}
 
       <div className="space-y-5">
-        {searching ? (
-          <p className="py-8 text-center text-sm text-ink-muted">Searching…</p>
-        ) : null}
+        {searching ? <p className="py-8 text-center text-sm text-ink-muted">Searching…</p> : null}
 
         {!searching && searched && !hasResults ? (
           <p className="py-8 text-center text-sm text-ink-muted">No matches. Try another query.</p>
@@ -318,9 +310,7 @@ export function MusicSearch({
         {!searching
           ? groups.map((group) => (
               <section key={group.key} className="space-y-2">
-                <h4 className="text-xs font-bold tracking-[0.08em] text-ink-faint uppercase">
-                  {group.title}
-                </h4>
+                <h4 className="text-label">{group.title}</h4>
                 {group.key === 'track' ? (
                   <div className="space-y-2">
                     {group.items.map((item, i) => (

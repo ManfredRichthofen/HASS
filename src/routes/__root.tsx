@@ -3,11 +3,14 @@ import { lazy, Suspense } from 'react'
 import { AppProviders } from '#/components/AppProviders'
 import { AppShell } from '#/components/layout/AppShell'
 import { PwaRegister } from '#/components/PwaRegister'
+import { defaultTheme, themeBootScript, themes } from '#/lib/theme'
 
 import appCss from '../styles.css?url'
 
+// Fonts for all three themes: Fraunces (Walnut & Cream), Geist (Walnut & Cream, Modern),
+// Space Grotesk + JetBrains Mono (Brutalist), Plus Jakarta Sans (Fluid Glass).
 const fontCss =
-  'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Geist:wght@400..700&family=JetBrains+Mono:wght@400..600&family=Space+Grotesk:wght@500..700&family=Plus+Jakarta+Sans:wght@400..700&display=swap'
 
 const Devtools = import.meta.env.DEV
   ? lazy(() => import('#/components/Devtools').then((mod) => ({ default: mod.Devtools })))
@@ -26,7 +29,10 @@ export const Route = createRootRoute({
         name: 'description',
         content: 'Home control dashboard',
       },
-      { name: 'theme-color', content: '#0e1116' },
+      {
+        name: 'theme-color',
+        content: themes.find((t) => t.id === defaultTheme)?.chrome.dark ?? '#17110d',
+      },
       { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
@@ -46,6 +52,7 @@ export const Route = createRootRoute({
       },
       { rel: 'stylesheet', href: fontCss },
     ],
+    scripts: [{ children: themeBootScript }],
   }),
   component: AppShell,
   shellComponent: RootDocument,
@@ -53,7 +60,7 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme={defaultTheme} data-mode="dark" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -61,7 +68,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <ClientOnly
           fallback={
             <div className="root flex min-h-dvh items-center justify-center">
-              <div className="size-10 animate-pulse rounded-full bg-accent/30" />
+              <div className="size-10 animate-pulse rounded-pill bg-on" />
             </div>
           }
         >

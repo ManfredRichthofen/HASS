@@ -31,7 +31,7 @@ export function WeatherCard() {
   return (
     <div
       className={cn(
-        'flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface p-3.5 sm:p-4',
+        'flex h-full min-w-0 flex-col overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-3.5 sm:p-4',
         weather.isUnavailable && 'opacity-50',
       )}
     >
@@ -41,7 +41,7 @@ export function WeatherCard() {
             {String(weather.condition ?? weather.state).replace(/-/g, ' ')}
           </p>
           <p className="text-xs text-ink-muted">Outside</p>
-          <p className="mt-1.5 font-display text-3xl font-semibold tabular-nums tracking-tight text-ink sm:mt-2 sm:text-4xl">
+          <p className="mt-1.5 text-display text-3xl tabular-nums text-ink sm:mt-2 sm:text-4xl">
             {temp != null && !Number.isNaN(temp) ? Math.round(temp) : '—'}
             <span className="text-lg text-ink-muted sm:text-xl">°F</span>
           </p>
@@ -52,20 +52,20 @@ export function WeatherCard() {
             </p>
           ) : null}
         </div>
-        <Icon className="size-11 shrink-0 text-accent/80 sm:size-14" strokeWidth={1.35} />
+        <Icon className="size-11 shrink-0 text-light sm:size-14" strokeWidth={1.35} />
       </div>
 
       <div className="mt-auto grid grid-cols-5 gap-1 border-t border-border-subtle pt-3 sm:mt-4 sm:gap-1.5">
         {loading && forecast.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-xl bg-canvas sm:h-16" />
+              <div key={i} className="h-14 animate-pulse rounded-control bg-canvas sm:h-16" />
             ))
           : forecast.map((day) => {
               const DayIcon = weatherIcon(day.condition)
               return (
                 <div
                   key={day.datetime}
-                  className="flex flex-col items-center gap-0.5 rounded-xl px-0.5 py-1 sm:gap-1 sm:px-1 sm:py-1.5"
+                  className="flex flex-col items-center gap-0.5 rounded-control px-0.5 py-1 sm:gap-1 sm:px-1 sm:py-1.5"
                 >
                   <span className="text-[10px] font-medium text-ink-muted">
                     {weekday(day.datetime)}

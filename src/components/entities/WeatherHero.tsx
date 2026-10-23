@@ -23,14 +23,14 @@ export function WeatherHero() {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4',
+        'relative overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4',
         weather.isUnavailable && 'opacity-50',
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm text-ink-muted">Outside</p>
-          <p className="mt-1 font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
+          <p className="mt-1 text-display text-4xl tabular-nums text-ink">
             {temp != null && !Number.isNaN(temp) ? Math.round(temp) : '—'}
             <span className="text-xl text-ink-muted">°</span>
           </p>
@@ -39,7 +39,7 @@ export function WeatherHero() {
             {weather.humidity != null ? ` · ${weather.humidity}% humidity` : ''}
           </p>
         </div>
-        <Icon className="size-14 text-accent/80" strokeWidth={1.4} />
+        <Icon className="size-14 text-light" strokeWidth={1.4} />
       </div>
     </div>
   )

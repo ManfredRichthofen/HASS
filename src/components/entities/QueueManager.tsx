@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
-import { Progress } from '#/components/ui/progress'
 import { notify } from '#/components/ui/toast'
 import { haUrl } from '#/config/ha'
 import { useMusicQueue } from '#/hooks/useMusicQueue'
@@ -52,9 +51,10 @@ function Artwork({
   return (
     <div
       className={cn(
-        'shrink-0 overflow-hidden bg-border',
-        size === 'hero' && 'size-24 rounded-2xl shadow-lg sm:size-32',
-        size === 'md' && 'size-12 rounded-xl',
+        'shrink-0 overflow-hidden bg-surface-hover',
+        size === 'hero' &&
+          'aspect-square w-full rounded-card bg-on shadow-on brutal:border-2 brutal:border-ink brutal:shadow-[6px_6px_0_var(--c-ink)] glass:rounded-pill glass:ring-[6px] glass:ring-white/70',
+        size === 'md' && 'size-12 rounded-control',
       )}
     >
       {showImage && src ? (
@@ -69,8 +69,13 @@ function Artwork({
           onError={() => setFailedSrc(src)}
         />
       ) : (
-        <div className="grid size-full place-items-center text-ink-faint">
-          <ListMusic className={size === 'md' ? 'size-4' : 'size-8'} />
+        <div
+          className={cn(
+            'grid size-full place-items-center',
+            size === 'hero' ? 'text-on-ink/70' : 'text-ink-faint',
+          )}
+        >
+          <ListMusic className={size === 'md' ? 'size-4' : 'size-14'} />
         </div>
       )}
       <span className="sr-only">{label}</span>
@@ -114,7 +119,7 @@ function ActionChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-medium transition-ui hover:bg-surface-hover',
+        'flex min-h-10 items-center gap-1.5 rounded-pill border-ui border-border px-3.5 text-xs font-semibold transition-ui hover:bg-surface-hover brutal:font-label brutal:uppercase',
         danger ? 'text-danger' : 'text-ink',
       )}
     >
@@ -172,11 +177,11 @@ function QueueRow({
   return (
     <div
       className={cn(
-        'rounded-2xl border bg-surface transition-ui',
-        expanded ? 'border-accent/30' : 'border-border-subtle',
+        'border-b border-border-subtle transition-ui last:border-b-0 brutal:border-b-2 brutal:border-ink brutal:last:border-b-0',
+        expanded && 'bg-surface-hover/50',
       )}
     >
-      <div className="flex items-center gap-2 p-2">
+      <div className="flex min-h-16 items-center gap-2 py-2">
         <span className="w-5 shrink-0 text-center text-[11px] font-medium tabular-nums text-ink-faint">
           {position}
         </span>
@@ -189,8 +194,10 @@ function QueueRow({
         >
           <Artwork src={art} label="" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{title}</p>
-            <p className="truncate text-xs text-ink-muted">{artist ?? 'Queued'}</p>
+            <p className="truncate text-[0.9375rem] font-semibold text-ink">{title}</p>
+            <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
+              {artist ?? 'Queued'}
+            </p>
           </div>
         </button>
 
@@ -266,13 +273,24 @@ function QueueRow({
   )
 }
 
+/**
+ * The music player and its queue. `view` lets the Music page place the player
+ * and the up-next list in different panels; `artClassName` sizes the artwork
+ * so the player fits the screen without scrolling.
+ */
 export function QueueManager({
   target,
   onTargetChange,
+  view = 'all',
+  artClassName = 'max-w-[22rem]',
 }: {
   target: string
   onTargetChange: (id: string) => void
+  view?: 'all' | 'player' | 'queue'
+  artClassName?: string
 }) {
+  const showPlayer = view !== 'queue'
+  const showQueue = view !== 'player'
   const { callService } = useServiceCall()
   const queueApi = useMusicQueue(target)
   const {
@@ -332,7 +350,8 @@ export function QueueManager({
   )
 
   const unavailable = player.isUnavailable
-  const hasNowPlaying = Boolean(currentTitle) && (player.isPlaying || player.isPaused || items.length > 0)
+  const hasNowPlaying =
+    Boolean(currentTitle) && (player.isPlaying || player.isPaused || items.length > 0)
   const canManageItems = configured
   const transferTargets = useMemo(
     () => mediaTargets.filter((playerTarget) => playerTarget.id !== target),
@@ -368,9 +387,9 @@ export function QueueManager({
   }
 
   return (
-    <div className="space-y-5">
+    <div className={cn(view === 'all' ? 'space-y-5' : 'grid gap-5')}>
       {error ? (
-        <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+        <div className="rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {error.message}{' '}
           <button type="button" className="underline" onClick={() => void refresh()}>
             Retry
@@ -378,177 +397,214 @@ export function QueueManager({
         </div>
       ) : null}
 
-      {loading && !hasNowPlaying && upNext.length === 0 ? (
-        <div className="rounded-2xl border border-border-subtle bg-surface px-4 py-10 text-center">
+      {loading && (view === 'queue' ? upNext.length === 0 : !hasNowPlaying) ? (
+        <div className="rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent px-4 py-10 text-center">
           <Loader2 className="mx-auto size-5 animate-spin text-ink-faint" />
           <p className="mt-3 text-sm text-ink-muted">Loading…</p>
         </div>
       ) : null}
 
-      {!loading && !hasNowPlaying && upNext.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border-subtle bg-surface px-4 py-10 text-center">
+      {!loading &&
+      (view === 'queue'
+        ? upNext.length === 0
+        : !hasNowPlaying && (view === 'player' || upNext.length === 0)) ? (
+        <div className="rounded-card border-ui border-dashed border-border-subtle px-4 py-10 text-center">
           <ListMusic className="mx-auto size-7 text-ink-faint" />
-          <p className="mt-3 text-sm font-medium text-ink">Nothing playing</p>
-          <p className="mt-1 text-xs text-ink-muted">Use Add music to play or queue a track.</p>
+          <p className="mt-3 text-sm font-medium text-ink">
+            {view === 'queue' ? 'Nothing queued' : 'Nothing playing'}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">Search to play or queue something.</p>
         </div>
       ) : null}
 
-      {hasNowPlaying ? (
-        <div className="relative rounded-3xl border border-border-subtle bg-surface">
-          {currentArt ? (
-            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
-              <img
-                src={currentArt}
-                alt=""
-                aria-hidden
-                className="size-full scale-150 object-cover opacity-25 blur-3xl"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-          ) : null}
-
-          <div className="relative p-4 sm:p-5">
-            <div className="flex items-start gap-4">
+      {showPlayer && hasNowPlaying ? (
+        <section className="grid gap-4" aria-label="Now playing">
+          <div
+            className={cn(
+              'grid gap-4',
+              view === 'player' &&
+                'grid-cols-[5.5rem_minmax(0,1fr)] items-end @2xl:grid-cols-1 @2xl:items-stretch',
+            )}
+          >
+            <div
+              className={cn(
+                'relative mx-auto w-full',
+                view === 'player'
+                  ? cn(
+                      '@max-2xl:w-[5.5rem] @max-2xl:[&_*]:rounded-control glass:@max-2xl:[&_*]:rounded-pill',
+                      artClassName,
+                    )
+                  : artClassName,
+              )}
+            >
               <Artwork src={currentArt} label="Now playing artwork" size="hero" />
-              <div className="min-w-0 flex-1 self-stretch">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-accent uppercase">
-                    {player.isPlaying ? 'Now playing' : 'Paused'}
-                  </p>
-                  <div className="relative -mt-1.5 -mr-1.5 shrink-0">
-                    {(fetching && !loading) || ensuring ? (
-                      <Loader2 className="m-2.5 size-4 animate-spin text-ink-faint" />
-                    ) : (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-9"
-                        disabled={unavailable || busy !== null}
-                        aria-label="Queue options"
-                        aria-expanded={menuOpen}
-                        onClick={() => setMenuOpen((open) => !open)}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    )}
-                    {menuOpen ? (
-                      <div className="absolute right-0 z-20 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-border bg-canvas-elevated shadow-lg">
-                        {transferTargets.map((dest) => (
-                          <button
-                            key={dest.id}
-                            type="button"
-                            className="block w-full px-3 py-2.5 text-left text-sm text-ink transition hover:bg-surface-hover"
-                            onClick={() => void transferTo(dest.id)}
-                          >
-                            Transfer to {dest.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <p className="mt-1 line-clamp-2 font-display text-xl font-semibold leading-tight text-ink">
+            </div>
+
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-label">{player.isPlaying ? 'Now playing' : 'Paused'}</p>
+                <p
+                  className={cn(
+                    'text-display mt-1.5 line-clamp-2 text-[1.75rem] leading-[1.1] text-ink',
+                    view === 'player' && '@max-2xl:text-xl',
+                  )}
+                >
                   {currentTitle ?? 'Unknown track'}
                 </p>
                 {currentArtist ? (
-                  <p className="mt-0.5 truncate text-sm text-ink-muted">{currentArtist}</p>
+                  <p className="mt-1 truncate text-[0.9375rem] text-ink-muted">{currentArtist}</p>
+                ) : null}
+              </div>
+              <div className="relative shrink-0">
+                {(fetching && !loading) || ensuring ? (
+                  <Loader2 className="m-3 size-5 animate-spin text-ink-faint" />
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={unavailable || busy !== null}
+                    aria-label="Queue options"
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen((open) => !open)}
+                  >
+                    <MoreHorizontal className="size-5" />
+                  </Button>
+                )}
+                {menuOpen ? (
+                  <div className="absolute right-0 bottom-full z-20 mb-1 min-w-[12rem] overflow-hidden rounded-control border-ui border-border bg-canvas-elevated shadow-sheet">
+                    {transferTargets.map((dest) => (
+                      <button
+                        key={dest.id}
+                        type="button"
+                        className="block min-h-11 w-full px-4 py-2.5 text-left text-sm text-ink transition hover:bg-surface-hover"
+                        onClick={() => void transferTo(dest.id)}
+                      >
+                        Move to {dest.label}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </div>
+          </div>
 
-            <div className="mt-5 space-y-1.5">
-              <Progress value={pct} aria-label="Playback progress" />
-              <div className="flex justify-between text-[11px] tabular-nums text-ink-faint">
-                <span>{formatDuration(position)}</span>
-                <span>{formatDuration(duration)}</span>
-              </div>
+          <div className="grid gap-2.5">
+            <div
+              className="relative h-1.5 rounded-pill bg-surface-hover brutal:h-2.5 brutal:border-2 brutal:border-ink brutal:bg-surface"
+              role="progressbar"
+              aria-label="Playback progress"
+              aria-valuenow={Math.round(pct)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span
+                className="absolute inset-y-0 left-0 rounded-pill bg-ink"
+                style={{ width: `${pct}%` }}
+              />
+              <span
+                className="absolute top-1/2 -mt-2 -ml-2 size-4 rounded-pill bg-ink brutal:-mt-[11px] brutal:-ml-[3px] brutal:h-[22px] brutal:w-1.5"
+                style={{ left: `${pct}%` }}
+              />
             </div>
-
-            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className={cn('justify-self-start', shuffle && 'text-accent')}
-                disabled={unavailable || busy !== null}
-                aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
-                aria-pressed={shuffle}
-                onClick={() =>
-                  void run('shuffle', () => queueApi.setShuffle(!shuffle), 'Shuffle failed')
-                }
-              >
-                <Shuffle className="size-4" />
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={unavailable || busy !== null}
-                  aria-label="Previous"
-                  onClick={() => void run('prev', () => player.previousTrack(), 'Previous failed')}
-                >
-                  <SkipBack className="size-5 fill-current" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="accent"
-                  className="size-14 rounded-full"
-                  disabled={unavailable || busy !== null}
-                  aria-label={player.isPlaying ? 'Pause' : 'Play'}
-                  onClick={() =>
-                    void run(
-                      'toggle',
-                      () => (player.isPlaying ? player.pause() : player.play()),
-                      'Playback failed',
-                    )
-                  }
-                >
-                  {busy === 'toggle' ? (
-                    <Loader2 className="size-6 animate-spin" />
-                  ) : player.isPlaying ? (
-                    <Pause className="size-6 fill-current" />
-                  ) : (
-                    <Play className="size-6 fill-current" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={unavailable || busy !== null}
-                  aria-label="Next"
-                  onClick={() => void run('next', () => player.nextTrack(), 'Next failed')}
-                >
-                  <SkipForward className="size-5 fill-current" />
-                </Button>
-              </div>
-
-              <Button
-                size="icon"
-                variant="ghost"
-                className={cn('justify-self-end', repeat !== 'off' && 'text-accent')}
-                disabled={unavailable || busy !== null}
-                aria-label={repeatModeLabel(repeat)}
-                aria-pressed={repeat !== 'off'}
-                onClick={() =>
-                  void run(
-                    'repeat',
-                    () => queueApi.setRepeat(nextRepeatMode(repeat)),
-                    'Repeat failed',
-                  )
-                }
-              >
-                {repeat === 'one' ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
-              </Button>
+            <div className="flex justify-between text-xs text-ink-faint tabular-nums brutal:font-label brutal:text-ink">
+              <span>{formatDuration(position)}</span>
+              <span>
+                {duration
+                  ? `−${formatDuration(Math.max(0, duration - position))}`
+                  : formatDuration(duration)}
+              </span>
             </div>
           </div>
-        </div>
+
+          <div className="flex items-center justify-between px-1">
+            <button
+              type="button"
+              className={cn(
+                'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
+                shuffle && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
+              )}
+              disabled={unavailable || busy !== null}
+              aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+              aria-pressed={shuffle}
+              onClick={() =>
+                void run('shuffle', () => queueApi.setShuffle(!shuffle), 'Shuffle failed')
+              }
+            >
+              <Shuffle className="size-[18px]" />
+            </button>
+            <button
+              type="button"
+              className="grid size-14 place-items-center rounded-pill text-ink disabled:opacity-40"
+              disabled={unavailable || busy !== null}
+              aria-label="Previous"
+              onClick={() => void run('prev', () => player.previousTrack(), 'Previous failed')}
+            >
+              <SkipBack className="size-6 fill-current" />
+            </button>
+            <button
+              type="button"
+              className="press grid size-19 place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 brutal:border-2 brutal:border-ink brutal:shadow-press"
+              disabled={unavailable || busy !== null}
+              aria-label={player.isPlaying ? 'Pause' : 'Play'}
+              onClick={() =>
+                void run(
+                  'toggle',
+                  () => (player.isPlaying ? player.pause() : player.play()),
+                  'Playback failed',
+                )
+              }
+            >
+              {busy === 'toggle' ? (
+                <Loader2 className="size-7 animate-spin" />
+              ) : player.isPlaying ? (
+                <Pause className="size-7 fill-current" />
+              ) : (
+                <Play className="size-7 fill-current" />
+              )}
+            </button>
+            <button
+              type="button"
+              className="grid size-14 place-items-center rounded-pill text-ink disabled:opacity-40"
+              disabled={unavailable || busy !== null}
+              aria-label="Next"
+              onClick={() => void run('next', () => player.nextTrack(), 'Next failed')}
+            >
+              <SkipForward className="size-6 fill-current" />
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
+                repeat !== 'off' && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
+              )}
+              disabled={unavailable || busy !== null}
+              aria-label={repeatModeLabel(repeat)}
+              aria-pressed={repeat !== 'off'}
+              onClick={() =>
+                void run(
+                  'repeat',
+                  () => queueApi.setRepeat(nextRepeatMode(repeat)),
+                  'Repeat failed',
+                )
+              }
+            >
+              {repeat === 'one' ? (
+                <Repeat1 className="size-[18px]" />
+              ) : (
+                <Repeat className="size-[18px]" />
+              )}
+            </button>
+          </div>
+        </section>
       ) : null}
 
-      {upNext.length > 0 ? (
+      {showQueue && upNext.length > 0 ? (
         <div className="space-y-2.5">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <h3 className="font-display text-base font-semibold text-ink">Up next</h3>
+              <h3 className="text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase">
+                Up next
+              </h3>
               <p className="text-xs text-ink-muted">
                 {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}
                 {upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
@@ -578,8 +634,13 @@ export function QueueManager({
             </Button>
           </div>
 
-          <div className="max-h-[26rem] overflow-y-auto overscroll-contain sm:max-h-[32rem]">
-            <div className="space-y-2">
+          <div
+            className={cn(
+              view === 'all' && 'max-h-[30rem] overflow-y-auto overscroll-contain',
+              'rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent brutal:border-ink',
+            )}
+          >
+            <div>
               {upNext.map((entry, rowIndex) => {
                 const { item, index } = entry
                 const itemId = item.queue_item_id ?? `idx-${index}`
@@ -593,7 +654,9 @@ export function QueueManager({
                       disabled={unavailable || busy !== null}
                       canManage={canManageItems}
                       supportMoveToEnd={!viaMassQueue}
-                      isFirstMovable={currentIndex == null ? index === 0 : index <= currentIndex + 1}
+                      isFirstMovable={
+                        currentIndex == null ? index === 0 : index <= currentIndex + 1
+                      }
                       isLast={index === items.length - 1}
                       onPlay={() =>
                         void run(

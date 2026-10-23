@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { githubRepo } from '#/config/github'
 import { isTauri } from '#/lib/deviceLocation'
 
@@ -85,7 +86,6 @@ async function downloadAndInstallApk(
   url: string,
   onProgress?: (fraction: number | null) => void,
 ): Promise<void> {
-  const { invoke } = await import('@tauri-apps/api/core')
   let polling = true
   const poll = (async () => {
     while (polling) {

@@ -10,7 +10,8 @@ export function Avatar({
   return (
     <BaseAvatar.Root
       className={cn(
-        'inline-flex size-10 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-sm font-semibold text-accent',
+        'inline-flex size-10 items-center justify-center overflow-hidden rounded-pill bg-accent-soft text-display text-base text-ink',
+        'brutal:border-2 brutal:border-ink',
         className,
       )}
       {...props}

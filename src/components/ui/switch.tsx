@@ -2,13 +2,13 @@ import { Switch as BaseSwitch } from '@base-ui/react/switch'
 import type { ComponentProps } from 'react'
 import { cn } from '#/lib/cn'
 
+/** Pill toggle for plain on/off devices. Lights never use this — the LightTile is the switch. */
 export function Switch({ className, ...props }: ComponentProps<typeof BaseSwitch.Root>) {
   return (
     <BaseSwitch.Root
       className={cn(
-        'relative inline-flex h-11 w-14 shrink-0 items-center justify-center rounded-xl',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-        'disabled:opacity-40',
+        'group relative inline-grid h-11 w-15 shrink-0 cursor-pointer place-items-center',
+        'disabled:cursor-default disabled:opacity-40',
         className,
       )}
       {...props}
@@ -16,15 +16,17 @@ export function Switch({ className, ...props }: ComponentProps<typeof BaseSwitch
       <span
         aria-hidden
         className={cn(
-          'pointer-events-none absolute inset-x-1.5 inset-y-2.5 rounded-full transition-ui',
-          'bg-border peer-data-checked:bg-accent',
-          '[[data-checked]_&]:bg-accent',
+          'h-8 w-13 rounded-pill border-ui border-border-strong bg-transparent transition-[background-color,border-color] duration-normal',
+          'group-data-checked:border-accent group-data-checked:bg-accent brutal:w-14',
+          'glass:border-transparent glass:bg-ink/10 glass:group-data-checked:border-white glass:group-data-checked:bg-white glass:group-data-checked:shadow-card',
         )}
       />
       <BaseSwitch.Thumb
         className={cn(
-          'relative z-10 size-6 rounded-full bg-ink shadow transition-ui duration-fast',
-          'data-checked:translate-x-3 data-unchecked:-translate-x-3',
+          'absolute top-1/2 left-1/2 -mt-[11px] -ml-[21px] size-[22px] rounded-pill bg-border-strong',
+          'transition-[transform,background-color] duration-[260ms] ease-spring',
+          'data-checked:translate-x-5 data-checked:bg-on-accent brutal:-ml-[23px] brutal:data-checked:translate-x-[22px]',
+          'glass:bg-white glass:data-checked:bg-[#141a2e]',
         )}
       />
     </BaseSwitch.Root>

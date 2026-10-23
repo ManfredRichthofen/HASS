@@ -1,6 +1,14 @@
 import { Link } from '@tanstack/react-router'
 import { useBinarySensor, useEntity, useEntityGroup, useLock } from 'hass-react'
-import { ChevronDown, Lightbulb, Lock, LockOpen, type LucideIcon, UserRound, UserRoundX } from 'lucide-react'
+import {
+  ChevronDown,
+  Lightbulb,
+  Lock,
+  LockOpen,
+  type LucideIcon,
+  UserRound,
+  UserRoundX,
+} from 'lucide-react'
 import { useState } from 'react'
 import { HouseModeGrid } from '#/components/home/HouseModeGrid'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
@@ -41,18 +49,18 @@ export function HomeStatusCard() {
 
   return (
     <>
-      <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface p-3.5 sm:p-4">
+      <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-3.5 sm:p-4">
         <div className="flex items-end justify-between gap-3">
           <button
             type="button"
             onClick={() => setModeOpen(true)}
-            className="group min-w-0 rounded-lg text-left outline-none transition-ui focus-visible:ring-2 focus-visible:ring-accent"
+            className="group min-w-0 rounded-control text-left outline-none transition-ui focus-visible:ring-2 focus-visible:ring-accent"
           >
             <p className="flex items-center gap-1 text-sm text-ink-muted">
               House mode
               <ChevronDown className="size-3.5 opacity-60 transition-ui group-hover:opacity-100" />
             </p>
-            <p className="truncate font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+            <p className="truncate text-display text-xl text-ink sm:text-2xl">
               <AnimatePresence mode="popLayout" initial={false}>
                 <m.span
                   key={modeLabel}
@@ -69,7 +77,7 @@ export function HomeStatusCard() {
           </button>
           <span
             className={cn(
-              'mb-0.5 shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold',
+              'mb-0.5 shrink-0 rounded-control px-2.5 py-1 text-xs font-semibold',
               autoOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
             )}
           >
@@ -86,7 +94,7 @@ export function HomeStatusCard() {
           />
           <Link
             to="/rooms"
-            className="block min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="block min-h-0 rounded-control outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <StatusCell
               label="Lights"
@@ -101,7 +109,7 @@ export function HomeStatusCard() {
             disabled={lock.isUnavailable}
             onClick={() => void toggleLock()}
             aria-label={locked ? 'Unlock front door' : 'Lock front door'}
-            className="block min-h-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40"
+            className="block min-h-0 rounded-control text-left outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40"
           >
             <StatusCell
               label="Door"
@@ -147,14 +155,14 @@ function StatusCell({
   return (
     <div
       className={cn(
-        'flex h-full min-h-[4.25rem] flex-col rounded-xl bg-canvas/50 px-2 py-2 sm:min-h-[4.5rem] sm:px-2.5 sm:py-2.5',
+        'flex h-full min-h-[4.25rem] flex-col rounded-control bg-canvas/50 px-2 py-2 sm:min-h-[4.5rem] sm:px-2.5 sm:py-2.5',
         interactive && 'transition-ui hover:bg-canvas',
         !interactive && 'opacity-90',
       )}
     >
       <span
         className={cn(
-          'mb-1.5 grid size-8 place-items-center rounded-lg sm:mb-2 sm:size-9',
+          'mb-1.5 grid size-8 place-items-center rounded-control sm:mb-2 sm:size-9',
           tones[tone],
         )}
       >

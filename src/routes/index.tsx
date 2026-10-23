@@ -1,13 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useCurrentUser } from 'hass-react'
-import { Settings } from 'lucide-react'
 import { EntityGrid } from '#/components/entities/EntityGrid'
 import { LightTile } from '#/components/entities/LightTile'
+import { LockTile } from '#/components/entities/LockTile'
 import { SceneStrip } from '#/components/entities/SceneStrip'
-import { ClimateSparkline } from '#/components/home/ClimateSparkline'
-import { HomeStatusCard } from '#/components/home/HomeStatusCard'
+import { HouseSummary } from '#/components/home/HouseSummary'
 import { QuickDeviceRow } from '#/components/home/QuickDeviceRow'
-import { WeatherCard } from '#/components/home/WeatherCard'
 import { Page } from '#/components/layout/Page'
 import { Section } from '#/components/layout/Section'
 import { entities, isRoomLight } from '#/config/dashboard'
@@ -15,43 +12,28 @@ import { m, staggerContainer, staggerItem } from '#/lib/motion'
 
 export const Route = createFileRoute('/')({ component: HomePage })
 
+/**
+ * Home, in order: how the house is (a sentence) → quick changes (scenes) →
+ * the lights you touch most → the front door → everything else.
+ */
 function HomePage() {
-  const user = useCurrentUser()
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-
   return (
     <m.div initial="initial" animate="animate" variants={staggerContainer}>
       <Page>
-        <m.header
-          variants={staggerItem}
-          className="flex items-center justify-between gap-3 pt-[max(0.25rem,env(safe-area-inset-top))]"
-        >
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem] md:text-3xl">
-            {greeting}
-            {user?.name ? `, ${user.name.split(' ')[0]}` : ''}
-          </h1>
-          <Link
-            to="/settings"
-            aria-label="Settings and more"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-hover text-ink-muted transition-ui hover:text-ink md:hidden"
-          >
-            <Settings className="size-5" />
-          </Link>
-        </m.header>
-
-        <m.div variants={staggerItem} className="grid gap-3 md:grid-cols-2 md:gap-4">
-          <HomeStatusCard />
-          <WeatherCard />
-        </m.div>
-
-        <div className="grid items-start gap-5 md:gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="grid items-start gap-section @2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] @2xl:gap-x-8">
           <m.div variants={staggerItem}>
-            <Section title="Lighting">
-              <div className="mb-3">
-                <SceneStrip />
-              </div>
-              <EntityGrid className="lg:grid-cols-4 xl:grid-cols-3">
+            <HouseSummary />
+          </m.div>
+
+          <m.div variants={staggerItem} className="min-w-0 @2xl:pt-12">
+            <Section title="Scenes">
+              <SceneStrip />
+            </Section>
+          </m.div>
+
+          <m.div variants={staggerItem} className="min-w-0">
+            <Section title="Favourites" action={<Link to="/rooms">All rooms</Link>}>
+              <EntityGrid>
                 {entities.favorites.lights.filter(isRoomLight).map((id) => (
                   <LightTile key={id} entityId={id} />
                 ))}
@@ -59,14 +41,15 @@ function HomePage() {
             </Section>
           </m.div>
 
-          <div className="flex min-w-0 flex-col gap-5 md:gap-6">
+          <div className="flex min-w-0 flex-col gap-section">
             <m.div variants={staggerItem}>
-              <ClimateSparkline />
+              <Section title="Front door">
+                <LockTile entityId={entities.lock} label="Front door" />
+              </Section>
             </m.div>
-
             <m.div variants={staggerItem}>
-              <Section title="Devices">
-                <QuickDeviceRow className="md:grid-cols-2 xl:grid-cols-1" />
+              <Section title="Around the house">
+                <QuickDeviceRow />
               </Section>
             </m.div>
           </div>

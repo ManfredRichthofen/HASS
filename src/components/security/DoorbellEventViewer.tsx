@@ -5,8 +5,8 @@ import { cn } from '#/lib/cn'
 import {
   eventLabel,
   eventScore,
-  formatEventRelative,
   type FrigateEvent,
+  formatEventRelative,
   frigateClipUrl,
   frigatePreviewUrl,
   frigateSnapshotUrl,
@@ -20,7 +20,7 @@ type Props = {
 }
 
 export function DoorbellEventViewer({ camera, instanceId, active }: Props) {
-  const { events, loading, error } = useFrigateEvents({
+  const { events, loading, error, resolvedInstanceId } = useFrigateEvents({
     camera,
     instanceId,
     enabled: active,
@@ -29,6 +29,7 @@ export function DoorbellEventViewer({ camera, instanceId, active }: Props) {
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setMode] = useState<'snapshot' | 'clip'>('snapshot')
+  const mediaInstance = resolvedInstanceId || instanceId
 
   useEffect(() => {
     if (!active) {
@@ -52,15 +53,16 @@ export function DoorbellEventViewer({ camera, instanceId, active }: Props) {
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-border-subtle bg-canvas px-3 py-2 text-xs text-danger">
-          Couldn’t load Frigate events. Check the Frigate integration and camera name (
-          <code className="text-ink">{camera}</code>).
+        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-xs text-danger">
+          Couldn’t load Frigate events for <code className="text-ink">{camera}</code> (instance{' '}
+          <code className="text-ink">{mediaInstance}</code>). {error}
         </p>
       ) : null}
 
       {!error && !loading && events.length === 0 ? (
-        <p className="rounded-xl border border-border-subtle bg-canvas px-3 py-2 text-xs text-ink-muted">
-          No recent detections for this camera yet.
+        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-xs text-ink-muted">
+          No recent detections for <code className="text-ink">{camera}</code> (instance{' '}
+          <code className="text-ink">{mediaInstance}</code>).
         </p>
       ) : null}
 
@@ -70,7 +72,7 @@ export function DoorbellEventViewer({ camera, instanceId, active }: Props) {
             <EventThumb
               key={event.id}
               event={event}
-              instanceId={instanceId}
+              instanceId={mediaInstance}
               selected={selected?.id === event.id}
               onSelect={() => {
                 setSelectedId(event.id)
@@ -84,7 +86,7 @@ export function DoorbellEventViewer({ camera, instanceId, active }: Props) {
       {selected ? (
         <EventDetail
           event={selected}
-          instanceId={instanceId}
+          instanceId={mediaInstance}
           mode={mode}
           onModeChange={setMode}
         />
@@ -110,7 +112,7 @@ function EventThumb({
       type="button"
       onClick={onSelect}
       className={cn(
-        'group w-[5.75rem] shrink-0 overflow-hidden rounded-xl border text-left transition-ui',
+        'group w-[5.75rem] shrink-0 overflow-hidden rounded-control border text-left transition-ui',
         selected
           ? 'border-accent bg-accent-soft'
           : 'border-border-subtle bg-canvas hover:border-border hover:bg-surface-hover',
@@ -157,18 +159,16 @@ function EventDetail({
   const showClip = mode === 'clip' && event.has_clip
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border-subtle bg-canvas">
+    <div className="overflow-hidden rounded-card border border-border-subtle bg-canvas">
       <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold capitalize text-ink">
-            {eventLabel(event)}
-          </p>
+          <p className="truncate text-sm font-semibold capitalize text-ink">{eventLabel(event)}</p>
           <p className="truncate text-xs text-ink-muted">
             {formatEventRelative(event.start_time)}
             {score != null ? ` · ${score}%` : ''}
           </p>
         </div>
-        <div className="flex shrink-0 gap-1 rounded-lg border border-border-subtle bg-surface p-0.5">
+        <div className="flex shrink-0 gap-1 rounded-control border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-0.5">
           <ModeChip
             active={mode === 'snapshot'}
             disabled={!event.has_snapshot && !event.has_clip}
@@ -237,8 +237,8 @@ function ModeChip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex h-7 items-center gap-1 rounded-md px-2 text-[0.7rem] font-medium transition-ui',
-        active ? 'bg-accent text-canvas' : 'text-ink-muted hover:text-ink',
+        'inline-flex h-7 items-center gap-1 rounded-control px-2 text-[0.7rem] font-medium transition-ui',
+        active ? 'bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
         disabled && 'pointer-events-none opacity-35',
       )}
     >

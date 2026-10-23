@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { cn } from '#/lib/cn'
 
+/**
+ * A titled block on a page. Walnut: italic serif title. Modern: small
+ * semibold label. Brutalist: a 2px rule and a mono uppercase label.
+ */
 export function Section({
   title,
   action,
@@ -15,15 +19,27 @@ export function Section({
   return (
     <section className={cn('min-w-0', className)}>
       {(title || action) && (
-        <div className="mb-2.5 flex items-center justify-between gap-2 md:mb-3">
+        <div className="mb-3.5 flex min-h-11 items-end justify-between gap-3 brutal:mb-4 brutal:border-t-2 brutal:border-ink brutal:pt-2 brutal:items-center">
           {title ? (
-            <h2 className="text-xs font-bold tracking-[0.08em] text-ink-faint uppercase">
+            <h2
+              className={cn(
+                'text-ink',
+                'walnut:font-serif walnut:text-xl walnut:italic',
+                'modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted',
+                'brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:tracking-[0.04em]',
+                'glass:text-base glass:font-semibold glass:text-ink',
+              )}
+            >
               {title}
             </h2>
           ) : (
             <span />
           )}
-          {action}
+          {action ? (
+            <div className="text-sm font-semibold text-ink-muted brutal:font-label brutal:text-xs brutal:uppercase brutal:text-ink brutal:underline">
+              {action}
+            </div>
+          ) : null}
         </div>
       )}
       {children}

@@ -52,7 +52,7 @@ function SensorHint({
     <span
       className={cn(
         'mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs',
-        onCard ? 'text-white/70' : 'text-ink-muted',
+        onCard ? 'text-on-ink/70' : 'text-ink-muted',
       )}
     >
       {tempId ? <SensorReading entityId={tempId} kind="temp" /> : null}
@@ -139,9 +139,11 @@ export function FanTile({
     <>
       <div
         className={cn(
-          'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5 transition-state',
+          'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
-          fan.isOn ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
+          fan.isOn
+            ? 'bg-on shadow-on border-transparent brutal:border-ink'
+            : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
           unavailable && 'opacity-40',
         )}
       >
@@ -156,8 +158,8 @@ export function FanTile({
           >
             <span
               className={cn(
-                'grid size-11 shrink-0 place-items-center rounded-xl',
-                fan.isOn ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
+                'grid size-11 shrink-0 place-items-center rounded-control',
+                fan.isOn ? 'bg-on-ink/10 text-on-ink' : 'bg-icon-well text-ink-muted',
               )}
             >
               <Fan
@@ -166,13 +168,18 @@ export function FanTile({
               />
             </span>
             <span className="min-w-0 pt-1">
-              <span className="line-clamp-2 block text-sm font-semibold tracking-tight text-ink">
+              <span
+                className={cn(
+                  'line-clamp-2 block text-[0.9375rem] font-semibold',
+                  fan.isOn ? 'text-on-ink' : 'text-ink',
+                )}
+              >
                 {name}
               </span>
               <span
                 className={cn(
                   'mt-0.5 block truncate text-xs',
-                  fan.isOn ? 'text-white/80' : 'text-ink-muted',
+                  fan.isOn ? 'text-on-ink-muted' : 'text-ink-muted',
                 )}
               >
                 {status}
@@ -188,7 +195,7 @@ export function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition-ui hover:bg-white/10 hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-black/5 hover:text-ink"
           >
             <SlidersHorizontal className="size-4" />
           </button>
@@ -218,10 +225,10 @@ export function FanTile({
                           void commitSpeed(preset.value)
                         }}
                         className={cn(
-                          'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition-ui',
+                          'touch-target min-w-0 flex-1 rounded-control border px-1.5 text-xs font-semibold transition-ui',
                           selected
-                            ? 'border-white/60 bg-white/25 text-white'
-                            : 'border-transparent bg-white/10 text-white/80 hover:text-white',
+                            ? 'border-on-ink bg-on-ink text-on-from'
+                            : 'border-transparent bg-on-ink/10 text-on-ink-muted hover:text-on-ink',
                         )}
                       >
                         {preset.label}
@@ -231,11 +238,11 @@ export function FanTile({
                 </div>
 
                 <div className="min-w-0 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-white/80">
+                  <div className="flex items-center justify-between text-[11px] text-on-ink-muted">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
                     </span>
-                    <span className="tabular-nums text-white">{speed}%</span>
+                    <span className="tabular-nums text-on-ink">{speed}%</span>
                   </div>
                   <Slider
                     onCard
@@ -278,7 +285,7 @@ export function FanTile({
                       setSpeed(preset.value)
                       void commitSpeed(preset.value)
                     }}
-                    className="touch-target min-w-0 flex-1 rounded-xl border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition-ui hover:border-info/30 hover:text-ink"
+                    className="touch-target min-w-0 flex-1 rounded-control border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition-ui hover:border-info/30 hover:text-ink"
                   >
                     {preset.label}
                   </button>
@@ -364,7 +371,7 @@ export function FanTile({
             {(fan.supportsOscillate || fan.supportsDirection) && (
               <div className="grid gap-2">
                 {fan.supportsOscillate ? (
-                  <div className="flex items-center justify-between rounded-2xl border border-border-subtle bg-canvas/40 px-3 py-2.5">
+                  <div className="flex items-center justify-between rounded-card border border-border-subtle bg-canvas/40 px-3 py-2.5">
                     <span className="text-sm text-ink">Oscillate</span>
                     <Switch
                       checked={Boolean(fan.isOscillating)}
@@ -391,7 +398,7 @@ export function FanTile({
                           notify('Direction failed', e instanceof Error ? e.message : 'Error'),
                         )
                     }}
-                    className="flex items-center justify-between rounded-2xl border border-border-subtle bg-canvas/40 px-3 py-2.5 text-left text-sm text-ink disabled:opacity-40"
+                    className="flex items-center justify-between rounded-card border border-border-subtle bg-canvas/40 px-3 py-2.5 text-left text-sm text-ink disabled:opacity-40"
                   >
                     <span>Direction</span>
                     <span className="inline-flex items-center gap-1.5 capitalize text-ink-muted">

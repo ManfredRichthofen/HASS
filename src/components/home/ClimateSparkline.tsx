@@ -44,11 +44,11 @@ export function ClimateSparkline() {
     <Link
       to="/climate"
       className={cn(
-        'flex min-h-14 items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-3.5 py-3 transition-ui sm:px-4',
+        'flex min-h-14 items-center gap-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent px-3.5 py-3 transition-ui sm:px-4',
         'hover:border-accent/30 hover:bg-surface-hover',
       )}
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-success/15 text-success">
+      <span className="grid size-11 shrink-0 place-items-center rounded-control bg-success/15 text-success">
         <Thermometer className="size-5" />
       </span>
       <div className="min-w-0 flex-1">

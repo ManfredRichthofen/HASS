@@ -2,28 +2,34 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import type { ComponentProps } from 'react'
 import { cn } from '#/lib/cn'
 
+/**
+ * `primary` is the ink colour used as a fill (choice = inversion).
+ * `accent` is kept as an alias of `primary` for older call sites.
+ */
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent'
 type Size = 'sm' | 'md' | 'lg' | 'icon'
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-surface-hover text-ink border border-border hover:bg-border active:scale-[0.98]',
+  primary: 'bg-accent text-on-accent hover:bg-accent-strong',
+  accent: 'bg-accent text-on-accent hover:bg-accent-strong',
   secondary:
-    'bg-surface text-ink border border-border-subtle hover:border-border hover:bg-surface-hover',
-  ghost: 'bg-transparent text-ink-muted hover:bg-surface-hover hover:text-ink',
-  danger: 'bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25',
-  accent: 'bg-accent text-canvas font-semibold hover:bg-accent-strong active:scale-[0.98]',
+    'border-ui border-border bg-transparent text-ink hover:bg-surface-hover brutal:bg-surface',
+  ghost:
+    'bg-transparent text-ink-muted shadow-none! hover:bg-surface-hover hover:text-ink brutal:underline brutal:underline-offset-4',
+  danger:
+    'border-ui border-danger/45 bg-transparent text-danger hover:bg-danger/10 brutal:border-ink brutal:bg-surface',
 }
 
 const sizes: Record<Size, string> = {
-  sm: 'h-11 px-3.5 text-sm gap-1.5 rounded-xl',
-  md: 'h-11 px-4 text-sm gap-2 rounded-xl',
-  lg: 'h-12 px-5 text-base gap-2 rounded-xl',
-  icon: 'size-11 rounded-xl inline-flex items-center justify-center',
+  sm: 'h-11 px-4 text-sm gap-1.5',
+  md: 'h-12 px-5 text-[0.9375rem] gap-2',
+  lg: 'h-13 px-6 text-base gap-2',
+  icon: 'size-12 p-0',
 }
 
 export function Button({
   className,
-  variant = 'primary',
+  variant = 'secondary',
   size = 'md',
   ...props
 }: ComponentProps<typeof BaseButton> & {
@@ -33,9 +39,9 @@ export function Button({
   return (
     <BaseButton
       className={cn(
-        'inline-flex items-center justify-center font-medium transition-ui select-none',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-        'disabled:opacity-40 disabled:pointer-events-none',
+        'press inline-flex shrink-0 items-center justify-center rounded-pill font-semibold whitespace-nowrap select-none',
+        'brutal:font-label brutal:text-[0.8125rem] brutal:font-medium brutal:uppercase brutal:tracking-[0.04em] brutal:shadow-press',
+        'disabled:pointer-events-none disabled:opacity-40',
         variants[variant],
         sizes[size],
         className,

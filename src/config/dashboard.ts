@@ -143,18 +143,17 @@ export const areas: AreaConfig[] = [
     id: 'garage',
     name: 'Garage',
     lights: [],
-    fans: [],
-    // AFG cooler: fan + onboard climate on one card.
-    fanDevices: [
+    // Evaporative cooler — fan control only (not HVAC / Climate page).
+    fans: ['fan.afg_smt_pro_2_0'],
+    media: [],
+    sensors: [],
+    climateReadings: [
       {
-        label: 'Garage fan',
-        fanId: 'fan.afg_smt_pro_2_0',
+        label: 'Garage',
         tempId: 'sensor.afg_smt_pro_2_0_temperature',
         humidityId: 'sensor.afg_smt_pro_2_0_humidity',
       },
     ],
-    media: [],
-    sensors: [],
   },
   {
     id: 'laundry',
@@ -241,6 +240,19 @@ export const houseClimateReadings: ClimateReading[] = [
     humidityId: 'sensor.afg_smt_pro_2_0_humidity',
   },
   { label: 'Outside', tempId: 'sensor.outdoor_temperature' },
+]
+
+/**
+ * Fans shown on the Climate page — HVAC / thermostat circulation only.
+ * Room comfort fans (bedroom ceiling, garage cooler) stay under Rooms.
+ */
+export const climateFans: FanDevice[] = [
+  {
+    label: 'Living room fan',
+    fanId: 'fan.mts300',
+    tempId: 'sensor.mts300_temperature',
+    humidityId: 'sensor.mts300_humidity',
+  },
 ]
 
 export const entities = {

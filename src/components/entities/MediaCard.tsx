@@ -44,11 +44,11 @@ export function MediaCard({
           void run(() => (player.isPlaying ? player.pause() : player.play()), 'Playback failed')
         }
         className={cn(
-          'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border-subtle bg-surface p-3 text-left transition-ui hover:bg-surface-hover',
+          'flex min-h-14 w-full items-center gap-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-3 text-left transition-ui hover:bg-surface-hover',
           unavailable && 'opacity-40',
         )}
       >
-        <span className="grid size-11 place-items-center rounded-xl bg-canvas text-accent">
+        <span className="grid size-11 place-items-center rounded-control bg-canvas text-accent">
           {player.isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
@@ -62,14 +62,14 @@ export function MediaCard({
   return (
     <div
       className={cn(
-        'min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4',
+        'min-w-0 overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4',
         isActive && 'border-success/30',
         unavailable && 'opacity-40',
       )}
     >
       <div className="mb-4">
         <p className="text-sm font-medium text-ink-muted">{name}</p>
-        <h3 className="mt-1 truncate font-display text-lg font-semibold text-ink">{title}</h3>
+        <h3 className="mt-1 truncate text-display text-lg text-ink">{title}</h3>
         {artist ? <p className="truncate text-sm text-ink-muted">{artist}</p> : null}
       </div>
 
@@ -105,7 +105,7 @@ export function MediaCard({
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
-          className="grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted transition-ui hover:bg-canvas hover:text-ink"
+          className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-canvas hover:text-ink"
           disabled={unavailable}
           aria-label={player.isMuted ? 'Unmute' : 'Mute'}
           onClick={() => void run(() => player.toggleMute(), 'Mute failed')}

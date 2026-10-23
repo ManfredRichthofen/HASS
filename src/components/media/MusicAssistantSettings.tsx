@@ -170,14 +170,15 @@ export function MusicAssistantSettings() {
     notify('Disconnected', 'Music Assistant credentials cleared')
   }
 
-  const statusLabel = ensuring || discovering
-    ? 'Connecting via Home Assistant…'
-    : connected
-      ? massAuthLabel(authMethod)
-      : 'Using Home Assistant get_queue only'
+  const statusLabel =
+    ensuring || discovering
+      ? 'Connecting via Home Assistant…'
+      : connected
+        ? massAuthLabel(authMethod)
+        : 'Using Home Assistant get_queue only'
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-4">
+    <div className="space-y-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4">
       <div>
         <p className="text-sm font-semibold text-ink">Music Assistant</p>
         <p className="mt-1 text-xs text-ink-muted">
@@ -190,7 +191,11 @@ export function MusicAssistantSettings() {
         <span className="text-ink-muted">Status</span>
         <span
           className={
-            connected ? 'text-right text-success' : ensuring ? 'text-ink-muted' : 'text-right text-ink-faint'
+            connected
+              ? 'text-right text-success'
+              : ensuring
+                ? 'text-ink-muted'
+                : 'text-right text-ink-faint'
           }
         >
           {ensuring || discovering ? <Loader2 className="inline size-3.5 animate-spin" /> : null}{' '}
@@ -198,9 +203,7 @@ export function MusicAssistantSettings() {
         </span>
       </div>
 
-      {ensureHint && !connected ? (
-        <p className="text-xs text-ink-muted">{ensureHint}</p>
-      ) : null}
+      {ensureHint && !connected ? <p className="text-xs text-ink-muted">{ensureHint}</p> : null}
 
       <div className="block space-y-1.5">
         <p className="text-xs font-medium text-ink-muted">Server URL</p>

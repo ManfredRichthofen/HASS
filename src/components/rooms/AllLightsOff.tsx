@@ -1,13 +1,14 @@
 import { useEntityGroup, useServiceCall } from 'hass-react'
-import { Power } from 'lucide-react'
+import { LightbulbOff } from 'lucide-react'
+import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
 import { cn } from '#/lib/cn'
-import { m, snappy, staggerItem, tap } from '#/lib/motion'
 
 const allLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
 
-export function AllLightsOff() {
+/** House-wide "All lights off". Disabled (and says so) when nothing is on. */
+export function AllLightsOff({ className }: { className?: string }) {
   const { callService } = useServiceCall()
   const lights = useEntityGroup([...allLights])
   const on = lights.filter((l) => l.state === 'on').length
@@ -15,26 +16,28 @@ export function AllLightsOff() {
   async function turnOff() {
     try {
       await callService('light', 'turn_off', { entity_id: allLights })
+      notify('All lights off', `${on} turned off`)
     } catch (e) {
       notify('Lights failed', e instanceof Error ? e.message : 'Error')
     }
   }
 
   return (
-    <m.button
-      variants={staggerItem}
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       disabled={on === 0}
       onClick={() => void turnOff()}
-      whileTap={tap.soft}
-      transition={snappy}
-      className={cn(
-        'flex min-h-13 w-full items-center justify-center gap-2.5 rounded-2xl text-[0.9375rem] font-bold transition-ui',
-        on === 0 ? 'bg-surface text-ink-faint' : 'bg-surface text-ink hover:bg-surface-hover',
-      )}
+      className={cn(className)}
     >
-      <Power className="size-5" />
-      {on === 0 ? 'All lights are off' : `Turn off all lights (${on} on)`}
-    </m.button>
+      <LightbulbOff className="size-[18px]" />
+      {on === 0 ? 'All off' : `All lights off (${on})`}
+    </Button>
   )
+}
+
+/** Lit-light count for headers ("3 with lights on"). */
+export function useLightsOnCount() {
+  const lights = useEntityGroup([...allLights])
+  return lights.filter((l) => l.state === 'on').length
 }

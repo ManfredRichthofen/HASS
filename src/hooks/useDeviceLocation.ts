@@ -166,9 +166,7 @@ export function useDeviceLocation() {
       try {
         const battery = await readBatteryPercent()
         const id = getOrCreateLocationDeviceId()
-        const hostName = native
-          ? (getLocationDeviceName() ?? 'Android')
-          : 'Casa Web'
+        const hostName = native ? (getLocationDeviceName() ?? 'Android') : 'Casa Web'
         const target = resolveLocationReportTarget(id)
 
         await reportLocationViaWebhook({

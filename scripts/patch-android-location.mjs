@@ -146,10 +146,7 @@ const proguardRules = `# Casa location plugin is registered reflectively from Ru
 -keep class * extends androidx.startup.Initializer { <init>(); }
 `
 
-if (
-  !existsSync(proguardPath) ||
-  !readFileSync(proguardPath, 'utf8').includes('AppUpdatePlugin')
-) {
+if (!existsSync(proguardPath) || !readFileSync(proguardPath, 'utf8').includes('AppUpdatePlugin')) {
   writeFileSync(proguardPath, proguardRules)
 }
 

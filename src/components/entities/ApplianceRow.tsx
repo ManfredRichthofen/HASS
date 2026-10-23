@@ -1,9 +1,10 @@
 import { useSensor, useSwitch } from 'hass-react'
+import { WashingMachine } from 'lucide-react'
+import { DeviceRow } from '#/components/entities/DeviceRow'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
-import { cn } from '#/lib/cn'
 
-/** Appliance power switch with its current cycle status underneath. */
+/** Appliance power switch with its current cycle status as the state line. Place inside `<DeviceList>`. */
 export function ApplianceRow({
   powerId,
   statusId,
@@ -20,25 +21,24 @@ export function ApplianceRow({
     : String(status.value ?? status.state).replace(/_/g, ' ')
 
   return (
-    <div
-      className={cn(
-        'flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface px-3.5 py-2 sm:px-4',
-        power.isUnavailable && 'opacity-40',
-      )}
-    >
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-ink">{label}</p>
-        <p className="truncate text-xs capitalize text-ink-muted">{statusLabel}</p>
-      </div>
-      <Switch
-        checked={power.isOn}
-        disabled={power.isUnavailable}
-        onCheckedChange={() => {
-          void power
-            .toggle()
-            .catch((e) => notify('Switch failed', e instanceof Error ? e.message : 'Error'))
-        }}
-      />
-    </div>
+    <DeviceRow
+      icon={WashingMachine}
+      tone={power.isOn ? 'info' : 'neutral'}
+      name={label}
+      caption={statusLabel}
+      unavailable={power.isUnavailable}
+      trailing={
+        <Switch
+          aria-label={`${label} power`}
+          checked={power.isOn}
+          disabled={power.isUnavailable}
+          onCheckedChange={() => {
+            void power
+              .toggle()
+              .catch((e) => notify('Switch failed', e instanceof Error ? e.message : 'Error'))
+          }}
+        />
+      }
+    />
   )
 }

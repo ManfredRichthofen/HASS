@@ -1,14 +1,51 @@
 import { useClimate } from 'hass-react'
 import { Minus, Plus, Thermometer } from 'lucide-react'
+import { type PointerEvent, useEffect, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
-import { Slider } from '#/components/ui/slider'
+import { Segmented } from '#/components/ui/segmented'
 import { notify } from '#/components/ui/toast'
-import { Toggle } from '#/components/ui/toggle'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 
-const modes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'fan_only'] as const
+const allModes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'fan_only'] as const
+const modeLabel: Record<string, string> = {
+  off: 'Off',
+  heat: 'Heat',
+  cool: 'Cool',
+  heat_cool: 'Heat/cool',
+  auto: 'Auto',
+  fan_only: 'Fan',
+  dry: 'Dry',
+}
 
+// Geometry: a 270° arc opening at the bottom.
+const CX = 124
+const CY = 118
+const R = 96
+const A0 = 135
+const A1 = 405
+
+function point(angle: number, radius = R) {
+  const rad = (angle * Math.PI) / 180
+  return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) }
+}
+
+function arcPath(from: number, to: number) {
+  const a = point(from)
+  const b = point(to)
+  const large = to - from > 180 ? 1 : 0
+  return `M${a.x.toFixed(1)} ${a.y.toFixed(1)} A${R} ${R} 0 ${large} 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`
+}
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v))
+}
+
+/**
+ * The thermostat as a dial you can read across the room: a 270° arc filled to
+ * the target, the target huge in the middle, a tick where the room actually is.
+ * Drag the arc, or use − / +. `compact` renders a single row for lists.
+ */
 export function ClimateCard({
   entityId,
   compact = false,
@@ -19,143 +56,236 @@ export function ClimateCard({
   const climate = useClimate(entityId)
   const name = entityName(entityId, climate.attributes.friendly_name)
   const unavailable = climate.isUnavailable
-  const target = climate.targetTemperature ?? climate.minTemp
+  const lo = climate.minTemp ?? 50
+  const hi = climate.maxTemp ?? 90
+  const haTarget = climate.targetTemperature ?? lo
+  const [target, setTarget] = useState(haTarget)
+  const dragging = useRef(false)
   const current = climate.currentTemperature
+  const mode = String(climate.mode ?? 'off')
+  const action = String((climate.attributes as { hvac_action?: string }).hvac_action ?? '')
 
-  async function setTemp(next: number) {
+  useEffect(() => {
+    if (!dragging.current) setTarget(haTarget)
+  }, [haTarget])
+
+  async function commit(next: number) {
+    const value = clamp(Math.round(next), lo, hi)
+    setTarget(value)
     try {
-      await climate.setTemperature(next)
+      await climate.setTemperature(value)
     } catch (e) {
-      notify('Temp failed', e instanceof Error ? e.message : 'Error')
+      notify('Temperature failed', e instanceof Error ? e.message : 'Error')
     }
   }
 
-  async function setMode(mode: string) {
+  async function setMode(next: string) {
     try {
-      await climate.setMode(mode)
+      await climate.setMode(next)
     } catch (e) {
       notify('Mode failed', e instanceof Error ? e.message : 'Error')
     }
   }
 
-  const supported = climate.supportedModes.length ? climate.supportedModes : [...modes]
+  const supported = (climate.supportedModes.length ? climate.supportedModes : [...allModes]).map(
+    (m) => ({ value: m, label: modeLabel[m] ?? m.replace('_', ' ') }),
+  )
+  const statusLine = unavailable
+    ? 'Unavailable'
+    : [
+        action && action !== 'idle' && action !== 'off'
+          ? action.charAt(0).toUpperCase() + action.slice(1)
+          : mode === 'off'
+            ? 'Off'
+            : 'Idle',
+        current != null ? `${Math.round(current)}° inside` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
 
   if (compact) {
     return (
       <div
         className={cn(
-          'rounded-2xl border border-border-subtle bg-surface p-4',
-          unavailable && 'opacity-40',
+          'flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface p-4.5 shadow-card modern:border-transparent',
+          unavailable && 'opacity-45',
         )}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
-              <Thermometer className="size-5" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-ink">{name}</p>
-              <p className="text-xs capitalize text-ink-muted">{climate.mode}</p>
-            </div>
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="text-light">
+            <Thermometer className="size-6" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[0.9375rem] font-semibold text-ink">{name}</p>
+            <p className="truncate text-[0.8125rem] text-ink-muted">{statusLine}</p>
           </div>
-          <div className="text-right">
-            <p className="font-display text-2xl font-semibold tabular-nums text-ink">
-              {current != null ? `${Math.round(current)}°` : '—'}
-            </p>
-            <p className="text-xs text-ink-muted tabular-nums">
-              Target {target != null ? `${Math.round(target)}°` : '—'}
-            </p>
-          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-display text-3xl leading-none text-ink tabular-nums">
+            {Math.round(target)}°
+          </p>
+          <p className="text-label mt-1">Target</p>
         </div>
       </div>
     )
   }
 
+  const span = hi - lo || 1
+  const angleFor = (v: number) => A0 + ((clamp(v, lo, hi) - lo) / span) * (A1 - A0)
+  const at = angleFor(target)
+  const knob = point(at)
+  const tick = current != null ? angleFor(current) : null
+  const heatLike = mode === 'heat' || mode === 'heat_cool' || mode === 'auto'
+  const arcColor =
+    mode === 'cool'
+      ? 'stroke-info'
+      : heatLike
+        ? 'stroke-on-to brutal:stroke-ink'
+        : 'stroke-ink-faint'
+
+  function valueFromPointer(e: PointerEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 248 - CX
+    const y = ((e.clientY - rect.top) / rect.height) * 220 - CY
+    let angle = (Math.atan2(y, x) * 180) / Math.PI
+    if (angle < 90) angle += 360 // map into 135…405
+    angle = clamp(angle, A0, A1)
+    return lo + ((angle - A0) / (A1 - A0)) * span
+  }
+
   return (
     <div
       className={cn(
-        'min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-surface p-4 sm:p-5',
-        unavailable && 'opacity-40',
+        'grid justify-items-center gap-5 rounded-card border-ui border-border-subtle bg-surface px-5 pt-6 pb-5 shadow-card',
+        'modern:border-transparent brutal:border-ink',
+        unavailable && 'opacity-45',
       )}
     >
-      <div className="mb-5 flex items-start justify-between gap-3 sm:mb-6">
-        <div className="min-w-0">
-          <p className="text-sm text-ink-muted">Climate</p>
-          <h3 className="mt-0.5 truncate font-display text-lg font-semibold text-ink sm:text-xl">
-            {name}
-          </h3>
-        </div>
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-          <Thermometer className="size-5" />
+      <div className="flex w-full items-baseline justify-between gap-3">
+        <h3 className="text-display truncate text-xl text-ink">{name}</h3>
+        <span className="shrink-0 text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
+          {statusLine}
         </span>
       </div>
 
-      <div className="mb-5 flex items-end justify-center gap-4 sm:mb-6 sm:gap-6">
-        <div className="text-center">
-          <p className="text-xs text-ink-muted">Inside</p>
-          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight text-ink sm:text-5xl">
-            {current != null ? Math.round(current) : '—'}
-            <span className="text-xl text-ink-muted sm:text-2xl">°</span>
-          </p>
-        </div>
-        <div className="mb-2 h-10 w-px bg-border sm:h-12" />
-        <div className="text-center">
-          <p className="text-xs text-ink-muted">Target</p>
-          <p className="font-display text-3xl font-semibold tabular-nums text-accent sm:text-4xl">
-            {target != null ? Math.round(target) : '—'}
-            <span className="text-lg sm:text-xl">°</span>
-          </p>
+      <div className="relative h-[220px] w-[248px]">
+        <svg
+          viewBox="0 0 248 220"
+          className={cn(
+            'absolute inset-0 overflow-visible',
+            !unavailable && 'cursor-grab touch-none',
+          )}
+          // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: the dial arc itself is the slider
+          role="slider"
+          aria-label={`${name} target temperature`}
+          aria-valuemin={lo}
+          aria-valuemax={hi}
+          aria-valuenow={Math.round(target)}
+          tabIndex={unavailable ? -1 : 0}
+          onKeyDown={(e) => {
+            if (unavailable) return
+            if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+              e.preventDefault()
+              void commit(target + 1)
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+              e.preventDefault()
+              void commit(target - 1)
+            }
+          }}
+          onPointerDown={(e) => {
+            if (unavailable) return
+            dragging.current = true
+            e.currentTarget.setPointerCapture(e.pointerId)
+            setTarget(Math.round(valueFromPointer(e)))
+          }}
+          onPointerMove={(e) => {
+            if (!dragging.current) return
+            setTarget(Math.round(valueFromPointer(e)))
+          }}
+          onPointerUp={() => {
+            if (!dragging.current) return
+            dragging.current = false
+            void commit(target)
+          }}
+        >
+          <path
+            d={arcPath(A0, A1)}
+            className="fill-none stroke-surface-hover brutal:[stroke-linecap:butt]"
+            strokeWidth={14}
+            strokeLinecap="round"
+          />
+          <path
+            d={arcPath(A0, Math.max(A0 + 0.5, at))}
+            className={cn(
+              'fill-none modern:[stroke-width:8] brutal:[stroke-linecap:butt]',
+              arcColor,
+            )}
+            strokeWidth={14}
+            strokeLinecap="round"
+          />
+          {tick != null ? (
+            <line
+              x1={point(tick, R - 22).x}
+              y1={point(tick, R - 22).y}
+              x2={point(tick, R - 12).x}
+              y2={point(tick, R - 12).y}
+              className="stroke-ink-faint"
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+          ) : null}
+          <circle
+            cx={knob.x}
+            cy={knob.y}
+            r={12}
+            className="fill-ink stroke-surface modern:fill-surface modern:stroke-ink brutal:fill-on-from brutal:stroke-ink"
+            strokeWidth={4}
+          />
+        </svg>
+        <div className="pointer-events-none absolute inset-0 grid place-content-center pt-2 text-center">
+          <span className="text-label">
+            {mode === 'off' ? 'Off' : `${modeLabel[mode] ?? mode} to`}
+          </span>
+          <span className="text-[4rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em] brutal:text-[4.5rem] brutal:font-bold brutal:tracking-[-0.06em]">
+            {Math.round(target)}°
+          </span>
         </div>
       </div>
 
-      <div className="mb-5 flex items-center justify-center gap-3">
+      <div className="flex w-full max-w-[19rem] items-center justify-between">
         <Button
           size="icon"
           variant="secondary"
-          disabled={unavailable}
-          onClick={() => void setTemp((target ?? 68) - 1)}
+          aria-label="Cooler"
+          disabled={unavailable || target <= lo}
+          onClick={() => void commit(target - 1)}
         >
           <Minus className="size-5" />
         </Button>
+        <span className="text-[0.8125rem] text-ink-faint tabular-nums brutal:font-label brutal:text-xs">
+          {Math.round(lo)}° – {Math.round(hi)}°
+        </span>
         <Button
           size="icon"
           variant="secondary"
-          disabled={unavailable}
-          onClick={() => void setTemp((target ?? 68) + 1)}
+          aria-label="Warmer"
+          disabled={unavailable || target >= hi}
+          onClick={() => void commit(target + 1)}
         >
           <Plus className="size-5" />
         </Button>
       </div>
 
-      {climate.supportsTargetTemperature ? (
-        <div className="mb-5 min-w-0 space-y-2">
-          <Slider
-            aria-label="Target temperature"
-            min={climate.minTemp}
-            max={climate.maxTemp}
-            step={1}
-            disabled={unavailable}
-            value={target ?? climate.minTemp}
-            onValueCommitted={(value) => {
-              void setTemp(Array.isArray(value) ? value[0] : value)
-            }}
-          />
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        {supported.map((mode) => (
-          <Toggle
-            key={mode}
-            pressed={climate.mode === mode}
-            disabled={unavailable}
-            onPressedChange={() => void setMode(mode)}
-            className="touch-target capitalize sm:flex-none"
-          >
-            {mode.replace('_', ' ')}
-          </Toggle>
-        ))}
-      </div>
+      <Segmented
+        className="w-full"
+        label="Mode"
+        options={supported}
+        value={mode}
+        disabled={unavailable}
+        onChange={(next) => void setMode(next)}
+      />
     </div>
   )
 }
+
+export const ClimateDial = ClimateCard

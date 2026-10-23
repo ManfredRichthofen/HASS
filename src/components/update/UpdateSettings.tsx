@@ -50,7 +50,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
             : 'Not supported'
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface p-4">
+    <div className="space-y-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4">
       <div className="flex items-start gap-2">
         <RefreshCw className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <div className="min-w-0">
@@ -95,9 +95,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
               void result
                 .install(setProgress)
                 .then(() => notify('Installing update…'))
-                .catch((e) =>
-                  notify('Update failed', e instanceof Error ? e.message : String(e)),
-                )
+                .catch((e) => notify('Update failed', e instanceof Error ? e.message : String(e)))
                 .finally(() => {
                   setBusy(false)
                   setDownloading(false)

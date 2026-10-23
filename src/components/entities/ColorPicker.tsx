@@ -42,7 +42,7 @@ export function ColorPicker({
         <span className="text-sm text-ink-muted">Color</span>
         <label
           className={cn(
-            'relative size-9 overflow-hidden rounded-full border border-border shadow-inner',
+            'relative size-9 overflow-hidden rounded-pill border border-border shadow-inner',
             disabled && 'opacity-40',
           )}
           style={{ backgroundColor: toHex(current) }}
@@ -75,7 +75,7 @@ export function ColorPicker({
               aria-label={preset.label}
               onClick={() => onChange(preset.rgb)}
               className={cn(
-                'aspect-square rounded-full border-2 transition-ui active:scale-[0.92]',
+                'aspect-square rounded-pill border-2 transition-ui active:scale-[0.92]',
                 selected ? 'border-ink' : 'border-transparent',
                 disabled && 'opacity-40',
               )}

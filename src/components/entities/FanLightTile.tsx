@@ -94,23 +94,37 @@ export function FanLightTile({
   return (
     <div
       className={cn(
-        'relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-3.5 transition-state',
+        'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
         showInline || (!fan.isOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
-        active ? 'bg-on border-transparent' : 'border-border-subtle bg-surface',
+        active
+          ? 'bg-on shadow-on border-transparent brutal:border-ink'
+          : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
         unavailable && 'opacity-40',
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 pt-0.5">
-          <p className="truncate text-sm font-semibold tracking-tight text-ink">{label}</p>
-          <p className={cn('mt-0.5 truncate text-xs', active ? 'text-white/80' : 'text-ink-muted')}>
+          <p
+            className={cn(
+              'truncate text-[0.9375rem] font-semibold',
+              active ? 'text-on-ink' : 'text-ink',
+            )}
+          >
+            {label}
+          </p>
+          <p
+            className={cn(
+              'mt-0.5 truncate text-xs',
+              active ? 'text-on-ink-muted' : 'text-ink-muted',
+            )}
+          >
             Light {light.isOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
           </p>
         </div>
         <span
           className={cn(
-            'grid size-11 shrink-0 place-items-center rounded-xl',
-            active ? 'bg-white/20 text-white' : 'bg-icon-well text-ink-muted',
+            'grid size-11 shrink-0 place-items-center rounded-control',
+            active ? 'bg-on-ink/10 text-on-ink' : 'bg-icon-well text-ink-muted',
           )}
         >
           <Fan
@@ -128,10 +142,12 @@ export function FanLightTile({
           whileTap={tap.soft}
           transition={snappy}
           className={cn(
-            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-ui',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border px-2 text-xs font-semibold transition-ui',
             light.isOn
-              ? 'border-white/40 bg-white/20 text-white'
-              : 'border-border-subtle bg-canvas/40 text-ink-muted',
+              ? 'border-on-ink/30 bg-on-ink/10 text-on-ink'
+              : active
+                ? 'border-on-ink/25 text-on-ink-muted'
+                : 'border-border-subtle bg-canvas/40 text-ink-muted',
           )}
         >
           <Lightbulb className="size-3.5 shrink-0" />
@@ -145,10 +161,12 @@ export function FanLightTile({
           whileTap={tap.soft}
           transition={snappy}
           className={cn(
-            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-ui',
+            'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border px-2 text-xs font-semibold transition-ui',
             fan.isOn
-              ? 'border-white/40 bg-white/20 text-white'
-              : 'border-border-subtle bg-canvas/40 text-ink-muted',
+              ? 'border-on-ink/30 bg-on-ink/10 text-on-ink'
+              : active
+                ? 'border-on-ink/25 text-on-ink-muted'
+                : 'border-border-subtle bg-canvas/40 text-ink-muted',
           )}
         >
           <Fan className="size-3.5 shrink-0" />
@@ -180,11 +198,11 @@ export function FanLightTile({
                         void commitSpeed(preset.value)
                       }}
                       className={cn(
-                        'touch-target min-w-0 flex-1 rounded-xl border px-1.5 text-xs font-semibold transition-ui',
+                        'touch-target min-w-0 flex-1 rounded-control border px-1.5 text-xs font-semibold transition-ui',
                         selected
-                          ? 'border-white/60 bg-white/25 text-white'
+                          ? 'border-on-ink bg-on-ink text-on-from'
                           : fan.isOn
-                            ? 'border-transparent bg-white/10 text-white/80 hover:text-white'
+                            ? 'border-transparent bg-on-ink/10 text-on-ink-muted hover:text-on-ink'
                             : 'border-border-subtle bg-canvas/40 text-ink-muted hover:text-ink',
                       )}
                     >
@@ -195,11 +213,11 @@ export function FanLightTile({
               </div>
               {showInline ? (
                 <div className="min-w-0 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-white/80">
+                  <div className="flex items-center justify-between text-[11px] text-on-ink-muted">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
                     </span>
-                    <span className="tabular-nums text-white">{speed}%</span>
+                    <span className="tabular-nums text-on-ink">{speed}%</span>
                   </div>
                   <Slider
                     onCard
