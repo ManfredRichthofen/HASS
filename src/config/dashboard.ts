@@ -274,7 +274,7 @@ export const entities = {
     { id: 'media_player.living_room_tv', label: 'Bedroom TV' },
   ],
 
-  /** Common-area favorites only — bedroom stays in Rooms. */
+  /** Common-area favorite lights only — bedroom stays in Rooms. AC fan stays off Home. */
   favorites: {
     lights: [
       'light.inovelli_vzm32_sn',
@@ -284,7 +284,6 @@ export const entities = {
       'light.kitchen_lights',
       'light.doughnut_lamp',
     ],
-    fans: ['fan.mts300'],
   },
   /** Security page: door contact, leaks, and cameras (hidden automatically if unavailable). */
   security: {

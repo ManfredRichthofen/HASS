@@ -50,7 +50,7 @@ export function ClimateReadingCard({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent px-3.5 py-3 sm:px-4',
+        'min-w-0 rounded-card border-ui border-border-subtle bg-surface px-3.5 py-3 shadow-card modern:border-transparent @md:px-4 @md:py-3.5',
         unavailable && 'opacity-40',
       )}
     >
@@ -58,12 +58,12 @@ export function ClimateReadingCard({
         <p className="truncate text-sm font-semibold text-ink">{label}</p>
         {occupancyId ? <OccupancyBadge entityId={occupancyId} /> : null}
       </div>
-      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:mt-2 sm:gap-x-4">
-        <p className="text-display text-xl text-ink sm:text-2xl">
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 @md:mt-2 @md:gap-x-4">
+        <p className="text-display text-xl text-ink @md:text-2xl">
           <ReadingValue entityId={tempId} suffix="°" />
         </p>
         {humidityId ? (
-          <p className="truncate text-xs text-ink-muted sm:text-sm">
+          <p className="truncate text-xs text-ink-muted @md:text-sm">
             <ReadingValue entityId={humidityId} suffix="%" /> humidity
           </p>
         ) : null}

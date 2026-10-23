@@ -158,11 +158,36 @@ function PlayerSkeleton({
         >
           <div className="aspect-square w-full animate-pulse rounded-card bg-surface-hover glass:rounded-pill" />
         </div>
-        <div className="grid gap-2">
-          <div className="h-3 w-20 animate-pulse rounded-control bg-surface-hover" />
-          <div className="h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover @xl:h-8" />
-          <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
+
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-3 w-20 animate-pulse rounded-control bg-surface-hover" />
+            <div
+              className={cn(
+                'h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover',
+                view === 'player' ? '@max-xl:h-6 @xl:h-8' : 'h-8',
+              )}
+            />
+            <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
+          </div>
+          <div className="size-11 shrink-0 animate-pulse rounded-pill bg-surface-hover" />
         </div>
+      </div>
+
+      <div className="grid gap-2.5">
+        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover brutal:h-2.5" />
+        <div className="flex justify-between">
+          <div className="h-3 w-8 animate-pulse rounded-control bg-surface-hover" />
+          <div className="h-3 w-10 animate-pulse rounded-control bg-surface-hover" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <div className="size-11 animate-pulse rounded-pill bg-surface-hover" />
+        <div className="size-14 animate-pulse rounded-pill bg-surface-hover" />
+        <div className="size-19 animate-pulse rounded-pill bg-surface-hover" />
+        <div className="size-14 animate-pulse rounded-pill bg-surface-hover" />
+        <div className="size-11 animate-pulse rounded-pill bg-surface-hover" />
       </div>
     </section>
   )
@@ -171,9 +196,12 @@ function PlayerSkeleton({
 function QueueSkeleton() {
   return (
     <div className="space-y-2.5" aria-busy="true" aria-label="Loading queue">
-      <div className="space-y-1.5">
-        <div className="h-4 w-20 animate-pulse rounded-control bg-surface-hover" />
-        <div className="h-3 w-28 animate-pulse rounded-control bg-surface-hover" />
+      <div className="flex items-end justify-between gap-2">
+        <div className="space-y-1.5">
+          <div className="h-4 w-20 animate-pulse rounded-control bg-surface-hover" />
+          <div className="h-3 w-28 animate-pulse rounded-control bg-surface-hover" />
+        </div>
+        <div className="h-8 w-24 animate-pulse rounded-control bg-surface-hover" />
       </div>
       <div className="rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent brutal:border-ink">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -182,11 +210,14 @@ function QueueSkeleton() {
             className="flex min-h-16 items-center gap-2 border-b border-border-subtle py-2 last:border-b-0 brutal:border-b-2 brutal:border-ink brutal:last:border-b-0"
           >
             <div className="h-3 w-5 shrink-0 animate-pulse rounded-control bg-surface-hover" />
-            <div className="size-12 shrink-0 animate-pulse rounded-control bg-surface-hover" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-4 w-3/4 animate-pulse rounded-control bg-surface-hover" />
-              <div className="h-3 w-1/2 animate-pulse rounded-control bg-surface-hover" />
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="size-12 shrink-0 animate-pulse rounded-control bg-surface-hover" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-3/4 animate-pulse rounded-control bg-surface-hover" />
+                <div className="h-3 w-1/2 animate-pulse rounded-control bg-surface-hover" />
+              </div>
             </div>
+            <div className="hidden h-3 w-8 shrink-0 animate-pulse rounded-control bg-surface-hover sm:block" />
             <div className="size-9 shrink-0 animate-pulse rounded-pill bg-surface-hover" />
           </div>
         ))}

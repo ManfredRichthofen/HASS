@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { TempHistoryChart } from '#/components/charts/TempHistoryChart'
 import { ClimateCard } from '#/components/entities/ClimateCard'
 import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
 import { FanTile } from '#/components/entities/FanTile'
@@ -9,50 +8,28 @@ import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { climateFans, entities, houseClimateReadings } from '#/config/dashboard'
-import { useEntityHistory } from '#/hooks/useEntityHistory'
 
 export const Route = createFileRoute('/climate')({ component: ClimatePage })
-
-function LivingTempHistory() {
-  const { points, loading } = useEntityHistory(entities.livingTemp, 24)
-
-  return (
-    <div className="rounded-card border-ui border-border-subtle bg-surface p-5 shadow-card modern:border-transparent">
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-display text-lg text-ink">Living room</h3>
-        <p className="text-label">Last 24 hours</p>
-      </div>
-      {loading && points.length < 2 ? (
-        <div className="h-[200px] animate-pulse rounded-control bg-surface-hover" />
-      ) : points.length < 2 ? (
-        <p className="py-16 text-center text-sm text-ink-muted">Not enough history yet</p>
-      ) : (
-        <TempHistoryChart
-          points={points}
-          variant="full"
-          height={200}
-          ariaLabel="Living room temperature over 24 hours"
-        />
-      )}
-    </div>
-  )
-}
 
 function ClimatePage() {
   return (
     <Page>
-      <PageHeader title="Climate" subtitle="Comfort across the home" />
+      <PageHeader title="Climate" />
 
-      <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
+      {/*
+        Mobile: stacked thermostat → outside → readings → fans.
+        Wide content (@xl): thermostat | outside side-by-side.
+      */}
+      <div className="grid items-stretch gap-section @xl:grid-cols-2 @xl:gap-x-6 @xl:gap-y-5">
         <ClimateCard entityId={entities.climate} />
-        <div className="grid gap-4 @xl:gap-section">
-          <Section title="Outside">
+        <Section
+          title="Outside"
+          className="@xl:flex @xl:h-full @xl:flex-col @xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
+        >
+          <div className="@xl:min-h-0 @xl:flex-1">
             <WeatherCard />
-          </Section>
-          <Section title="History">
-            <LivingTempHistory />
-          </Section>
-        </div>
+          </div>
+        </Section>
       </div>
 
       <Section title="Room by room">

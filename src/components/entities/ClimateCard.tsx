@@ -156,7 +156,8 @@ export function ClimateCard({
   return (
     <div
       className={cn(
-        'grid justify-items-center gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 pt-5 pb-4 shadow-card @md:px-5 @md:pt-6 @md:pb-5 @md:gap-5',
+        'grid h-full justify-items-center gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 pt-5 pb-4 shadow-card',
+        '@md:gap-5 @md:px-5 @md:pt-6 @md:pb-5',
         'modern:border-transparent brutal:border-ink',
         unavailable && 'opacity-45',
       )}
