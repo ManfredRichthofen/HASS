@@ -66,12 +66,16 @@ export const tap = {
   hard: { scale: 0.92 },
 } as const
 
-/** Page route enter/exit (AppShell AnimatedOutlet) */
+/**
+ * Page route enter/exit (AppShell AnimatedOutlet).
+ * Keep exit absolute so the entering page owns layout immediately — avoids a
+ * blank canvas flash when popLayout would collapse height under opacity: 0.
+ */
 export const pageFade = {
-  initial: { opacity: 0, y: 8 },
+  initial: { opacity: 0, y: 6 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -4 },
-  transition: { duration: duration.normal, ease: easeOut },
+  transition: { duration: duration.fast, ease: easeOut },
 }
 
 /** Generic fade-up for standalone entrances */
@@ -125,11 +129,14 @@ export const staggerContainer = {
   },
 }
 
-/** Child of staggerContainer — soft rise */
+/**
+ * Child of staggerContainer — soft rise.
+ * Opacity stays at 1 so nested pageFade + stagger don't multiply into a blank
+ * flash (especially heavy pages like Climate).
+ */
 export const staggerItem = {
-  initial: { opacity: 0, y: 10 },
+  initial: { y: 10 },
   animate: {
-    opacity: 1,
     y: 0,
     transition: { duration: duration.normal, ease: easeOut },
   },

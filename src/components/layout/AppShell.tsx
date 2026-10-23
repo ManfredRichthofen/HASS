@@ -123,17 +123,27 @@ function AnimatedOutlet() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
-      <m.div
-        key={pathname}
-        initial={pageFade.initial}
-        animate={pageFade.animate}
-        exit={pageFade.exit}
-        transition={pageFade.transition}
-      >
-        <Outlet />
-      </m.div>
-    </AnimatePresence>
+    <div className="relative w-full">
+      <AnimatePresence initial={false}>
+        <m.div
+          key={pathname}
+          className="w-full"
+          initial={pageFade.initial}
+          animate={pageFade.animate}
+          exit={{
+            ...pageFade.exit,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            pointerEvents: 'none',
+          }}
+          transition={pageFade.transition}
+        >
+          <Outlet />
+        </m.div>
+      </AnimatePresence>
+    </div>
   )
 }
 
