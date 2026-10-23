@@ -87,7 +87,7 @@
   --default-transition-timing-function: var(--ease-out);
 }
 
-/* ── Walnut & Cream (default): dark walnut, cream type, honey light, serif ── */
+/* ── Walnut & Cream: dark walnut, cream type, honey light, serif ── */
 :root,
 [data-theme="walnut"] {
   color-scheme: dark;

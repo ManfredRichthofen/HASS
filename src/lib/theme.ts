@@ -35,7 +35,7 @@ export type ThemeId = (typeof themes)[number]['id']
 export type ModeSetting = 'light' | 'dark' | 'system'
 export type Mode = 'light' | 'dark'
 
-export const defaultTheme: ThemeId = 'walnut'
+export const defaultTheme: ThemeId = 'glass'
 export const defaultMode: ModeSetting = 'system'
 const THEME_KEY = 'casa.theme'
 const MODE_KEY = 'casa.mode'

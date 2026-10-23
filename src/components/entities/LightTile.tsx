@@ -39,18 +39,20 @@ function fixtureIcon(name: string): LucideIcon {
 }
 
 /** Hold briefly before a vertical drag can dim — otherwise scroll always wins. */
-const DIM_HOLD_MS = 200
+const DIM_HOLD_MS = 180
 
 type DragGesture = {
   pointerId: number
   x: number
   y: number
+  lastX: number
+  lastY: number
   start: number
   level: number
-  /** True after DIM_HOLD_MS without leaving the press — dimming is allowed. */
+  /** True after DIM_HOLD_MS — vertical drag may dim. */
   armed: boolean
   dimming: boolean
-  /** Scroll / swipe detected — do not toggle on the following click. */
+  /** Page scrolled (or similar) — do not toggle on the following click. */
   cancelled: boolean
 }
 
@@ -60,9 +62,12 @@ type DragGesture = {
  * is shaded, like liquid in a glass (Modern shows a level bar instead). The
  * small "more" target opens a sheet for colour and white temperature.
  *
- * Mobile WebViews often scroll without delivering pointermove to the tile, then
- * still fire pointerup — so we never toggle on pointerup. Toggle is click-only,
- * and document touchmove + capture scroll listeners cancel the pending click.
+ * Mobile rules:
+ * - Never toggle on pointerup (WebViews scroll without pointermove, then still
+ *   fire pointerup). Toggle is click-only, suppressed after scroll/drag.
+ * - Finger jitter during the hold must NOT cancel arming.
+ * - Once dimming, touchmove is non-passive so we can preventDefault and stop
+ *   the page stealing the gesture (touch-action cannot change mid-touch).
  */
 export function LightTile({ entityId, className }: { entityId: string; className?: string }) {
   // useLight only accepts light.* — callers must not pass switch.* or other domains.
@@ -117,12 +122,9 @@ export function LightTile({ entityId, className }: { entityId: string; className
     holdTimer.current = null
   }
 
-  const clearTouchLock = () => {
-    tileRef.current?.style.removeProperty('touch-action')
-  }
-
   const cancelPress = () => {
     const d = drag.current
+    if (d?.dimming) return
     if (d) d.cancelled = true
     suppressClick.current = true
     clearHoldTimer()
@@ -130,7 +132,6 @@ export function LightTile({ entityId, className }: { entityId: string; className
 
   const endGesture = () => {
     clearHoldTimer()
-    clearTouchLock()
     detachScrollGuards.current?.()
     detachScrollGuards.current = null
     drag.current = null
@@ -152,7 +153,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
     }
   }
 
-  function applyDimFromPoint(clientY: number, target: HTMLElement) {
+  function updateDimLevel(clientY: number) {
     const d = drag.current
     if (!d) return
     const dy = d.y - clientY
@@ -160,43 +161,53 @@ export function LightTile({ entityId, className }: { entityId: string; className
     const next = Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100)))
     d.level = next
     setLevel(next)
-    if (!d.dimming) {
-      d.dimming = true
-      suppressClick.current = true
-      clearHoldTimer()
-      try {
-        target.setPointerCapture(d.pointerId)
-      } catch {
-        // Capture can fail if the pointer already ended.
-      }
-      tileRef.current?.style.setProperty('touch-action', 'none')
-    }
   }
 
-  function considerMove(clientX: number, clientY: number, target: HTMLElement) {
+  function beginDim(clientY: number, target: HTMLElement) {
     const d = drag.current
-    if (!d || d.cancelled) return
+    if (!d || d.dimming || d.cancelled) return
+    d.dimming = true
+    // Re-base so brightness does not jump from jitter during the hold.
+    d.y = clientY
+    d.start = d.level
+    suppressClick.current = true
+    clearHoldTimer()
+    try {
+      target.setPointerCapture(d.pointerId)
+    } catch {
+      // Capture can fail if the pointer already ended.
+    }
+    updateDimLevel(clientY)
+  }
 
-    const dx = clientX - d.x
-    const dy = d.y - clientY
-    const absX = Math.abs(dx)
-    const absY = Math.abs(clientY - d.y)
+  /** @returns whether this move was claimed as a dim gesture */
+  function handleMove(clientX: number, clientY: number, target: HTMLElement): boolean {
+    const d = drag.current
+    if (!d || d.cancelled) return false
+
+    d.lastX = clientX
+    d.lastY = clientY
 
     if (d.dimming) {
-      applyDimFromPoint(clientY, target)
-      return
+      updateDimLevel(clientY)
+      return true
     }
 
-    if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return
+    // Still holding to arm — ignore jitter so the timer can finish.
+    if (!d.armed) return false
 
-    // Held vertical drag on a dimmable on light → start dimming.
-    // Any other movement is a scroll/swipe — suppress the click.
-    if (d.armed && onRef.current && canDimRef.current && absY > absX) {
-      applyDimFromPoint(clientY, target)
-      return
+    const absX = Math.abs(clientX - d.x)
+    const absY = Math.abs(clientY - d.y)
+    if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return false
+
+    if (onRef.current && canDimRef.current && absY > absX) {
+      beginDim(clientY, target)
+      return true
     }
 
-    cancelPress()
+    // Horizontal (or light off) after hold — not a dim; suppress tap.
+    suppressClick.current = true
+    return false
   }
 
   function attachScrollGuards(target: HTMLElement) {
@@ -206,16 +217,17 @@ export function LightTile({ entityId, className }: { entityId: string; className
       cancelPress()
     }
 
-    // touchmove keeps firing on Android/iOS WebViews while the page scrolls;
-    // pointermove on the tile often does not.
+    // Non-passive: once we claim a dim, preventDefault stops the WebView scroll.
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0]
       if (!t) return
-      considerMove(t.clientX, t.clientY, target)
+      if (handleMove(t.clientX, t.clientY, target)) {
+        e.preventDefault()
+      }
     }
 
     window.addEventListener('scroll', onScroll, true)
-    document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true })
 
     detachScrollGuards.current = () => {
       window.removeEventListener('scroll', onScroll, true)
@@ -231,6 +243,8 @@ export function LightTile({ entityId, className }: { entityId: string; className
       pointerId: e.pointerId,
       x: e.clientX,
       y: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
       start: level,
       level,
       armed: false,
@@ -240,14 +254,19 @@ export function LightTile({ entityId, className }: { entityId: string; className
     attachScrollGuards(e.currentTarget)
     clearHoldTimer()
     holdTimer.current = setTimeout(() => {
-      if (drag.current && !drag.current.cancelled) drag.current.armed = true
+      const d = drag.current
+      if (!d || d.cancelled) return
+      d.armed = true
+      // Fresh origin after the hold so the first drag does not include jitter.
+      d.x = d.lastX
+      d.y = d.lastY
     }, DIM_HOLD_MS)
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
-    considerMove(e.clientX, e.clientY, e.currentTarget)
+    handleMove(e.clientX, e.clientY, e.currentTarget)
   }
 
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
@@ -255,8 +274,16 @@ export function LightTile({ entityId, className }: { entityId: string; className
     const wasDimming = d?.dimming ?? false
     const levelToCommit = d?.level ?? level
     const samePointer = d?.pointerId === e.pointerId
-    // Keep suppressClick if we cancelled or dimmed — click may still arrive.
+
+    if (d && !wasDimming) {
+      const dx = e.clientX - d.x
+      const dy = e.clientY - d.y
+      if (dx * dx + dy * dy >= SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) {
+        suppressClick.current = true
+      }
+    }
     if (d?.cancelled || wasDimming) suppressClick.current = true
+
     endGesture()
     // Never toggle here — mobile scroll often ends in pointerup without move events.
     if (!d || unavailable || !samePointer || !wasDimming) return

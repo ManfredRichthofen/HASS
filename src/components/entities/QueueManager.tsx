@@ -386,8 +386,8 @@ function QueueRow({
  * and the up-next list in different panels; `artClassName` sizes the artwork
  * so the player fits the screen without scrolling. In `player` view the
  * artwork instead fills whatever height is left, so the player always fits.
- * `endlessToggle` puts the Endless Mix switch at the top of the queue (used by
- * the phone's Up next sheet, where the player itself stays uncluttered).
+ * `endlessToggle` puts the Endless Mix switch at the top of the queue, so the
+ * player itself stays uncluttered.
  */
 export function QueueManager({
   target,
@@ -395,12 +395,15 @@ export function QueueManager({
   view = 'all',
   artClassName = 'max-w-[22rem]',
   endlessToggle = false,
+  heading = true,
 }: {
   target: string
   onTargetChange: (id: string) => void
   view?: 'all' | 'player' | 'queue'
   artClassName?: string
   endlessToggle?: boolean
+  /** Show the "Up next" title (off when a tab already says it). */
+  heading?: boolean
 }) {
   const showPlayer = view !== 'queue'
   const showQueue = view !== 'player'
@@ -419,6 +422,8 @@ export function QueueManager({
     refresh,
     player,
     endlessMixEnabled,
+    shuffleEnabled,
+    repeatMode,
   } = queueApi
   const [busy, setBusy] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -441,8 +446,8 @@ export function QueueManager({
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
   const { position, pct } = useLivePosition(player.mediaPosition, duration, player.isPlaying)
 
-  const shuffle = player.shuffle ?? queue?.shuffle_enabled ?? false
-  const repeat = (player.repeat ?? queue?.repeat_mode ?? 'off').toLowerCase()
+  const shuffle = shuffleEnabled
+  const repeat = repeatMode
   const currentIndex = useMemo(() => {
     const currentId = queue?.current_item?.queue_item_id
     if (currentId) {
@@ -483,6 +488,13 @@ export function QueueManager({
     }
   }
 
+  /** Instant toggles — optimistic UI in the hook; don't lock the whole player. */
+  function runToggle(action: () => Promise<void>, failLabel: string) {
+    void action().catch((e) => {
+      notify(failLabel, e instanceof Error ? e.message : 'Error')
+    })
+  }
+
   async function transferTo(destination: string) {
     setMenuOpen(false)
     await run(
@@ -501,17 +513,14 @@ export function QueueManager({
   }
 
   function toggleEndless() {
-    void run(
-      'endless',
-      async () => {
-        await queueApi.setEndlessMix(!endlessMixEnabled)
-        notify(
-          endlessMixEnabled ? 'Endless Mix off' : 'Endless Mix on',
-          endlessMixEnabled ? 'Queue will stop when it ends' : 'Similar tracks will keep playing',
-        )
-      },
-      'Endless Mix failed',
-    )
+    const next = !endlessMixEnabled
+    runToggle(async () => {
+      await queueApi.setEndlessMix(next)
+      notify(
+        next ? 'Endless Mix on' : 'Endless Mix off',
+        next ? 'Similar tracks will keep playing' : 'Queue will stop when it ends',
+      )
+    }, 'Endless Mix failed')
   }
 
   return (
@@ -535,7 +544,7 @@ export function QueueManager({
           <Switch
             aria-label="Endless Mix"
             checked={endlessMixEnabled}
-            disabled={unavailable || busy !== null}
+            disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
             onCheckedChange={() => toggleEndless()}
           />
         </div>
@@ -574,13 +583,21 @@ export function QueueManager({
           className={cn(
             'grid gap-4',
             view === 'player' && 'flex min-h-0 flex-1 flex-col justify-center',
+            // Portrait tablet: artwork on the left, everything else beside it.
+            view === 'player' &&
+              '@xl:portrait:grid @xl:portrait:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)] @xl:portrait:content-center @xl:portrait:gap-x-8 @xl:portrait:gap-y-3',
           )}
           aria-label="Now playing"
         >
-          <div className={cn('grid gap-4', view === 'player' && 'flex min-h-0 shrink flex-col')}>
+          <div
+            className={cn(
+              'grid gap-4',
+              view === 'player' && 'flex min-h-0 shrink flex-col @xl:portrait:contents',
+            )}
+          >
             {view === 'player' ? (
               // The artwork takes whatever height is left, so the player always fits.
-              <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size]">
+              <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size] @xl:portrait:col-start-1 @xl:portrait:row-span-4 @xl:portrait:row-start-1 @xl:portrait:self-center">
                 <div className="size-[calc(min(100cqw,100cqh)-12px)]">
                   <Artwork src={currentArt} label="Now playing artwork" size="hero" />
                 </div>
@@ -677,12 +694,10 @@ export function QueueManager({
                 'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
                 shuffle && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
               )}
-              disabled={unavailable || busy !== null}
+              disabled={unavailable}
               aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
               aria-pressed={shuffle}
-              onClick={() =>
-                void run('shuffle', () => queueApi.setShuffle(!shuffle), 'Shuffle failed')
-              }
+              onClick={() => runToggle(() => queueApi.setShuffle(!shuffle), 'Shuffle failed')}
             >
               <Shuffle className="size-[18px]" />
             </button>
@@ -731,15 +746,11 @@ export function QueueManager({
                 'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
                 repeat !== 'off' && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
               )}
-              disabled={unavailable || busy !== null}
+              disabled={unavailable}
               aria-label={repeatModeLabel(repeat)}
               aria-pressed={repeat !== 'off'}
               onClick={() =>
-                void run(
-                  'repeat',
-                  () => queueApi.setRepeat(nextRepeatMode(repeat)),
-                  'Repeat failed',
-                )
+                runToggle(() => queueApi.setRepeat(nextRepeatMode(repeat)), 'Repeat failed')
               }
             >
               {repeat === 'one' ? (
@@ -780,7 +791,7 @@ export function QueueManager({
             </div>
           ) : null}
 
-          <div className={cn('flex justify-center', view === 'player' && 'hidden @xl:flex')}>
+          <div className={cn('flex justify-center', view === 'player' && 'hidden')}>
             <button
               type="button"
               className={cn(
@@ -788,16 +799,12 @@ export function QueueManager({
                 endlessMixEnabled &&
                   'border-transparent bg-accent-soft text-ink brutal:border-ink brutal:bg-ink brutal:text-surface',
               )}
-              disabled={unavailable || busy !== null || (!hasNowPlaying && !endlessMixEnabled)}
+              disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
               aria-label={endlessMixEnabled ? 'Turn off Endless Mix' : 'Turn on Endless Mix'}
               aria-pressed={endlessMixEnabled}
               onClick={toggleEndless}
             >
-              {busy === 'endless' ? (
-                <Loader2 className="size-3.5 animate-spin @xl:size-4" />
-              ) : (
-                <Radio className="size-3.5 @xl:size-4" />
-              )}
+              <Radio className="size-3.5 @xl:size-4" />
               Endless Mix
             </button>
           </div>
@@ -808,7 +815,12 @@ export function QueueManager({
         <div className="space-y-2.5">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <h3 className="text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase">
+              <h3
+                className={cn(
+                  heading ? 'block' : 'sr-only',
+                  'text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase',
+                )}
+              >
                 Up next
               </h3>
               <p className="text-xs text-ink-muted">

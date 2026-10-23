@@ -1,6 +1,6 @@
 import { useMediaPlayer, useServiceCall } from 'hass-react'
 import { Check, Plus, Volume1, Volume2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
@@ -48,6 +48,7 @@ async function toggleSpeaker(
     notify(`Playing in ${label}`)
   } catch (e) {
     notify('Speaker failed', e instanceof Error ? e.message : 'Error')
+    throw e
   }
 }
 
@@ -66,14 +67,28 @@ export function SpeakerPicker({ leader }: { leader: string }) {
   )
 }
 
+function useOptimisticOn(serverOn: boolean) {
+  const [optimistic, setOptimistic] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (optimistic !== null && optimistic === serverOn) setOptimistic(null)
+  }, [optimistic, serverOn])
+  return {
+    on: optimistic ?? serverOn,
+    setOptimistic,
+  }
+}
+
 function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: string }) {
   const { callService } = useServiceCall()
   const { player, members, active } = useSpeaker(id)
   const lead = useSpeaker(leader)
-  const on = active || (lead.members.includes(id) && lead.active)
+  const serverOn = active || (lead.members.includes(id) && lead.active)
+  const { on, setOptimistic } = useOptimisticOn(serverOn)
   const unavailable = player.isUnavailable
 
-  const handleToggle = () =>
+  const handleToggle = () => {
+    const next = !on
+    setOptimistic(next)
     void toggleSpeaker(
       callService,
       id,
@@ -85,7 +100,8 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
       lead.active,
       () => player.pause(),
       () => player.play(),
-    )
+    ).catch(() => setOptimistic(!next))
+  }
 
   return (
     <m.div
@@ -158,8 +174,26 @@ function SpeakerChip({ id, label, leader }: { id: string; label: string; leader:
   const { callService } = useServiceCall()
   const { player, members, active } = useSpeaker(id)
   const lead = useSpeaker(leader)
-  const on = active || (lead.members.includes(id) && lead.active)
+  const serverOn = active || (lead.members.includes(id) && lead.active)
+  const { on, setOptimistic } = useOptimisticOn(serverOn)
   const unavailable = player.isUnavailable
+
+  const handleToggle = () => {
+    const next = !on
+    setOptimistic(next)
+    void toggleSpeaker(
+      callService,
+      id,
+      label,
+      leader,
+      on,
+      members,
+      lead.members,
+      lead.active,
+      () => player.pause(),
+      () => player.play(),
+    ).catch(() => setOptimistic(!next))
+  }
 
   return (
     <m.button
@@ -170,20 +204,7 @@ function SpeakerChip({ id, label, leader }: { id: string; label: string; leader:
       aria-checked={on}
       aria-label={`Play in ${label}`}
       disabled={unavailable}
-      onClick={() =>
-        void toggleSpeaker(
-          callService,
-          id,
-          label,
-          leader,
-          on,
-          members,
-          lead.members,
-          lead.active,
-          () => player.pause(),
-          () => player.play(),
-        )
-      }
+      onClick={handleToggle}
       className={cn(
         'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-sm font-medium transition-state',
         on

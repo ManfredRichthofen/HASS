@@ -31,7 +31,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'theme-color',
-        content: themes.find((t) => t.id === defaultTheme)?.chrome.dark ?? '#17110d',
+        content: themes.find((t) => t.id === defaultTheme)?.chrome.dark ?? '#0c0f22',
       },
       { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },

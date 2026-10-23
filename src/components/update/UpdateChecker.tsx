@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { notify } from '#/components/ui/toast'
 import { checkForAppUpdate } from '#/lib/appUpdate'
@@ -7,6 +8,8 @@ const NOTIFIED_KEY = 'casa.update.notified_version'
 
 /** Quiet startup check; toasts once per available version. */
 export function UpdateChecker() {
+  const navigate = useNavigate()
+
   useEffect(() => {
     if (!isTauri()) return
 
@@ -20,13 +23,18 @@ export function UpdateChecker() {
       } catch {
         /* private mode */
       }
-      notify(`Casa ${result.version} is available`, 'Open Settings → App updates to install')
+      notify(`Casa ${result.version} is available`, 'Tap to open App updates', {
+        onClick: () => {
+          void navigate({ to: '/settings' })
+        },
+        timeout: 8000,
+      })
     })()
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [navigate])
 
   return null
 }

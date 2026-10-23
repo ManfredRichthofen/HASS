@@ -64,7 +64,10 @@ export type MusicQueueState = {
   setRepeat: (mode: string) => Promise<void>
   /** Endless Mix / Don’t stop the music — similar tracks when the queue runs low. */
   setEndlessMix: (enabled: boolean) => Promise<void>
+  /** Display values — optimistic until HA/MA catches up. */
   endlessMixEnabled: boolean
+  shuffleEnabled: boolean
+  repeatMode: string
 }
 
 async function resolvePlayerId(
@@ -255,17 +258,187 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   const queueId = query.data?.queueId ?? null
   const viaMassQueue = Boolean(query.data?.viaMassQueue ?? massQueueAvailable)
   const queue = query.data?.queue ?? null
-  const endlessMixEnabled = Boolean(
+
+  type OptimisticToggles = {
+    shuffle?: boolean
+    repeat?: string
+    endlessMix?: boolean
+  }
+  const [optimistic, setOptimistic] = useState<OptimisticToggles>({})
+
+  const serverEndless = Boolean(
     queue?.autoplay_enabled || queue?.dont_stop_the_music_enabled || queue?.is_dynamic,
   )
+  const serverShuffle = Boolean(player.shuffle ?? queue?.shuffle_enabled ?? false)
+  const serverRepeat = String(player.repeat ?? queue?.repeat_mode ?? 'off').toLowerCase()
+
+  // Drop optimistic overrides once HA/MA state matches what the user picked.
+  useEffect(() => {
+    setOptimistic((prev) => {
+      let changed = false
+      const next: OptimisticToggles = { ...prev }
+      if (prev.endlessMix !== undefined && prev.endlessMix === serverEndless) {
+        delete next.endlessMix
+        changed = true
+      }
+      if (prev.shuffle !== undefined && prev.shuffle === serverShuffle) {
+        delete next.shuffle
+        changed = true
+      }
+      if (prev.repeat !== undefined && prev.repeat === serverRepeat) {
+        delete next.repeat
+        changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [serverEndless, serverShuffle, serverRepeat])
+
+  const endlessMixEnabled = optimistic.endlessMix ?? serverEndless
+  const shuffleEnabled = optimistic.shuffle ?? serverShuffle
+  const repeatMode = optimistic.repeat ?? serverRepeat
 
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['music-queue', entityId] })
   }, [queryClient, entityId])
 
-  const afterMutation = useCallback(async () => {
-    await refresh()
+  const afterMutation = useCallback(() => {
+    // Soft refresh — don't block the UI on Music Assistant catching up.
+    void refresh()
+    window.setTimeout(() => void refresh(), 1_200)
   }, [refresh])
+
+  const patchQueueFlags = useCallback(
+    (patch: Partial<MusicQueue>) => {
+      queryClient.setQueriesData<{ queue: MusicQueue | null } | undefined>(
+        { queryKey: ['music-queue', entityId] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                queue: old.queue ? { ...old.queue, ...patch } : old.queue,
+              }
+            : old,
+      )
+    },
+    [entityId, queryClient],
+  )
+
+  const setShuffle = useCallback(
+    async (enabled: boolean) => {
+      setOptimistic((prev) => ({ ...prev, shuffle: enabled }))
+      patchQueueFlags({ shuffle_enabled: enabled })
+      try {
+        if (massApiConfigured && queueId && !viaMassQueue) {
+          await setQueueShuffle(queueId, enabled)
+        } else {
+          await player.setShuffle(enabled)
+        }
+        afterMutation()
+      } catch (e) {
+        setOptimistic((prev) => ({ ...prev, shuffle: !enabled }))
+        patchQueueFlags({ shuffle_enabled: !enabled })
+        throw e
+      }
+    },
+    [afterMutation, massApiConfigured, patchQueueFlags, player, queueId, viaMassQueue],
+  )
+
+  const setRepeat = useCallback(
+    async (mode: string) => {
+      const previous = repeatMode
+      setOptimistic((prev) => ({ ...prev, repeat: mode }))
+      patchQueueFlags({ repeat_mode: mode })
+      try {
+        if (massApiConfigured && queueId && !viaMassQueue) {
+          await setQueueRepeat(queueId, mode)
+        } else {
+          await player.setRepeat(mode)
+        }
+        afterMutation()
+      } catch (e) {
+        setOptimistic((prev) => ({ ...prev, repeat: previous }))
+        patchQueueFlags({ repeat_mode: previous })
+        throw e
+      }
+    },
+    [
+      afterMutation,
+      massApiConfigured,
+      patchQueueFlags,
+      player,
+      queueId,
+      repeatMode,
+      viaMassQueue,
+    ],
+  )
+
+  const setEndlessMix = useCallback(
+    async (enabled: boolean) => {
+      setOptimistic((prev) => ({ ...prev, endlessMix: enabled }))
+      patchQueueFlags({
+        autoplay_enabled: enabled,
+        dont_stop_the_music_enabled: enabled,
+        is_dynamic: enabled,
+      })
+      try {
+        if (massApiConfigured && queueId) {
+          try {
+            await setDontStopTheMusic(queueId, enabled)
+          } catch {
+            await setQueueAutoplay(queueId, enabled)
+          }
+          afterMutation()
+          return
+        }
+
+        if (!enabled) {
+          throw new Error(
+            'Turn off Endless Mix from Music Assistant, or connect the Music Assistant API in Settings',
+          )
+        }
+
+        const attrs = player.attributes as Record<string, unknown>
+        const mediaId =
+          queue?.current_item?.media_item?.uri?.trim() ||
+          (typeof attrs.media_content_id === 'string' ? attrs.media_content_id : null)
+        if (!mediaId) {
+          throw new Error('Nothing playing to start Endless Mix from')
+        }
+
+        const mediaType =
+          queue?.current_item?.media_item?.media_type ||
+          (typeof attrs.media_content_type === 'string' ? attrs.media_content_type : 'track')
+
+        await callService('music_assistant', 'play_media', {
+          entity_id: entityId,
+          media_id: mediaId,
+          media_type: mediaType,
+          enqueue: 'replace',
+          radio_mode: true,
+        })
+        afterMutation()
+      } catch (e) {
+        setOptimistic((prev) => ({ ...prev, endlessMix: !enabled }))
+        patchQueueFlags({
+          autoplay_enabled: !enabled,
+          dont_stop_the_music_enabled: !enabled,
+          is_dynamic: !enabled,
+        })
+        throw e
+      }
+    },
+    [
+      afterMutation,
+      callService,
+      entityId,
+      massApiConfigured,
+      patchQueueFlags,
+      player.attributes,
+      queue?.current_item?.media_item?.media_type,
+      queue?.current_item?.media_item?.uri,
+      queueId,
+    ],
+  )
 
   return useMemo(
     () => ({
@@ -288,6 +461,11 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       refresh,
       player,
       endlessMixEnabled,
+      shuffleEnabled,
+      repeatMode,
+      setShuffle,
+      setRepeat,
+      setEndlessMix,
       clear: async () => {
         if (massApiConfigured && queueId && !viaMassQueue) {
           await clearQueue(queueId)
@@ -327,7 +505,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           if (!queueId) throw new Error('No active Music Assistant queue')
           await deleteQueueItem(queueId, itemId)
         }
-        await afterMutation()
+        afterMutation()
       },
       moveUp: async (itemId: string) => {
         if (viaMassQueue) {
@@ -339,7 +517,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           if (!queueId) throw new Error('No active Music Assistant queue')
           await moveQueueItem(queueId, itemId, -1)
         }
-        await afterMutation()
+        afterMutation()
       },
       moveDown: async (itemId: string) => {
         if (viaMassQueue) {
@@ -351,7 +529,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           if (!queueId) throw new Error('No active Music Assistant queue')
           await moveQueueItem(queueId, itemId, 1)
         }
-        await afterMutation()
+        afterMutation()
       },
       playNext: async (itemId: string) => {
         if (viaMassQueue) {
@@ -363,7 +541,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           if (!queueId) throw new Error('No active Music Assistant queue')
           await moveQueueItem(queueId, itemId, 0)
         }
-        await afterMutation()
+        afterMutation()
       },
       moveToEnd: async (itemId: string) => {
         if (viaMassQueue) {
@@ -376,7 +554,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           if (!queueId) throw new Error('No active Music Assistant queue')
           await moveQueueItemEnd(queueId, itemId)
         }
-        await afterMutation()
+        afterMutation()
       },
       playIndex: async (index: number | string) => {
         if (viaMassQueue) {
@@ -391,61 +569,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         } else {
           await player.nextTrack()
         }
-        await afterMutation()
-      },
-      setShuffle: async (enabled: boolean) => {
-        if (massApiConfigured && queueId && !viaMassQueue) {
-          await setQueueShuffle(queueId, enabled)
-        } else {
-          await player.setShuffle(enabled)
-        }
-        await afterMutation()
-      },
-      setRepeat: async (mode: string) => {
-        if (massApiConfigured && queueId && !viaMassQueue) {
-          await setQueueRepeat(queueId, mode)
-        } else {
-          await player.setRepeat(mode)
-        }
-        await afterMutation()
-      },
-      setEndlessMix: async (enabled: boolean) => {
-        if (massApiConfigured && queueId) {
-          try {
-            await setDontStopTheMusic(queueId, enabled)
-          } catch {
-            await setQueueAutoplay(queueId, enabled)
-          }
-          await afterMutation()
-          return
-        }
-
-        if (!enabled) {
-          throw new Error(
-            'Turn off Endless Mix from Music Assistant, or connect the Music Assistant API in Settings',
-          )
-        }
-
-        const attrs = player.attributes as Record<string, unknown>
-        const mediaId =
-          queue?.current_item?.media_item?.uri?.trim() ||
-          (typeof attrs.media_content_id === 'string' ? attrs.media_content_id : null)
-        if (!mediaId) {
-          throw new Error('Nothing playing to start Endless Mix from')
-        }
-
-        const mediaType =
-          queue?.current_item?.media_item?.media_type ||
-          (typeof attrs.media_content_type === 'string' ? attrs.media_content_type : 'track')
-
-        await callService('music_assistant', 'play_media', {
-          entity_id: entityId,
-          media_id: mediaId,
-          media_type: mediaType,
-          enqueue: 'replace',
-          radio_mode: true,
-        })
-        await afterMutation()
+        afterMutation()
       },
     }),
     [
@@ -468,6 +592,11 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       query.isLoading,
       queueId,
       refresh,
+      repeatMode,
+      setEndlessMix,
+      setRepeat,
+      setShuffle,
+      shuffleEnabled,
       viaMassQueue,
     ],
   )
