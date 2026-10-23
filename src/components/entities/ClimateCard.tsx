@@ -4,6 +4,7 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Segmented } from '#/components/ui/segmented'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 
@@ -62,7 +63,7 @@ export function ClimateCard({
   const [target, setTarget] = useState(haTarget)
   const dragging = useRef(false)
   const current = climate.currentTemperature
-  const mode = String(climate.mode ?? 'off')
+  const { value: mode, commit: commitMode } = useOptimisticValue(String(climate.mode ?? 'off'))
   const action = String((climate.attributes as { hvac_action?: string }).hvac_action ?? '')
 
   useEffect(() => {
@@ -79,12 +80,15 @@ export function ClimateCard({
     }
   }
 
-  async function setMode(next: string) {
-    try {
-      await climate.setMode(next)
-    } catch (e) {
-      notify('Mode failed', e instanceof Error ? e.message : 'Error')
-    }
+  const setMode = (next: string) => {
+    commitMode(next, async () => {
+      try {
+        await climate.setMode(next)
+      } catch (e) {
+        notify('Mode failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
   const supported = (climate.supportedModes.length ? climate.supportedModes : [...allModes]).map(
@@ -283,7 +287,7 @@ export function ClimateCard({
         options={supported}
         value={mode}
         disabled={unavailable}
-        onChange={(next) => void setMode(next)}
+        onChange={setMode}
       />
     </div>
   )

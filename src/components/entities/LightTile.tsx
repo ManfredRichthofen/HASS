@@ -20,6 +20,7 @@ import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { LabeledSlider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { SCROLL_PRESS_THRESHOLD } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName, simpleToggleLights } from '#/lib/entityName'
@@ -98,7 +99,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const maxK = light.maxColorTempKelvin
   const canTemp = !isSimple && light.supportsColorTemp && minK != null && maxK != null
   const hasSheet = canColor || canTemp || canDim
-  const on = light.isOn && !unavailable
+  const { value: on, commit: commitOn } = useOptimisticValue(light.isOn && !unavailable)
   const swatch = on && canColor ? rgbCss(light.rgbColor) : undefined
   const Icon = fixtureIcon(name)
   onRef.current = on
@@ -137,12 +138,15 @@ export function LightTile({ entityId, className }: { entityId: string; className
     drag.current = null
   }
 
-  async function toggle() {
-    try {
-      await light.toggle()
-    } catch (e) {
-      notify('Light failed', e instanceof Error ? e.message : 'Unknown error')
-    }
+  const toggle = () => {
+    commitOn(!on, async () => {
+      try {
+        await light.toggle()
+      } catch (e) {
+        notify('Light failed', e instanceof Error ? e.message : 'Unknown error')
+        throw e
+      }
+    })
   }
 
   async function commitLevel(pct: number) {
@@ -302,14 +306,14 @@ export function LightTile({ entityId, className }: { entityId: string; className
       suppressClick.current = false
       return
     }
-    void toggle()
+    toggle()
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (unavailable) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      void toggle()
+      toggle()
     } else if (on && canDim && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault()
       const next = Math.max(1, Math.min(100, level + (e.key === 'ArrowUp' ? 10 : -10)))
@@ -442,7 +446,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
             <div className="grid gap-6 py-2">
               <div className="flex min-h-11 items-center justify-between">
                 <span className="text-label">Power</span>
-                <Switch checked={on} disabled={unavailable} onCheckedChange={() => void toggle()} />
+                <Switch checked={on} disabled={unavailable} onCheckedChange={() => toggle()} />
               </div>
 
               {canDim ? (

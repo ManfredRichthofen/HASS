@@ -1,31 +1,37 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useMediaPlayer } from 'hass-react'
 import { Music2, Pause, Play } from 'lucide-react'
 import { notify } from '#/components/ui/toast'
-import { entities } from '#/config/dashboard'
+import { useActiveMedia } from '#/hooks/useActiveMedia'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, slideUp, snappy, tap } from '#/lib/motion'
 
 /** Floating player card above the nav while music plays (hidden on the Music page). */
 export function NowPlayingBar() {
-  const player = useMediaPlayer(entities.mediaAll)
+  const media = useActiveMedia()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const { value: isPlaying, commit } = useOptimisticValue(media.isPlaying)
 
-  const visible = player.isPlaying && !pathname.startsWith('/media')
+  const visible = media.isActive && !pathname.startsWith('/media')
 
-  async function toggle() {
-    try {
-      if (player.isPlaying) await player.pause()
-      else await player.play()
-    } catch (e) {
-      notify('Music failed', e instanceof Error ? e.message : 'Error')
-    }
+  const toggle = () => {
+    const next = !isPlaying
+    commit(next, async () => {
+      try {
+        if (isPlaying) await media.player.pause()
+        else await media.player.play()
+      } catch (e) {
+        notify('Music failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
-  const title = player.mediaTitle ?? 'Playing'
-  const subtitle = player.mediaArtist ?? 'Everywhere'
-  const duration = player.attributes.media_duration as number | undefined
-  const position = player.attributes.media_position as number | undefined
+  const title = media.mediaTitle ?? 'Playing'
+  const subtitle =
+    [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
+  const duration = media.player.attributes.media_duration as number | undefined
+  const position = media.player.attributes.media_position as number | undefined
   const progress = duration && position != null ? Math.min(100, (position / duration) * 100) : 0
 
   return (
@@ -63,11 +69,11 @@ export function NowPlayingBar() {
                 type="button"
                 whileTap={tap.hard}
                 transition={snappy}
-                onClick={() => void toggle()}
-                aria-label={player.isPlaying ? 'Pause' : 'Play'}
+                onClick={toggle}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
                 className="grid size-12 shrink-0 place-items-center rounded-pill bg-accent text-on-accent modern:bg-on-accent modern:text-accent"
               >
-                {player.isPlaying ? (
+                {isPlaying ? (
                   <Pause className="size-5" fill="currentColor" />
                 ) : (
                   <Play className="size-5" fill="currentColor" />

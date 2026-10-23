@@ -3,6 +3,7 @@ import { Fan, Lightbulb, Wind } from 'lucide-react'
 import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
@@ -38,49 +39,73 @@ export function FanLightTile({
   const fan = useFan(fanId)
   const [speed, setSpeed] = useState(Math.max(0, Math.round(fan.percentage) || 0))
   const unavailable = light.isUnavailable && fan.isUnavailable
+  const { value: lightOn, commit: commitLight } = useOptimisticValue(
+    light.isOn && !light.isUnavailable,
+  )
+  const { value: fanOn, commit: commitFan } = useOptimisticValue(fan.isOn && !fan.isUnavailable)
   const canSpeed = fan.supportsSetSpeed
   const showFanControls = canSpeed && !fan.isUnavailable
-  const showInline = showFanControls && fan.isOn
+  const showInline = showFanControls && fanOn
   const activePreset = useMemo(() => (canSpeed ? nearestPreset(speed) : null), [canSpeed, speed])
-  const active = light.isOn || fan.isOn
+  const active = lightOn || fanOn
 
   useEffect(() => {
     setSpeed(Math.max(0, Math.round(fan.percentage) || 0))
   }, [fan.percentage, fan.isOn])
 
-  async function toggleLight() {
-    try {
-      await light.toggle()
-    } catch (e) {
-      notify('Light failed', e instanceof Error ? e.message : 'Error')
-    }
+  const toggleLight = () => {
+    commitLight(!lightOn, async () => {
+      try {
+        await light.toggle()
+      } catch (e) {
+        notify('Light failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
-  async function toggleFan() {
-    try {
-      await fan.toggle()
-    } catch (e) {
-      notify('Fan failed', e instanceof Error ? e.message : 'Error')
-    }
+  const toggleFan = () => {
+    commitFan(!fanOn, async () => {
+      try {
+        await fan.toggle()
+      } catch (e) {
+        notify('Fan failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
-  const lightPress = useScrollSafePress(() => void toggleLight())
-  const fanPress = useScrollSafePress(() => void toggleFan())
+  const lightPress = useScrollSafePress(toggleLight)
+  const fanPress = useScrollSafePress(toggleFan)
 
-  async function commitSpeed(pct: number) {
-    try {
-      if (pct <= 0) {
-        await fan.turnOff()
-        return
-      }
-      if (!fan.isOn) {
-        await fan.turnOn({ percentage: pct })
-        return
-      }
-      await fan.setPercentage(pct)
-    } catch (e) {
-      notify('Fan speed failed', e instanceof Error ? e.message : 'Error')
+  const failSpeed = (e: unknown) => {
+    notify('Fan speed failed', e instanceof Error ? e.message : 'Error')
+  }
+
+  const commitSpeed = (pct: number) => {
+    if (pct <= 0) {
+      commitFan(false, async () => {
+        try {
+          await fan.turnOff()
+        } catch (e) {
+          failSpeed(e)
+          throw e
+        }
+      })
+      return
     }
+    if (!fanOn) {
+      commitFan(true, async () => {
+        try {
+          await fan.turnOn({ percentage: pct })
+        } catch (e) {
+          failSpeed(e)
+          throw e
+        }
+      })
+      return
+    }
+    void fan.setPercentage(pct).catch(failSpeed)
   }
 
   function stopBubble(e: PointerEvent) {
@@ -89,7 +114,7 @@ export function FanLightTile({
 
   const fanStatus = fan.isUnavailable
     ? 'Unavailable'
-    : fan.isOn
+    : fanOn
       ? canSpeed
         ? `${speed || activePreset?.value || 0}% · ${activePreset?.label ?? 'Custom'}`
         : 'On'
@@ -99,7 +124,7 @@ export function FanLightTile({
     <div
       className={cn(
         'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
-        showInline || (!fan.isOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
+        showInline || (!fanOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
         active
           ? 'bg-on shadow-on border-transparent brutal:border-ink'
           : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
@@ -122,7 +147,7 @@ export function FanLightTile({
               active ? 'text-on-ink-muted' : 'text-ink-muted',
             )}
           >
-            Light {light.isOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
+            Light {lightOn ? 'on' : 'off'} · Fan {fanStatus.toLowerCase()}
           </p>
         </div>
         <span
@@ -132,8 +157,8 @@ export function FanLightTile({
           )}
         >
           <Fan
-            className={cn('size-5', fan.isOn && 'animate-spin')}
-            style={fan.isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
+            className={cn('size-5', fanOn && 'animate-spin')}
+            style={fanOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
           />
         </span>
       </div>
@@ -147,7 +172,7 @@ export function FanLightTile({
           transition={snappy}
           className={cn(
             'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border px-2 text-xs font-semibold transition-ui',
-            light.isOn
+            lightOn
               ? 'border-on-ink/30 bg-on-ink/10 text-on-ink'
               : active
                 ? 'border-on-ink/25 text-on-ink-muted'
@@ -166,7 +191,7 @@ export function FanLightTile({
           transition={snappy}
           className={cn(
             'flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border px-2 text-xs font-semibold transition-ui',
-            fan.isOn
+            fanOn
               ? 'border-on-ink/30 bg-on-ink/10 text-on-ink'
               : active
                 ? 'border-on-ink/25 text-on-ink-muted'
@@ -191,7 +216,7 @@ export function FanLightTile({
             <div className="mt-3 min-w-0 space-y-2">
               <div className="flex min-w-0 gap-1.5">
                 {speedPresets.map((preset) => {
-                  const selected = fan.isOn && activePreset?.value === preset.value
+                  const selected = fanOn && activePreset?.value === preset.value
                   return (
                     <button
                       key={preset.label}
@@ -205,7 +230,7 @@ export function FanLightTile({
                         'touch-target min-w-0 flex-1 rounded-control border px-1.5 text-xs font-semibold transition-ui',
                         selected
                           ? 'border-on-ink bg-on-ink text-on-from'
-                          : fan.isOn
+                          : fanOn
                             ? 'border-transparent bg-on-ink/10 text-on-ink-muted hover:text-on-ink'
                             : 'border-border-subtle bg-canvas/40 text-ink-muted hover:text-ink',
                       )}

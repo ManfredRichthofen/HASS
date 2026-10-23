@@ -21,7 +21,7 @@ function RoomTemp({ entityId }: { entityId: string }) {
 export function RoomCard({ area }: { area: AreaConfig }) {
   const room = useRoom(area)
   const { Icon } = room
-  const powerPress = useScrollSafePress(() => void room.togglePower())
+  const powerPress = useScrollSafePress(room.togglePower)
 
   return (
     <m.div

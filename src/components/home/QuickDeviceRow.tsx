@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useMediaPlayer, useSensor, useVacuum } from 'hass-react'
+import { useSensor, useVacuum } from 'hass-react'
 import { ChevronRight, Music2, Pause, Play, RobotVacuum, Thermometer } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceList, DeviceRow, RowChevron } from '#/components/entities/DeviceRow'
@@ -7,6 +7,8 @@ import { VacuumSheet } from '#/components/entities/VacuumSheet'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
+import { useActiveMedia } from '#/hooks/useActiveMedia'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, swapIcon, swapText, tap } from '#/lib/motion'
 
@@ -29,14 +31,15 @@ function Swap({ text }: { text: string }) {
 
 /** Home's "Around the house": music, climate and the vacuum in one calm list. */
 export function QuickDeviceRow({ className }: { className?: string }) {
-  const player = useMediaPlayer(entities.mediaAll)
+  const media = useActiveMedia()
   const vacuum = useVacuum(entities.vacuum)
   const inside = useSensor(entities.livingTemp)
   const [vacuumOpen, setVacuumOpen] = useState(false)
+  const { value: isPlaying, commit } = useOptimisticValue(media.isPlaying)
 
-  const isActive = player.isPlaying || player.isPaused
+  const isActive = media.isActive
   const musicCaption = isActive
-    ? [player.mediaTitle, player.mediaArtist].filter(Boolean).join(' · ') || 'Playing'
+    ? [media.mediaTitle, media.mediaArtist, media.room].filter(Boolean).join(' · ') || 'Playing'
     : 'Nothing playing'
 
   const vacuumStatus = vacuum.isUnavailable
@@ -53,13 +56,17 @@ export function QuickDeviceRow({ className }: { className?: string }) {
       ? `${vacuumStatus} · ${vacuum.batteryLevel}%`
       : vacuumStatus
 
-  async function togglePlayback() {
-    try {
-      if (player.isPlaying) await player.pause()
-      else await player.play()
-    } catch (err) {
-      notify('Music failed', err instanceof Error ? err.message : 'Error')
-    }
+  const togglePlayback = () => {
+    const next = !isPlaying
+    commit(next, async () => {
+      try {
+        if (isPlaying) await media.player.pause()
+        else await media.player.play()
+      } catch (err) {
+        notify('Music failed', err instanceof Error ? err.message : 'Error')
+        throw err
+      }
+    })
   }
 
   return (
@@ -74,18 +81,18 @@ export function QuickDeviceRow({ className }: { className?: string }) {
             isActive ? (
               <AnimatePresence mode="wait" initial={false}>
                 <m.button
-                  key={player.isPlaying ? 'pause' : 'play'}
+                  key={isPlaying ? 'pause' : 'play'}
                   type="button"
                   initial={swapIcon.initial}
                   animate={swapIcon.animate}
                   exit={swapIcon.exit}
                   transition={swapIcon.transition}
                   whileTap={tap.hard}
-                  onClick={() => void togglePlayback()}
-                  aria-label={player.isPlaying ? 'Pause' : 'Play'}
+                  onClick={togglePlayback}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
                   className="mr-1.5 grid size-11 shrink-0 place-items-center rounded-pill bg-accent text-on-accent"
                 >
-                  {player.isPlaying ? (
+                  {isPlaying ? (
                     <Pause className="size-4" fill="currentColor" />
                   ) : (
                     <Play className="size-4" fill="currentColor" />

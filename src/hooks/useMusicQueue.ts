@@ -104,6 +104,79 @@ async function detectMassQueue(connection: HaConnection | null): Promise<boolean
   }
 }
 
+type QueueCache = { items: QueueItem[]; queue: MusicQueue | null }
+
+const emptyQueueList = (old: QueueCache | undefined): QueueCache | undefined =>
+  old
+    ? {
+        ...old,
+        items: [],
+        queue: old.queue
+          ? {
+              ...old.queue,
+              items: 0,
+              current_index: null,
+              current_item: null,
+              next_item: null,
+            }
+          : old.queue,
+      }
+    : old
+
+const removeFromQueue = (old: QueueCache | undefined, itemId: string): QueueCache | undefined => {
+  if (!old) return old
+  const items = old.items.filter((item) => item.queue_item_id !== itemId)
+  return {
+    ...old,
+    items,
+    queue: old.queue ? { ...old.queue, items: items.length } : old.queue,
+  }
+}
+
+const swapQueueItems = (
+  old: QueueCache | undefined,
+  itemId: string,
+  direction: -1 | 1,
+): QueueCache | undefined => {
+  if (!old) return old
+  const index = old.items.findIndex((item) => item.queue_item_id === itemId)
+  const swapWith = index + direction
+  if (index < 0 || swapWith < 0 || swapWith >= old.items.length) return old
+  const items = [...old.items]
+  const a = items[index]
+  const b = items[swapWith]
+  if (!a || !b) return old
+  items[index] = b
+  items[swapWith] = a
+  return { ...old, items }
+}
+
+const moveItemNext = (old: QueueCache | undefined, itemId: string): QueueCache | undefined => {
+  if (!old) return old
+  const index = old.items.findIndex((item) => item.queue_item_id === itemId)
+  if (index < 0) return old
+  const currentIndex = old.queue?.current_index ?? 0
+  const insertAt = Math.min(currentIndex + 1, old.items.length - 1)
+  if (index === insertAt) return old
+  const items = [...old.items]
+  const [item] = items.splice(index, 1)
+  if (!item) return old
+  const adjusted = index < insertAt ? insertAt - 1 : insertAt
+  items.splice(Math.max(0, adjusted), 0, item)
+  return { ...old, items }
+}
+
+const moveItemToEnd = (old: QueueCache | undefined, itemId: string): QueueCache | undefined => {
+  if (!old) return old
+  const index = old.items.findIndex((item) => item.queue_item_id === itemId)
+  if (index < 0 || index === old.items.length - 1) return old
+  const items = [...old.items]
+  const [item] = items.splice(index, 1)
+  if (!item) return old
+  items.push(item)
+  return { ...old, items }
+}
+
 export function useMusicQueue(entityId: string): MusicQueueState {
   const { callService, callServiceWithResponse } = useServiceCall()
   const { connection, connected } = useHAConnection()
@@ -323,6 +396,39 @@ export function useMusicQueue(entityId: string): MusicQueueState {
     [entityId, queryClient],
   )
 
+  const patchQueueCache = useCallback(
+    (updater: (old: QueueCache | undefined) => QueueCache | undefined) => {
+      queryClient.setQueriesData<QueueCache | undefined>(
+        { queryKey: ['music-queue', entityId] },
+        updater,
+      )
+    },
+    [entityId, queryClient],
+  )
+
+  const withOptimisticQueue = useCallback(
+    async (
+      updater: (old: QueueCache | undefined) => QueueCache | undefined,
+      action: () => Promise<void>,
+    ) => {
+      // Full query keys include player state — snapshot every match so rollback is exact.
+      const snapshots = queryClient.getQueriesData<QueueCache>({
+        queryKey: ['music-queue', entityId],
+      })
+      patchQueueCache(updater)
+      try {
+        await action()
+        afterMutation()
+      } catch (e) {
+        for (const [key, data] of snapshots) {
+          queryClient.setQueryData(key, data)
+        }
+        throw e
+      }
+    },
+    [afterMutation, entityId, patchQueueCache, queryClient],
+  )
+
   const setShuffle = useCallback(
     async (enabled: boolean) => {
       setOptimistic((prev) => ({ ...prev, shuffle: enabled }))
@@ -467,99 +573,85 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       setRepeat,
       setEndlessMix,
       clear: async () => {
-        if (massApiConfigured && queueId && !viaMassQueue) {
-          await clearQueue(queueId)
-        } else {
-          // Full clear via the media player (mass_queue.clear_queue_from_here only drops upcoming).
-          await callService('media_player', 'clear_playlist', { entity_id: entityId })
-        }
-        // Empty the list right away; HA/MA state lags behind the service call.
-        queryClient.setQueriesData<{ items: QueueItem[]; queue: MusicQueue | null } | undefined>(
-          { queryKey: ['music-queue', entityId] },
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  items: [],
-                  queue: old.queue
-                    ? {
-                        ...old.queue,
-                        items: 0,
-                        current_index: null,
-                        current_item: null,
-                        next_item: null,
-                      }
-                    : old.queue,
-                }
-              : old,
-        )
-        window.setTimeout(() => void refresh(), 1_500)
+        await withOptimisticQueue(emptyQueueList, async () => {
+          if (massApiConfigured && queueId && !viaMassQueue) {
+            await clearQueue(queueId)
+          } else {
+            // Full clear via the media player (mass_queue.clear_queue_from_here only drops upcoming).
+            await callService('media_player', 'clear_playlist', { entity_id: entityId })
+          }
+        })
       },
       removeItem: async (itemId: string) => {
-        if (viaMassQueue) {
-          await callService('mass_queue', 'remove_queue_item', {
-            ...massQueueEntityData(entityId),
-            queue_item_id: itemId,
-          })
-        } else {
-          if (!queueId) throw new Error('No active Music Assistant queue')
-          await deleteQueueItem(queueId, itemId)
-        }
-        afterMutation()
+        await withOptimisticQueue((old) => removeFromQueue(old, itemId), async () => {
+          if (viaMassQueue) {
+            await callService('mass_queue', 'remove_queue_item', {
+              ...massQueueEntityData(entityId),
+              queue_item_id: itemId,
+            })
+          } else {
+            if (!queueId) throw new Error('No active Music Assistant queue')
+            await deleteQueueItem(queueId, itemId)
+          }
+        })
       },
       moveUp: async (itemId: string) => {
-        if (viaMassQueue) {
-          await callService('mass_queue', 'move_queue_item_up', {
-            ...massQueueEntityData(entityId),
-            queue_item_id: itemId,
-          })
-        } else {
-          if (!queueId) throw new Error('No active Music Assistant queue')
-          await moveQueueItem(queueId, itemId, -1)
-        }
-        afterMutation()
+        await withOptimisticQueue((old) => swapQueueItems(old, itemId, -1), async () => {
+          if (viaMassQueue) {
+            await callService('mass_queue', 'move_queue_item_up', {
+              ...massQueueEntityData(entityId),
+              queue_item_id: itemId,
+            })
+          } else {
+            if (!queueId) throw new Error('No active Music Assistant queue')
+            await moveQueueItem(queueId, itemId, -1)
+          }
+        })
       },
       moveDown: async (itemId: string) => {
-        if (viaMassQueue) {
-          await callService('mass_queue', 'move_queue_item_down', {
-            ...massQueueEntityData(entityId),
-            queue_item_id: itemId,
-          })
-        } else {
-          if (!queueId) throw new Error('No active Music Assistant queue')
-          await moveQueueItem(queueId, itemId, 1)
-        }
-        afterMutation()
+        await withOptimisticQueue((old) => swapQueueItems(old, itemId, 1), async () => {
+          if (viaMassQueue) {
+            await callService('mass_queue', 'move_queue_item_down', {
+              ...massQueueEntityData(entityId),
+              queue_item_id: itemId,
+            })
+          } else {
+            if (!queueId) throw new Error('No active Music Assistant queue')
+            await moveQueueItem(queueId, itemId, 1)
+          }
+        })
       },
       playNext: async (itemId: string) => {
-        if (viaMassQueue) {
-          await callService('mass_queue', 'move_queue_item_next', {
-            ...massQueueEntityData(entityId),
-            queue_item_id: itemId,
-          })
-        } else {
-          if (!queueId) throw new Error('No active Music Assistant queue')
-          await moveQueueItem(queueId, itemId, 0)
-        }
-        afterMutation()
+        await withOptimisticQueue((old) => moveItemNext(old, itemId), async () => {
+          if (viaMassQueue) {
+            await callService('mass_queue', 'move_queue_item_next', {
+              ...massQueueEntityData(entityId),
+              queue_item_id: itemId,
+            })
+          } else {
+            if (!queueId) throw new Error('No active Music Assistant queue')
+            await moveQueueItem(queueId, itemId, 0)
+          }
+        })
       },
       moveToEnd: async (itemId: string) => {
-        if (viaMassQueue) {
-          // mass_queue has no move-to-end; nudge down repeatedly is too harsh — skip via next.
-          await callService('mass_queue', 'move_queue_item_down', {
-            ...massQueueEntityData(entityId),
-            queue_item_id: itemId,
-          })
-        } else {
-          if (!queueId) throw new Error('No active Music Assistant queue')
-          await moveQueueItemEnd(queueId, itemId)
-        }
-        afterMutation()
+        await withOptimisticQueue((old) => moveItemToEnd(old, itemId), async () => {
+          if (viaMassQueue) {
+            // mass_queue has no move-to-end; nudge down once as a best-effort.
+            await callService('mass_queue', 'move_queue_item_down', {
+              ...massQueueEntityData(entityId),
+              queue_item_id: itemId,
+            })
+          } else {
+            if (!queueId) throw new Error('No active Music Assistant queue')
+            await moveQueueItemEnd(queueId, itemId)
+          }
+        })
       },
       playIndex: async (index: number | string) => {
+        // Playing an item does not reorder the list locally — just fire and soft-refresh.
         if (viaMassQueue) {
           const itemId = typeof index === 'string' ? index : String(index)
-          // Prefer queue_item_id when the UI passes one.
           await callService('mass_queue', 'play_queue_item', {
             ...massQueueEntityData(entityId),
             queue_item_id: itemId,
@@ -575,7 +667,6 @@ export function useMusicQueue(entityId: string): MusicQueueState {
     [
       afterMutation,
       callService,
-      queryClient,
       configured,
       ensuring,
       endlessMixEnabled,
@@ -598,6 +689,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       setShuffle,
       shuffleEnabled,
       viaMassQueue,
+      withOptimisticQueue,
     ],
   )
 }

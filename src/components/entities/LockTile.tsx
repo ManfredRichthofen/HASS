@@ -2,6 +2,7 @@ import { useLock } from 'hass-react'
 import { Lock, LockOpen } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
@@ -29,20 +30,25 @@ export function LockTile({
   const lock = useLock(entityId)
   const name = label ?? entityName(entityId, lock.attributes.friendly_name)
   const unavailable = lock.isUnavailable
-  const open = !unavailable && !lock.isLocked
+  const { value: locked, commit } = useOptimisticValue(!unavailable && lock.isLocked)
+  const open = !unavailable && !locked
   const changed = since((lock as { lastChanged?: Date }).lastChanged)
 
-  async function toggle() {
-    try {
-      if (lock.isLocked) await lock.unlock()
-      else await lock.lock()
-      notify(lock.isLocked ? 'Unlocked' : 'Locked', name)
-    } catch (e) {
-      notify('Lock failed', e instanceof Error ? e.message : 'Error')
-    }
+  const toggle = () => {
+    const nextLocked = !locked
+    commit(nextLocked, async () => {
+      try {
+        if (locked) await lock.unlock()
+        else await lock.lock()
+        notify(nextLocked ? 'Locked' : 'Unlocked', name)
+      } catch (e) {
+        notify('Lock failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
-  const press = useScrollSafePress(() => void toggle())
+  const press = useScrollSafePress(toggle)
 
   return (
     <div

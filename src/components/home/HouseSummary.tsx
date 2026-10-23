@@ -27,6 +27,7 @@ import { Dialog, DialogClose, DialogContent } from '#/components/ui/dialog'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 
 const watchedLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
@@ -84,19 +85,25 @@ export function HouseSummary() {
     (outdoor.value != null ? Number(outdoor.value) : null)
   const condition = String(weather.condition ?? weather.state ?? '')
   const WeatherIcon = weatherIcon(condition)
-  const locked = !lock.isUnavailable && lock.isLocked
+  const { value: locked, commit: commitLocked } = useOptimisticValue(
+    !lock.isUnavailable && lock.isLocked,
+  )
   const unlocking = locked
 
-  const handleConfirmLock = async () => {
+  const handleConfirmLock = () => {
     if (lock.isUnavailable) return
     setConfirmLockOpen(false)
-    try {
-      if (unlocking) await lock.unlock()
-      else await lock.lock()
-      notify(unlocking ? 'Unlocked' : 'Locked', 'Front door')
-    } catch (e) {
-      notify('Lock failed', e instanceof Error ? e.message : 'Error')
-    }
+    const nextLocked = !locked
+    commitLocked(nextLocked, async () => {
+      try {
+        if (locked) await lock.unlock()
+        else await lock.lock()
+        notify(nextLocked ? 'Locked' : 'Unlocked', 'Front door')
+      } catch (e) {
+        notify('Lock failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
   const people = occupancy.isUnavailable ? null : someoneHome ? "Someone's home" : 'Nobody is home'
@@ -232,7 +239,7 @@ export function HouseSummary() {
               <Button
                 size="sm"
                 variant={unlocking ? 'danger' : 'primary'}
-                onClick={() => void handleConfirmLock()}
+                onClick={handleConfirmLock}
               >
                 {unlocking ? 'Unlock' : 'Lock'}
               </Button>

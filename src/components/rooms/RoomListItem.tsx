@@ -16,7 +16,7 @@ function Temp({ entityId }: { entityId: string }) {
 export function RoomListItem({ area, active }: { area: AreaConfig; active: boolean }) {
   const room = useRoom(area)
   const { Icon } = room
-  const powerPress = useScrollSafePress(() => void room.togglePower())
+  const powerPress = useScrollSafePress(room.togglePower)
 
   return (
     <div

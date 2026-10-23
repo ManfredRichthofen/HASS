@@ -3,14 +3,20 @@ import { LayoutGrid } from 'lucide-react'
 import { roomIcons } from '#/components/rooms/roomMeta'
 import { notify } from '#/components/ui/toast'
 import { type AreaConfig, areaDeviceCount, areaLightIds, areaTempId } from '#/config/dashboard'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 
 /** Everything a room card or list row needs: lamp states, a short sentence, and a power toggle. */
 export function useRoom(area: AreaConfig) {
   const { callService } = useServiceCall()
   const lightIds = areaLightIds(area)
   const lights = useEntityGroup([...lightIds])
-  const lit = lights.map((l) => l.state === 'on')
-  const on = lit.filter(Boolean).length
+  const serverLit = lights.map((l) => l.state === 'on')
+  const serverOn = serverLit.filter(Boolean).length
+  const serverIsLit = serverOn > 0
+  const { value: isLit, commit } = useOptimisticValue(serverIsLit)
+  const pending = isLit !== serverIsLit
+  const lit = pending ? lightIds.map(() => isLit) : serverLit
+  const on = pending ? (isLit ? lightIds.length : 0) : serverOn
   const hasLights = lightIds.length > 0
   const deviceCount = areaDeviceCount(area)
   const hasClimate = (area.climateReadings?.length ?? 0) > 0 || area.sensors.length > 0
@@ -25,13 +31,17 @@ export function useRoom(area: AreaConfig) {
       ? 'Sensors only'
       : `${deviceCount} device${deviceCount === 1 ? '' : 's'}`
 
-  async function togglePower() {
-    try {
-      await callService('light', on > 0 ? 'turn_off' : 'turn_on', { entity_id: lightIds })
-      notify(on > 0 ? `${area.name} off` : `${area.name} on`)
-    } catch (e) {
-      notify('Lights failed', e instanceof Error ? e.message : 'Error')
-    }
+  const togglePower = () => {
+    const next = !isLit
+    commit(next, async () => {
+      try {
+        await callService('light', isLit ? 'turn_off' : 'turn_on', { entity_id: lightIds })
+        notify(isLit ? `${area.name} off` : `${area.name} on`)
+      } catch (e) {
+        notify('Lights failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
   return {
@@ -39,7 +49,7 @@ export function useRoom(area: AreaConfig) {
     tempId: areaTempId(area),
     lit,
     on,
-    isLit: on > 0,
+    isLit,
     hasLights,
     summary,
     togglePower,

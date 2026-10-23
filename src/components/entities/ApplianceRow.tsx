@@ -3,6 +3,7 @@ import { WashingMachine } from 'lucide-react'
 import { DeviceRow } from '#/components/entities/DeviceRow'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 
 /** Appliance power switch with its current cycle status as the state line. Place inside `<DeviceList>`. */
 export function ApplianceRow({
@@ -16,27 +17,35 @@ export function ApplianceRow({
 }) {
   const status = useSensor(statusId)
   const power = useSwitch(powerId)
+  const { value: on, commit } = useOptimisticValue(power.isOn)
   const statusLabel = status.isUnavailable
     ? '—'
     : String(status.value ?? status.state).replace(/_/g, ' ')
 
+  const handleToggle = () => {
+    commit(!on, async () => {
+      try {
+        await power.toggle()
+      } catch (e) {
+        notify('Switch failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
+  }
+
   return (
     <DeviceRow
       icon={WashingMachine}
-      tone={power.isOn ? 'info' : 'neutral'}
+      tone={on ? 'info' : 'neutral'}
       name={label}
       caption={statusLabel}
       unavailable={power.isUnavailable}
       trailing={
         <Switch
           aria-label={`${label} power`}
-          checked={power.isOn}
+          checked={on}
           disabled={power.isUnavailable}
-          onCheckedChange={() => {
-            void power
-              .toggle()
-              .catch((e) => notify('Switch failed', e instanceof Error ? e.message : 'Error'))
-          }}
+          onCheckedChange={handleToggle}
         />
       }
     />

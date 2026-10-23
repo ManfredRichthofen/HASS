@@ -5,6 +5,7 @@ import { VacuumMap } from '#/components/entities/VacuumMap'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useVacuumDevice } from '#/hooks/useVacuumDevice'
 import { cn } from '#/lib/cn'
 
@@ -40,18 +41,21 @@ function ModeChips({ entityId, title }: { entityId: string; title: string }) {
   const entity = useEntity<{ options?: string[] }>(entityId)
   const { callService } = useServiceCall()
   const options = entity.attributes.options ?? []
-  const current = String(entity.state ?? '')
+  const { value: current, commit } = useOptimisticValue(String(entity.state ?? ''))
   const disabled = entity.isUnavailable || options.length === 0
 
-  async function select(option: string) {
-    try {
-      await callService('select', 'select_option', {
-        entity_id: entityId,
-        option,
-      })
-    } catch (e) {
-      notify('Mode failed', e instanceof Error ? e.message : 'Error')
-    }
+  const select = (option: string) => {
+    commit(option, async () => {
+      try {
+        await callService('select', 'select_option', {
+          entity_id: entityId,
+          option,
+        })
+      } catch (e) {
+        notify('Mode failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
   if (disabled && options.length === 0) return null
@@ -67,7 +71,7 @@ function ModeChips({ entityId, title }: { entityId: string; title: string }) {
               key={option}
               type="button"
               disabled={entity.isUnavailable}
-              onClick={() => void select(option)}
+              onClick={() => select(option)}
               className={cn(
                 'touch-target rounded-control border px-3 text-xs font-medium capitalize transition-ui',
                 selected

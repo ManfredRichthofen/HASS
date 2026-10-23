@@ -6,6 +6,7 @@ import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { Toggle } from '#/components/ui/toggle'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
@@ -81,9 +82,10 @@ export function FanTile({
   const [speed, setSpeed] = useState(Math.max(0, Math.round(fan.percentage) || 0))
   const name = label ?? entityName(entityId, fan.attributes.friendly_name)
   const unavailable = fan.isUnavailable
+  const { value: isOn, commit: commitOn } = useOptimisticValue(fan.isOn && !unavailable)
   const canSpeed = fan.supportsSetSpeed
   const presets = fan.availablePresetModes.filter(Boolean)
-  const showInline = canSpeed && fan.isOn && !unavailable
+  const showInline = canSpeed && isOn && !unavailable
   const hasSensors = Boolean(tempId || humidityId)
   const activePreset = useMemo(() => (canSpeed ? nearestPreset(speed) : null), [canSpeed, speed])
 
@@ -91,30 +93,47 @@ export function FanTile({
     setSpeed(Math.max(0, Math.round(fan.percentage) || 0))
   }, [fan.percentage, fan.isOn])
 
-  async function handleToggle() {
-    try {
-      await fan.toggle()
-    } catch (e) {
-      notify('Fan failed', e instanceof Error ? e.message : 'Unknown error')
-    }
+  const handleToggle = () => {
+    commitOn(!isOn, async () => {
+      try {
+        await fan.toggle()
+      } catch (e) {
+        notify('Fan failed', e instanceof Error ? e.message : 'Unknown error')
+        throw e
+      }
+    })
   }
 
-  const togglePress = useScrollSafePress(() => void handleToggle())
+  const togglePress = useScrollSafePress(handleToggle)
 
-  async function commitSpeed(pct: number) {
-    try {
-      if (pct <= 0) {
-        await fan.turnOff()
-        return
-      }
-      if (!fan.isOn) {
-        await fan.turnOn({ percentage: pct })
-        return
-      }
-      await fan.setPercentage(pct)
-    } catch (e) {
-      notify('Fan speed failed', e instanceof Error ? e.message : 'Error')
+  const failSpeed = (e: unknown) => {
+    notify('Fan speed failed', e instanceof Error ? e.message : 'Error')
+  }
+
+  const commitSpeed = (pct: number) => {
+    if (pct <= 0) {
+      commitOn(false, async () => {
+        try {
+          await fan.turnOff()
+        } catch (e) {
+          failSpeed(e)
+          throw e
+        }
+      })
+      return
     }
+    if (!isOn) {
+      commitOn(true, async () => {
+        try {
+          await fan.turnOn({ percentage: pct })
+        } catch (e) {
+          failSpeed(e)
+          throw e
+        }
+      })
+      return
+    }
+    void fan.setPercentage(pct).catch(failSpeed)
   }
 
   async function setPresetMode(preset: string) {
@@ -132,7 +151,7 @@ export function FanTile({
 
   const status = unavailable
     ? 'Unavailable'
-    : fan.isOn
+    : isOn
       ? canSpeed
         ? `${speed || activePreset?.value || 0}% · ${activePreset?.label ?? 'Custom'}`
         : fan.presetMode || 'On'
@@ -144,7 +163,7 @@ export function FanTile({
         className={cn(
           'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
-          fan.isOn
+          isOn
             ? 'bg-on shadow-on border-transparent brutal:border-ink'
             : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
           unavailable && 'opacity-40',
@@ -162,19 +181,19 @@ export function FanTile({
             <span
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-control',
-                fan.isOn ? 'bg-on-ink/10 text-on-ink' : 'bg-icon-well text-ink-muted',
+                isOn ? 'bg-on-ink/10 text-on-ink' : 'bg-icon-well text-ink-muted',
               )}
             >
               <Fan
-                className={cn('size-5', fan.isOn && 'animate-spin')}
-                style={fan.isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
+                className={cn('size-5', isOn && 'animate-spin')}
+                style={isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
               />
             </span>
             <span className="min-w-0 pt-1">
               <span
                 className={cn(
                   'line-clamp-2 block text-[0.9375rem] font-semibold',
-                  fan.isOn ? 'text-on-ink' : 'text-ink',
+                  isOn ? 'text-on-ink' : 'text-ink',
                 )}
               >
                 {name}
@@ -182,13 +201,13 @@ export function FanTile({
               <span
                 className={cn(
                   'mt-0.5 block truncate text-xs',
-                  fan.isOn ? 'text-on-ink-muted' : 'text-ink-muted',
+                  isOn ? 'text-on-ink-muted' : 'text-ink-muted',
                 )}
               >
                 {status}
               </span>
               {hasSensors ? (
-                <SensorHint tempId={tempId} humidityId={humidityId} onCard={fan.isOn} />
+                <SensorHint tempId={tempId} humidityId={humidityId} onCard={isOn} />
               ) : null}
             </span>
           </m.button>
@@ -270,7 +289,7 @@ export function FanTile({
         </AnimatePresence>
 
         <AnimatePresence initial={false}>
-          {!fan.isOn && !unavailable && canSpeed ? (
+          {!isOn && !unavailable && canSpeed ? (
             <m.div
               key="fan-presets-off"
               initial={expandCollapse.initial}
@@ -305,9 +324,9 @@ export function FanTile({
             <div className="flex items-center justify-between">
               <span className="text-sm text-ink-muted">Power</span>
               <Switch
-                checked={fan.isOn}
+                checked={isOn}
                 disabled={unavailable}
-                onCheckedChange={() => void handleToggle()}
+                onCheckedChange={handleToggle}
               />
             </div>
 
@@ -321,7 +340,7 @@ export function FanTile({
                   {speedPresets.map((preset) => (
                     <Toggle
                       key={preset.label}
-                      pressed={activePreset?.value === preset.value && fan.isOn}
+                      pressed={activePreset?.value === preset.value && isOn}
                       disabled={unavailable}
                       onPressedChange={() => {
                         setSpeed(preset.value)
@@ -378,7 +397,7 @@ export function FanTile({
                     <span className="text-sm text-ink">Oscillate</span>
                     <Switch
                       checked={Boolean(fan.isOscillating)}
-                      disabled={unavailable || !fan.isOn}
+                      disabled={unavailable || !isOn}
                       onCheckedChange={(checked) => {
                         void fan
                           .setOscillating(checked)
@@ -392,7 +411,7 @@ export function FanTile({
                 {fan.supportsDirection ? (
                   <button
                     type="button"
-                    disabled={unavailable || !fan.isOn}
+                    disabled={unavailable || !isOn}
                     onClick={() => {
                       const next = fan.direction === 'reverse' ? 'forward' : 'reverse'
                       void fan

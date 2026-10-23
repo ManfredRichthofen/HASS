@@ -1,6 +1,7 @@
 import { useEntity, useServiceCall } from 'hass-react'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { LayoutGroup, m, snappy, tap } from '#/lib/motion'
@@ -58,16 +59,20 @@ function ModeRow({
 export function HouseModeGrid({ onPicked }: { onPicked?: () => void }) {
   const mode = useEntity(entities.houseMode)
   const { callService } = useServiceCall()
-  const current = String(mode.state ?? '')
+  const server = String(mode.state ?? '')
+  const { value: current, commit } = useOptimisticValue(server)
 
-  async function runScript(entityId: string, label: string) {
-    try {
-      await callService('script', 'turn_on', { entity_id: entityId })
-      notify(label)
-      onPicked?.()
-    } catch (e) {
-      notify('Mode failed', e instanceof Error ? e.message : 'Error')
-    }
+  const runScript = (entityId: string, label: string) => {
+    commit(label, async () => {
+      try {
+        await callService('script', 'turn_on', { entity_id: entityId })
+        notify(label)
+        onPicked?.()
+      } catch (e) {
+        notify('Mode failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
   return (
@@ -78,7 +83,7 @@ export function HouseModeGrid({ onPicked }: { onPicked?: () => void }) {
             key={item.id}
             label={item.label}
             selected={modeMatches(current, item.label)}
-            onSelect={() => void runScript(item.id, item.label)}
+            onSelect={() => runScript(item.id, item.label)}
           />
         ))}
       </div>

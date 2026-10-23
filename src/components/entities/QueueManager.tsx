@@ -29,6 +29,7 @@ import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { haUrl } from '#/config/ha'
 import { useMusicQueue } from '#/hooks/useMusicQueue'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import {
   formatDuration,
@@ -428,6 +429,10 @@ export function QueueManager({
   const [busy, setBusy] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
+  const { value: isPlaying, commit: commitPlaying } = useOptimisticValue(player.isPlaying)
+  const { value: isMuted, commit: commitMuted } = useOptimisticValue(Boolean(player.isMuted))
+  const serverVolume = Math.round((player.volumeLevel ?? 0) * 100)
+  const [volume, setVolume] = useState(serverVolume)
 
   // Drop the confirm prompt if it's ignored or the room changes.
   useEffect(() => {
@@ -436,6 +441,9 @@ export function QueueManager({
     return () => window.clearTimeout(id)
   }, [confirmClear])
   useEffect(() => setConfirmClear(false), [target])
+  useEffect(() => {
+    setVolume(serverVolume)
+  }, [serverVolume])
 
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
@@ -444,7 +452,7 @@ export function QueueManager({
     typeof attrs.entity_picture === 'string' ? resolveHaMediaUrl(attrs.entity_picture, haUrl) : null
   const currentArt = entityPicture ?? queueItemImage(queue?.current_item, massUrl, 256)
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
-  const { position, pct } = useLivePosition(player.mediaPosition, duration, player.isPlaying)
+  const { position, pct } = useLivePosition(player.mediaPosition, duration, isPlaying)
 
   const shuffle = shuffleEnabled
   const repeat = repeatMode
@@ -470,7 +478,7 @@ export function QueueManager({
 
   const unavailable = player.isUnavailable
   const hasNowPlaying =
-    Boolean(currentTitle) && (player.isPlaying || player.isPaused || items.length > 0)
+    Boolean(currentTitle) && (isPlaying || player.isPaused || items.length > 0)
   const canManageItems = configured
   const transferTargets = useMemo(
     () => mediaTargets.filter((playerTarget) => playerTarget.id !== target),
@@ -492,6 +500,30 @@ export function QueueManager({
   function runToggle(action: () => Promise<void>, failLabel: string) {
     void action().catch((e) => {
       notify(failLabel, e instanceof Error ? e.message : 'Error')
+    })
+  }
+
+  const togglePlayback = () => {
+    const next = !isPlaying
+    commitPlaying(next, async () => {
+      try {
+        if (isPlaying) await player.pause()
+        else await player.play()
+      } catch (e) {
+        notify('Playback failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
+  }
+
+  const toggleMute = () => {
+    commitMuted(!isMuted, async () => {
+      try {
+        await player.toggleMute()
+      } catch (e) {
+        notify('Mute failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
     })
   }
 
@@ -611,7 +643,7 @@ export function QueueManager({
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 {view === 'player' ? null : (
-                  <p className="text-label mb-1">{player.isPlaying ? 'Now playing' : 'Paused'}</p>
+                  <p className="text-label mb-1">{isPlaying ? 'Now playing' : 'Paused'}</p>
                 )}
                 <p
                   className={cn(
@@ -713,19 +745,11 @@ export function QueueManager({
             <button
               type="button"
               className="press grid size-[4.5rem] place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 brutal:border-2 brutal:border-ink brutal:shadow-press @xl:size-19"
-              disabled={unavailable || busy !== null}
-              aria-label={player.isPlaying ? 'Pause' : 'Play'}
-              onClick={() =>
-                void run(
-                  'toggle',
-                  () => (player.isPlaying ? player.pause() : player.play()),
-                  'Playback failed',
-                )
-              }
+              disabled={unavailable}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              onClick={togglePlayback}
             >
-              {busy === 'toggle' ? (
-                <Loader2 className="size-7 animate-spin" />
-              ) : player.isPlaying ? (
+              {isPlaying ? (
                 <Pause className="size-7 fill-current" />
               ) : (
                 <Play className="size-7 fill-current" />
@@ -767,11 +791,11 @@ export function QueueManager({
                 type="button"
                 className="grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink"
                 disabled={unavailable}
-                aria-label={player.isMuted ? 'Unmute' : 'Mute'}
-                aria-pressed={player.isMuted}
-                onClick={() => void run('mute', () => player.toggleMute(), 'Mute failed')}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                aria-pressed={isMuted}
+                onClick={toggleMute}
               >
-                {player.isMuted ? <VolumeX className="size-5" /> : <Volume1 className="size-5" />}
+                {isMuted ? <VolumeX className="size-5" /> : <Volume1 className="size-5" />}
               </button>
               <Slider
                 size="thin"
@@ -781,10 +805,18 @@ export function QueueManager({
                 max={100}
                 step={1}
                 disabled={unavailable}
-                value={Math.round((player.volumeLevel ?? 0) * 100)}
+                value={volume}
+                onValueChange={(value) => {
+                  setVolume(Array.isArray(value) ? value[0] : value)
+                }}
                 onValueCommitted={(value) => {
                   const next = Array.isArray(value) ? value[0] : value
-                  void run('volume', () => player.setVolume(next / 100), 'Volume failed')
+                  setVolume(next)
+                  void player
+                    .setVolume(next / 100)
+                    .catch((e) =>
+                      notify('Volume failed', e instanceof Error ? e.message : 'Error'),
+                    )
                 }}
               />
               <Volume2 className="mx-3 size-5 shrink-0 text-ink-faint" aria-hidden />

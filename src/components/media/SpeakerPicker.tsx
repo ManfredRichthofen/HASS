@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { m, snappy, tap } from '#/lib/motion'
 import { mediaTargets } from '#/lib/musicAssistant'
@@ -67,40 +68,36 @@ export function SpeakerPicker({ leader }: { leader: string }) {
   )
 }
 
-function useOptimisticOn(serverOn: boolean) {
-  const [optimistic, setOptimistic] = useState<boolean | null>(null)
-  useEffect(() => {
-    if (optimistic !== null && optimistic === serverOn) setOptimistic(null)
-  }, [optimistic, serverOn])
-  return {
-    on: optimistic ?? serverOn,
-    setOptimistic,
-  }
-}
-
 function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: string }) {
   const { callService } = useServiceCall()
   const { player, members, active } = useSpeaker(id)
   const lead = useSpeaker(leader)
   const serverOn = active || (lead.members.includes(id) && lead.active)
-  const { on, setOptimistic } = useOptimisticOn(serverOn)
+  const { value: on, commit } = useOptimisticValue(serverOn)
+  const serverVolume = Math.round((player.volumeLevel ?? 0) * 100)
+  const [volume, setVolume] = useState(serverVolume)
   const unavailable = player.isUnavailable
+
+  useEffect(() => {
+    setVolume(serverVolume)
+  }, [serverVolume])
 
   const handleToggle = () => {
     const next = !on
-    setOptimistic(next)
-    void toggleSpeaker(
-      callService,
-      id,
-      label,
-      leader,
-      on,
-      members,
-      lead.members,
-      lead.active,
-      () => player.pause(),
-      () => player.play(),
-    ).catch(() => setOptimistic(!next))
+    commit(next, () =>
+      toggleSpeaker(
+        callService,
+        id,
+        label,
+        leader,
+        on,
+        members,
+        lead.members,
+        lead.active,
+        () => player.pause(),
+        () => player.play(),
+      ),
+    )
   }
 
   return (
@@ -152,9 +149,13 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
             min={0}
             max={100}
             step={1}
-            value={Math.round((player.volumeLevel ?? 0) * 100)}
+            value={volume}
+            onValueChange={(value) => {
+              setVolume(Array.isArray(value) ? (value[0] ?? 0) : value)
+            }}
             onValueCommitted={(value) => {
               const next = Array.isArray(value) ? (value[0] ?? 0) : value
+              setVolume(next)
               void player
                 .setVolume(next / 100)
                 .catch((e) => notify('Volume failed', e instanceof Error ? e.message : 'Error'))
@@ -175,24 +176,25 @@ function SpeakerChip({ id, label, leader }: { id: string; label: string; leader:
   const { player, members, active } = useSpeaker(id)
   const lead = useSpeaker(leader)
   const serverOn = active || (lead.members.includes(id) && lead.active)
-  const { on, setOptimistic } = useOptimisticOn(serverOn)
+  const { value: on, commit } = useOptimisticValue(serverOn)
   const unavailable = player.isUnavailable
 
   const handleToggle = () => {
     const next = !on
-    setOptimistic(next)
-    void toggleSpeaker(
-      callService,
-      id,
-      label,
-      leader,
-      on,
-      members,
-      lead.members,
-      lead.active,
-      () => player.pause(),
-      () => player.play(),
-    ).catch(() => setOptimistic(!next))
+    commit(next, () =>
+      toggleSpeaker(
+        callService,
+        id,
+        label,
+        leader,
+        on,
+        members,
+        lead.members,
+        lead.active,
+        () => player.pause(),
+        () => player.play(),
+      ),
+    )
   }
 
   return (

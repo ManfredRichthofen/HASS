@@ -19,12 +19,10 @@ type LightScene = (typeof entities.lightScenes)[number]
 function SceneCard({
   scene,
   selected,
-  disabled,
   onRun,
 }: {
   scene: LightScene
   selected: boolean
-  disabled: boolean
   onRun: (scene: LightScene) => void
 }) {
   const Icon = icons[scene.id] ?? Sunrise
@@ -35,7 +33,6 @@ function SceneCard({
       type="button"
       aria-pressed={selected}
       aria-label={scene.label}
-      disabled={disabled}
       {...press}
       whileTap={tap.medium}
       transition={snappy}
@@ -45,7 +42,6 @@ function SceneCard({
         'glass:rounded-[1.25rem]',
         'brutal:-mt-0.5 brutal:-ml-0.5 brutal:border-ink brutal:shadow-none',
         selected && 'border-transparent bg-accent text-on-accent brutal:border-ink',
-        disabled && 'opacity-50',
       )}
     >
       <Icon
@@ -69,27 +65,27 @@ function SceneCard({
 /** Scenes as a grid of cards, all visible without scrolling (Modern: pills). The last scene run stays inverted. */
 export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonly LightScene[] }) {
   const { callService } = useServiceCall()
-  const [busyId, setBusyId] = useState<string | null>(null)
   const [lastId, setLastId] = useState<string | null>(null)
 
-  async function runScene(scene: LightScene) {
-    setBusyId(scene.id)
-    try {
-      if (scene.kind === 'lights_off') {
-        const entityIds = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
-        await callService('light', 'turn_off', { entity_id: [...entityIds] })
-      } else if (scene.kind === 'actions') {
-        for (const action of scene.actions) {
-          await callService(action.domain, action.service, action.data)
+  const runScene = (scene: LightScene) => {
+    const previous = lastId
+    setLastId(scene.id)
+    void (async () => {
+      try {
+        if (scene.kind === 'lights_off') {
+          const entityIds = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
+          await callService('light', 'turn_off', { entity_id: [...entityIds] })
+        } else if (scene.kind === 'actions') {
+          for (const action of scene.actions) {
+            await callService(action.domain, action.service, action.data)
+          }
         }
+        notify(scene.label)
+      } catch (e) {
+        setLastId(previous)
+        notify('Scene failed', e instanceof Error ? e.message : 'Error')
       }
-      notify(scene.label)
-      setLastId(scene.id)
-    } catch (e) {
-      notify('Scene failed', e instanceof Error ? e.message : 'Error')
-    } finally {
-      setBusyId(null)
-    }
+    })()
   }
 
   return (
@@ -105,9 +101,8 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
         <SceneCard
           key={scene.id}
           scene={scene}
-          selected={lastId === scene.id || busyId === scene.id}
-          disabled={busyId != null && busyId !== scene.id}
-          onRun={(s) => void runScene(s)}
+          selected={lastId === scene.id}
+          onRun={runScene}
         />
       ))}
     </div>

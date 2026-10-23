@@ -19,6 +19,7 @@ import { Section } from '#/components/layout/Section'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
+import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { entityName } from '#/lib/entityName'
 import { m, staggerContainer } from '#/lib/motion'
@@ -31,32 +32,37 @@ export const Route = createFileRoute('/rooms/$areaId')({
 function RoomLightsButton({ ids, name }: { ids: string[]; name: string }) {
   const { callService } = useServiceCall()
   const lights = useEntityGroup([...ids])
-  const on = lights.filter((l) => l.state === 'on').length
+  const serverOn = lights.filter((l) => l.state === 'on').length
+  const { value: isLit, commit } = useOptimisticValue(serverOn > 0)
 
-  async function toggle() {
-    try {
-      await callService('light', on > 0 ? 'turn_off' : 'turn_on', { entity_id: ids })
-      notify(on > 0 ? `${name} lights off` : `${name} lights on`)
-    } catch (e) {
-      notify('Lights failed', e instanceof Error ? e.message : 'Error')
-    }
+  const toggle = () => {
+    const next = !isLit
+    commit(next, async () => {
+      try {
+        await callService('light', isLit ? 'turn_off' : 'turn_on', { entity_id: ids })
+        notify(isLit ? `${name} lights off` : `${name} lights on`)
+      } catch (e) {
+        notify('Lights failed', e instanceof Error ? e.message : 'Error')
+        throw e
+      }
+    })
   }
 
-  const press = useScrollSafePress(() => void toggle())
+  const press = useScrollSafePress(toggle)
 
   return (
     <Button
       size="sm"
-      variant={on > 0 ? 'secondary' : 'primary'}
+      variant={isLit ? 'secondary' : 'primary'}
       {...press}
-      aria-label={on > 0 ? `Turn off all ${name} lights` : `Turn on all ${name} lights`}
+      aria-label={isLit ? `Turn off all ${name} lights` : `Turn on all ${name} lights`}
     >
-      {on > 0 ? (
+      {isLit ? (
         <LightbulbOff className="size-[18px]" aria-hidden />
       ) : (
         <Lightbulb className="size-[18px]" aria-hidden />
       )}
-      {on > 0 ? 'All lights off' : 'Lights on'}
+      {isLit ? 'All lights off' : 'Lights on'}
     </Button>
   )
 }
