@@ -40,27 +40,23 @@ function SceneCard({
       whileTap={tap.medium}
       transition={snappy}
       className={cn(
-        'flex min-h-24 w-38 shrink-0 flex-col justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface p-4 text-left shadow-card transition-state modern:border-transparent',
-        'walnut:min-h-28 walnut:w-40',
-        'modern:min-h-12 modern:w-auto modern:flex-row modern:items-center modern:gap-2.5 modern:rounded-pill modern:py-0 modern:pr-5 modern:pl-3.5',
-        'brutal:w-40 brutal:shadow-none brutal:not-first:-ml-0.5',
-        '@xl:min-h-18 @xl:min-w-0 @xl:w-auto @xl:shrink @xl:gap-2.5 @xl:p-3',
-        'walnut:@xl:min-h-20 @xl:w-auto',
-        'modern:@xl:min-h-11 @xl:w-full',
-        'brutal:@xl:w-auto brutal:@xl:not-first:ml-0',
+        'flex min-h-16 min-w-0 items-center gap-3 rounded-card border-ui border-border-subtle bg-surface px-4 py-3 text-left shadow-card transition-state',
+        'modern:min-h-13 modern:rounded-pill modern:border-transparent modern:py-2',
+        'glass:rounded-[1.25rem]',
+        'brutal:-mt-0.5 brutal:-ml-0.5 brutal:border-ink brutal:shadow-none',
         selected && 'border-transparent bg-accent text-on-accent brutal:border-ink',
         disabled && 'opacity-50',
       )}
     >
       <Icon
         className={cn(
-          'size-[22px] modern:size-[18px]',
+          'size-5 shrink-0 modern:size-[18px]',
           selected ? 'text-on-accent' : 'text-ink-faint',
         )}
       />
       <span
         className={cn(
-          'text-display block text-lg leading-tight @xl:text-base',
+          'text-display block truncate text-[1.0625rem] leading-tight',
           'modern:font-sans modern:text-[0.9375rem] modern:font-semibold modern:tracking-[-0.01em]',
         )}
       >
@@ -70,7 +66,7 @@ function SceneCard({
   )
 }
 
-/** Scenes as a swipeable row of cards (Modern: compact pills). The last scene run stays inverted. */
+/** Scenes as a grid of cards, all visible without scrolling (Modern: pills). The last scene run stays inverted. */
 export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonly LightScene[] }) {
   const { callService } = useServiceCall()
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -99,11 +95,10 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
   return (
     <div
       className={cn(
-        'no-scrollbar -mx-page flex gap-3 overflow-x-auto px-page pt-0.5 pb-2 sm:mx-0 sm:px-0',
-        'brutal:gap-0',
-        // Page @container: wrap into a 2×2 once Home goes two-column (@xl)
-        '@xl:mx-0 @xl:grid @xl:grid-cols-2 @xl:gap-2.5 @xl:overflow-visible @xl:px-0 @xl:pb-0',
-        'brutal:@xl:gap-0',
+        // Every scene visible at once: 2×2 on phones, one row of four when
+        // the page is wide but single-column, back to 2×2 beside Home's summary.
+        'grid grid-cols-2 gap-2.5 @md:grid-cols-4 @xl:grid-cols-2',
+        'brutal:gap-0 brutal:pt-0.5 brutal:pl-0.5',
       )}
     >
       {scenes.map((scene) => (
