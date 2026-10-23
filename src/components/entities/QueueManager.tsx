@@ -93,7 +93,7 @@ function useLivePosition(position: number | null, duration: number | null, playi
 
   useEffect(() => {
     if (!playing) return
-    const id = window.setInterval(() => setNow(Date.now()), 500)
+    const id = window.setInterval(() => setNow(Date.now()), 1_000)
     return () => window.clearInterval(id)
   }, [playing])
 

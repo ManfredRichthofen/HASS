@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
-    "generate-icons": "node scripts/generate-icons.mjs",
+    "generate-icons": "node scripts/generate-icons.mjs && tauri icon ./app-icon.png",
     "build": "vite build",
     "build:tauri": "node scripts/build-tauri.mjs",
     "preview": "vite preview",
@@ -23,11 +23,9 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@tanstack/charts": "^1.1.0",
     "@tanstack/react-query": "^5.104.5",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
-    "@tanstack/react-virtual": "^3.14.21",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-geolocation": "^2.5.0",
     "@tauri-apps/plugin-opener": "^2.7.2",

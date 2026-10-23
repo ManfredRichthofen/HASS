@@ -8,6 +8,7 @@ import { DoorbellPopup } from '#/components/security/DoorbellPopup'
 import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
+import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
 import { AnimatePresence, domAnimation, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
 
 function ConnectingSplash({ label }: { label: string }) {
@@ -59,6 +60,8 @@ function ConnectedShell({ children }: { children: React.ReactNode }) {
     nextRetryIn,
     lastConnectedAt,
   } = useHAConnection()
+
+  useHAResumeReconnect()
 
   if (connected) {
     return (

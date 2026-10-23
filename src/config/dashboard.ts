@@ -314,6 +314,8 @@ export const entities = {
   doorbell: {
     cameraId: 'camera.doorbell',
     ringId: 'binary_sensor.doorbell_visitor',
+    /** Fallback open trigger when the visitor/ring sensor is missing. */
+    motionId: 'binary_sensor.doorbell_motion',
     frigateCamera: 'doorbell',
     frigateInstanceId: 'frigate',
   },

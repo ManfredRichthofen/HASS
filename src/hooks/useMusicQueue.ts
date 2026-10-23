@@ -168,9 +168,10 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       (player.attributes as { active_queue?: string }).active_queue,
     ],
     enabled: Boolean(entityId) && connected && massQueueAvailable !== null,
-    staleTime: 2_000,
-    refetchInterval: configured ? (active ? 3_000 : 8_000) : active ? 4_000 : 12_000,
-    refetchOnWindowFocus: true,
+    staleTime: 8_000,
+    // Drive freshness mainly from media_player state in the query key; poll as a backstop.
+    refetchInterval: configured ? (active ? 10_000 : 15_000) : active ? 12_000 : 20_000,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<{
       queueId: string | null
       queue: MusicQueue | null
