@@ -98,12 +98,7 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
       )}
     >
       {scenes.map((scene) => (
-        <SceneCard
-          key={scene.id}
-          scene={scene}
-          selected={lastId === scene.id}
-          onRun={runScene}
-        />
+        <SceneCard key={scene.id} scene={scene} selected={lastId === scene.id} onRun={runScene} />
       ))}
     </div>
   )

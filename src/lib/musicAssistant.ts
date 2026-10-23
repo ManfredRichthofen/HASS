@@ -290,6 +290,22 @@ export function resolveHaMediaUrl(path: string | null | undefined, haBaseUrl?: s
   return withHaAuth(absolute)
 }
 
+/**
+ * Artwork candidates from a HA media_player's attributes: the proxied
+ * `entity_picture_local` first (always same-origin + signed), then `entity_picture`.
+ */
+export function playerArtSources(attributes: object | null | undefined, haBaseUrl?: string | null) {
+  const attrs = (attributes ?? {}) as Record<string, unknown>
+  const out: string[] = []
+  for (const key of ['entity_picture_local', 'entity_picture']) {
+    const value = attrs[key]
+    if (typeof value !== 'string' || !value) continue
+    const url = resolveHaMediaUrl(value, haBaseUrl)
+    if (url && !out.includes(url)) out.push(url)
+  }
+  return out
+}
+
 /** Absolutize a path against a base URL (MA imageproxy, CDN paths, etc.). */
 export function resolveAgainstBase(path: string | null | undefined, baseUrl?: string | null) {
   if (!path) return null

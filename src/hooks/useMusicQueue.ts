@@ -524,15 +524,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         throw e
       }
     },
-    [
-      afterMutation,
-      massApiConfigured,
-      patchQueueFlags,
-      player,
-      queueId,
-      repeatMode,
-      viaMassQueue,
-    ],
+    [afterMutation, massApiConfigured, patchQueueFlags, player, queueId, repeatMode, viaMassQueue],
   )
 
   const setEndlessMix = useCallback(
@@ -632,70 +624,85 @@ export function useMusicQueue(entityId: string): MusicQueueState {
         })
       },
       removeItem: async (itemId: string) => {
-        await withOptimisticQueue((old) => removeFromQueue(old, itemId), async () => {
-          if (viaMassQueue) {
-            await callService('mass_queue', 'remove_queue_item', {
-              ...massQueueEntityData(entityId),
-              queue_item_id: itemId,
-            })
-          } else {
-            if (!queueId) throw new Error('No active Music Assistant queue')
-            await deleteQueueItem(queueId, itemId)
-          }
-        })
+        await withOptimisticQueue(
+          (old) => removeFromQueue(old, itemId),
+          async () => {
+            if (viaMassQueue) {
+              await callService('mass_queue', 'remove_queue_item', {
+                ...massQueueEntityData(entityId),
+                queue_item_id: itemId,
+              })
+            } else {
+              if (!queueId) throw new Error('No active Music Assistant queue')
+              await deleteQueueItem(queueId, itemId)
+            }
+          },
+        )
       },
       moveUp: async (itemId: string) => {
-        await withOptimisticQueue((old) => swapQueueItems(old, itemId, -1), async () => {
-          if (viaMassQueue) {
-            await callService('mass_queue', 'move_queue_item_up', {
-              ...massQueueEntityData(entityId),
-              queue_item_id: itemId,
-            })
-          } else {
-            if (!queueId) throw new Error('No active Music Assistant queue')
-            await moveQueueItem(queueId, itemId, -1)
-          }
-        })
+        await withOptimisticQueue(
+          (old) => swapQueueItems(old, itemId, -1),
+          async () => {
+            if (viaMassQueue) {
+              await callService('mass_queue', 'move_queue_item_up', {
+                ...massQueueEntityData(entityId),
+                queue_item_id: itemId,
+              })
+            } else {
+              if (!queueId) throw new Error('No active Music Assistant queue')
+              await moveQueueItem(queueId, itemId, -1)
+            }
+          },
+        )
       },
       moveDown: async (itemId: string) => {
-        await withOptimisticQueue((old) => swapQueueItems(old, itemId, 1), async () => {
-          if (viaMassQueue) {
-            await callService('mass_queue', 'move_queue_item_down', {
-              ...massQueueEntityData(entityId),
-              queue_item_id: itemId,
-            })
-          } else {
-            if (!queueId) throw new Error('No active Music Assistant queue')
-            await moveQueueItem(queueId, itemId, 1)
-          }
-        })
+        await withOptimisticQueue(
+          (old) => swapQueueItems(old, itemId, 1),
+          async () => {
+            if (viaMassQueue) {
+              await callService('mass_queue', 'move_queue_item_down', {
+                ...massQueueEntityData(entityId),
+                queue_item_id: itemId,
+              })
+            } else {
+              if (!queueId) throw new Error('No active Music Assistant queue')
+              await moveQueueItem(queueId, itemId, 1)
+            }
+          },
+        )
       },
       playNext: async (itemId: string) => {
-        await withOptimisticQueue((old) => moveItemNext(old, itemId), async () => {
-          if (viaMassQueue) {
-            await callService('mass_queue', 'move_queue_item_next', {
-              ...massQueueEntityData(entityId),
-              queue_item_id: itemId,
-            })
-          } else {
-            if (!queueId) throw new Error('No active Music Assistant queue')
-            await moveQueueItem(queueId, itemId, 0)
-          }
-        })
+        await withOptimisticQueue(
+          (old) => moveItemNext(old, itemId),
+          async () => {
+            if (viaMassQueue) {
+              await callService('mass_queue', 'move_queue_item_next', {
+                ...massQueueEntityData(entityId),
+                queue_item_id: itemId,
+              })
+            } else {
+              if (!queueId) throw new Error('No active Music Assistant queue')
+              await moveQueueItem(queueId, itemId, 0)
+            }
+          },
+        )
       },
       moveToEnd: async (itemId: string) => {
-        await withOptimisticQueue((old) => moveItemToEnd(old, itemId), async () => {
-          if (viaMassQueue) {
-            // mass_queue has no move-to-end; nudge down once as a best-effort.
-            await callService('mass_queue', 'move_queue_item_down', {
-              ...massQueueEntityData(entityId),
-              queue_item_id: itemId,
-            })
-          } else {
-            if (!queueId) throw new Error('No active Music Assistant queue')
-            await moveQueueItemEnd(queueId, itemId)
-          }
-        })
+        await withOptimisticQueue(
+          (old) => moveItemToEnd(old, itemId),
+          async () => {
+            if (viaMassQueue) {
+              // mass_queue has no move-to-end; nudge down once as a best-effort.
+              await callService('mass_queue', 'move_queue_item_down', {
+                ...massQueueEntityData(entityId),
+                queue_item_id: itemId,
+              })
+            } else {
+              if (!queueId) throw new Error('No active Music Assistant queue')
+              await moveQueueItemEnd(queueId, itemId)
+            }
+          },
+        )
       },
       playIndex: async (index: number | string) => {
         // Playing an item does not reorder the list locally — just fire and soft-refresh.

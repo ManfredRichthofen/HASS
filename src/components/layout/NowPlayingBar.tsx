@@ -1,10 +1,14 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Music2, Pause, Play } from 'lucide-react'
+import { useMemo } from 'react'
+import { MediaArt } from '#/components/media/MediaArt'
 import { notify } from '#/components/ui/toast'
+import { haUrl } from '#/config/ha'
 import { useActiveMedia } from '#/hooks/useActiveMedia'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, slideUp, snappy, tap } from '#/lib/motion'
+import { playerArtSources } from '#/lib/musicAssistant'
 
 /** Floating player card above the nav while music plays (hidden on the Music page). */
 export function NowPlayingBar() {
@@ -26,6 +30,10 @@ export function NowPlayingBar() {
       }
     })
   }
+
+  const artKey = playerArtSources(media.player.attributes, haUrl).join('|')
+  // biome-ignore lint/correctness/useExhaustiveDependencies: artKey is the by-value key
+  const artSources = useMemo(() => (artKey ? artKey.split('|') : []), [artKey])
 
   const title = media.mediaTitle ?? 'Playing'
   const subtitle =
@@ -61,9 +69,16 @@ export function NowPlayingBar() {
               )}
             >
               <Link to="/media" className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
-                <span className="grid size-12 shrink-0 place-items-center rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink shadow-none! modern:rounded-pill glass:rounded-pill brutal:border-2 brutal:border-ink">
-                  <Music2 className="size-5" />
-                </span>
+                <MediaArt
+                  sources={artSources}
+                  label=""
+                  className="size-12 rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink shadow-none! modern:rounded-pill glass:rounded-pill brutal:border-2 brutal:border-ink"
+                  fallback={
+                    <span className="grid size-full place-items-center">
+                      <Music2 className="size-5" />
+                    </span>
+                  }
+                />
                 <span className="min-w-0">
                   <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
                   <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70 brutal:font-label brutal:text-xs">

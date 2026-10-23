@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
  * Local override that paints immediately, then clears once `server` catches up.
  * On action failure, rolls back to the previous displayed value.
  */
-export const useOptimisticValue = <T,>(server: T) => {
+export const useOptimisticValue = <T>(server: T) => {
   const [override, setOverride] = useState<T | null>(null)
 
   useEffect(() => {

@@ -323,11 +323,7 @@ export function FanTile({
           <div className="space-y-6 py-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-ink-muted">Power</span>
-              <Switch
-                checked={isOn}
-                disabled={unavailable}
-                onCheckedChange={handleToggle}
-              />
+              <Switch checked={isOn} disabled={unavailable} onCheckedChange={handleToggle} />
             </div>
 
             {canSpeed ? (

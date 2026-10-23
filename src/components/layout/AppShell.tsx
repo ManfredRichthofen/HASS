@@ -123,7 +123,8 @@ function ConnectedShell({ children }: { children: ReactNode }) {
   // in the background (phone wake / network blip) instead of a full-screen splash.
   if (connected || hasBeenConnected) {
     const showReconnectBanner =
-      !connected && (connecting || isAutoRetrying || Boolean(error) || connectionState === 'disconnected')
+      !connected &&
+      (connecting || isAutoRetrying || Boolean(error) || connectionState === 'disconnected')
 
     return (
       <LocationProvider>

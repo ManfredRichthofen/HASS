@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { MediaArt, uniqueArtCandidates } from '#/components/media/MediaArt'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
@@ -40,85 +41,8 @@ import {
   queueItemImage,
   queueItemTitle,
   repeatModeLabel,
-  resolveHaMediaUrl,
+  playerArtSources,
 } from '#/lib/musicAssistant'
-
-function uniqueArtCandidates(...candidates: Array<string | null | undefined>) {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const candidate of candidates) {
-    if (!candidate || seen.has(candidate)) continue
-    seen.add(candidate)
-    out.push(candidate)
-  }
-  return out
-}
-
-function Artwork({
-  src,
-  sources,
-  label,
-  size = 'md',
-}: {
-  src?: string | null | undefined
-  /** Tried in order; on error advances to the next candidate. */
-  sources?: Array<string | null | undefined>
-  label: string
-  size?: 'md' | 'hero'
-}) {
-  const candidates = useMemo(
-    () => (sources ? uniqueArtCandidates(...sources) : uniqueArtCandidates(src)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- compare by value
-    [sources?.join('|'), src],
-  )
-  const candidatesKey = candidates.join('|')
-  const [failed, setFailed] = useState<Set<string>>(() => new Set())
-  const activeSrc = candidates.find((candidate) => !failed.has(candidate)) ?? null
-
-  useEffect(() => {
-    setFailed(new Set())
-  }, [candidatesKey])
-
-  return (
-    <div
-      className={cn(
-        'shrink-0 overflow-hidden bg-surface-hover',
-        size === 'hero' &&
-          'aspect-square w-full rounded-card bg-on shadow-on brutal:border-2 brutal:border-ink brutal:shadow-[6px_6px_0_var(--c-ink)] glass:rounded-pill glass:ring-[6px] glass:ring-white/70',
-        size === 'md' && 'size-12 rounded-control',
-      )}
-    >
-      {activeSrc ? (
-        <img
-          key={activeSrc}
-          src={activeSrc}
-          alt=""
-          className="size-full object-cover"
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={() => {
-            setFailed((prev) => {
-              const next = new Set(prev)
-              next.add(activeSrc)
-              return next
-            })
-          }}
-        />
-      ) : (
-        <div
-          className={cn(
-            'grid size-full place-items-center',
-            size === 'hero' ? 'text-on-ink/70' : 'text-ink-faint',
-          )}
-        >
-          <ListMusic className={size === 'md' ? 'size-4' : 'size-14'} />
-        </div>
-      )}
-      <span className="sr-only">{label}</span>
-    </div>
-  )
-}
 
 function useLivePosition(position: number | null, duration: number | null, playing: boolean) {
   const [now, setNow] = useState(() => Date.now())
@@ -331,7 +255,7 @@ function QueueRow({
           aria-label={`Play ${title}`}
           onClick={onPlay}
         >
-          <Artwork src={art} label="" />
+          <MediaArt src={art} label="" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.9375rem] font-semibold text-ink">{title}</p>
             <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
@@ -492,13 +416,13 @@ export function QueueManager({
 
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
-  const attrs = player.attributes as { entity_picture?: unknown }
-  const entityPicture =
-    typeof attrs.entity_picture === 'string' ? resolveHaMediaUrl(attrs.entity_picture, haUrl) : null
+  const playerArt = playerArtSources(player.attributes, haUrl)
   const queueArt = queueItemImage(queue?.current_item, massUrl, 256)
+  const playerArtKey = playerArt.join('|')
+  // biome-ignore lint/correctness/useExhaustiveDependencies: playerArtKey is the by-value key for playerArt
   const currentArtSources = useMemo(
-    () => uniqueArtCandidates(entityPicture, queueArt),
-    [entityPicture, queueArt],
+    () => uniqueArtCandidates(queueArt, ...playerArt),
+    [queueArt, playerArtKey],
   )
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
   const { position, pct } = useLivePosition(player.mediaPosition, duration, isPlaying)
@@ -679,12 +603,12 @@ export function QueueManager({
               // The artwork takes whatever height is left, so the player always fits.
               <div className="grid aspect-square min-h-0 w-full shrink place-items-center [container-type:size] @xl:portrait:col-start-1 @xl:portrait:row-span-4 @xl:portrait:row-start-1 @xl:portrait:self-center">
                 <div className="size-[calc(min(100cqw,100cqh)-12px)]">
-                  <Artwork sources={currentArtSources} label="Now playing artwork" size="hero" />
+                  <MediaArt sources={currentArtSources} label="Now playing artwork" size="hero" />
                 </div>
               </div>
             ) : (
               <div className={cn('relative mx-auto w-full', artClassName)}>
-                <Artwork sources={currentArtSources} label="Now playing artwork" size="hero" />
+                <MediaArt sources={currentArtSources} label="Now playing artwork" size="hero" />
               </div>
             )}
 
