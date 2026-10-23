@@ -3,6 +3,7 @@ import { Fan, Lightbulb, Wind } from 'lucide-react'
 import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
 
@@ -62,6 +63,9 @@ export function FanLightTile({
       notify('Fan failed', e instanceof Error ? e.message : 'Error')
     }
   }
+
+  const lightPress = useScrollSafePress(() => void toggleLight())
+  const fanPress = useScrollSafePress(() => void toggleFan())
 
   async function commitSpeed(pct: number) {
     try {
@@ -138,7 +142,7 @@ export function FanLightTile({
         <m.button
           type="button"
           disabled={light.isUnavailable}
-          onClick={() => void toggleLight()}
+          {...lightPress}
           whileTap={tap.soft}
           transition={snappy}
           className={cn(
@@ -157,7 +161,7 @@ export function FanLightTile({
         <m.button
           type="button"
           disabled={fan.isUnavailable}
-          onClick={() => void toggleFan()}
+          {...fanPress}
           whileTap={tap.soft}
           transition={snappy}
           className={cn(

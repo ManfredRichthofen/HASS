@@ -156,7 +156,7 @@ export function ClimateCard({
   return (
     <div
       className={cn(
-        'grid justify-items-center gap-5 rounded-card border-ui border-border-subtle bg-surface px-5 pt-6 pb-5 shadow-card',
+        'grid justify-items-center gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 pt-5 pb-4 shadow-card @md:px-5 @md:pt-6 @md:pb-5 @md:gap-5',
         'modern:border-transparent brutal:border-ink',
         unavailable && 'opacity-45',
       )}
@@ -260,7 +260,7 @@ export function ClimateCard({
           disabled={unavailable || target <= lo}
           onClick={() => void commit(target - 1)}
         >
-          <Minus className="size-5" />
+          <Minus className="size-5" aria-hidden />
         </Button>
         <span className="text-[0.8125rem] text-ink-faint tabular-nums brutal:font-label brutal:text-xs">
           {Math.round(lo)}° – {Math.round(hi)}°
@@ -272,7 +272,7 @@ export function ClimateCard({
           disabled={unavailable || target >= hi}
           onClick={() => void commit(target + 1)}
         >
-          <Plus className="size-5" />
+          <Plus className="size-5" aria-hidden />
         </Button>
       </div>
 

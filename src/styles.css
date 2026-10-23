@@ -149,7 +149,8 @@
   --c-border-strong: #8c8c85;
   --c-ink: #141413;
   --c-ink-muted: #55554f;
-  --c-ink-faint: #6b6b64;
+  /* Slightly deeper faint for secondary labels on white (~4.8→5.5 AA margin). */
+  --c-ink-faint: #5f5f58;
   --c-accent: #141413;
   --c-accent-soft: #1414130f;
   --c-accent-strong: #000000;
@@ -198,8 +199,9 @@
   --c-border-subtle: #ffffff99;
   --c-border-strong: #7d8090;
   --c-ink: #141a2e;
-  --c-ink-muted: #5a5e6e;
-  --c-ink-faint: #5f6373;
+  /* Darker muted/faint so labels hold AA over lavender–cream blobs (~4.1→5.7). */
+  --c-ink-muted: #454956;
+  --c-ink-faint: #4a4e5c;
   --c-accent: #141a2e;
   --c-accent-soft: #141a2e12;
   --c-accent-strong: #000000;
@@ -209,7 +211,7 @@
   --c-on-from: #ffffff;
   --c-on-to: #f8e6c4;
   --c-on-ink: #141a2e;
-  --c-on-ink-muted: #5a5e6e;
+  --c-on-ink-muted: #454956;
   --c-success: #1b6e4c;
   --c-danger: #b23a24;
   --c-info: #2a58a6;
@@ -397,14 +399,15 @@
   --c-base: #0c0f22;
   --c-canvas: #0a0c2059;
   --c-canvas-elevated: #161a3acc;
-  --c-surface: #ffffff17;
-  --c-surface-hover: #ffffff2b;
+  /* Slightly denser frost so panels stay readable over neon blobs. */
+  --c-surface: #ffffff22;
+  --c-surface-hover: #ffffff33;
   --c-border: #ffffff38;
   --c-border-subtle: #ffffff24;
   --c-border-strong: #ffffffa6;
   --c-ink: #ffffff;
-  --c-ink-muted: #ffffffcc;
-  --c-ink-faint: #ffffffad;
+  --c-ink-muted: #ffffffd6;
+  --c-ink-faint: #ffffffb8;
   --c-accent: #ffffff;
   --c-accent-soft: #ffffff24;
   --c-accent-strong: #ffffff;

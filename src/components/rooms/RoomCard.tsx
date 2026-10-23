@@ -3,6 +3,7 @@ import { useSensor } from 'hass-react'
 import { Power } from 'lucide-react'
 import { useRoom } from '#/components/rooms/useRoom'
 import type { AreaConfig } from '#/config/dashboard'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { m, snappy, staggerItem, tap } from '#/lib/motion'
 
@@ -13,13 +14,14 @@ function RoomTemp({ entityId }: { entityId: string }) {
 }
 
 /**
- * A room on the Rooms page: its name large, a short sentence, a lamp dot per
- * light and the temperature. A lit room glows from the corner (Modern: a
- * single amber dot; Brutalist: a yellow bar across the top).
+ * A room on the Rooms page: name on top, summary under it, temperature bottom
+ * left and the power control bottom right. A lit room glows from the corner
+ * (Modern: a single amber dot; Brutalist: a yellow bar across the top).
  */
 export function RoomCard({ area }: { area: AreaConfig }) {
   const room = useRoom(area)
   const { Icon } = room
+  const powerPress = useScrollSafePress(() => void room.togglePower())
 
   return (
     <m.div
@@ -48,41 +50,42 @@ export function RoomCard({ area }: { area: AreaConfig }) {
         aria-label={`Open ${area.name}`}
         className="absolute inset-0 z-[1]"
       />
-      <div className="relative flex items-start justify-between gap-3 text-ink-faint brutal:pt-1.5">
-        <Icon className="size-[22px] modern:hidden" />
-        <span className="text-display text-xl leading-none text-ink-muted tabular-nums modern:order-first modern:text-[2rem] modern:text-ink modern:tracking-[-0.04em] modern:pr-6">
-          {room.tempId ? <RoomTemp entityId={room.tempId} /> : null}
-        </span>
+      <Icon
+        className="pointer-events-none absolute top-4.5 right-4.5 z-[1] size-[22px] text-ink-faint modern:hidden"
+        aria-hidden
+      />
+      <div className="relative grid min-w-0 gap-2 pr-8 brutal:pt-1.5 modern:pr-6">
+        <p className="text-display line-clamp-2 text-2xl leading-tight text-ink walnut:text-[1.75rem] walnut:font-light">
+          {area.name}
+        </p>
+        {room.hasLights ? (
+          <div className="flex gap-1.5 modern:hidden" aria-hidden>
+            {room.lit.map((on, i) => (
+              <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: one dot per light, fixed order
+                key={i}
+                className={cn(
+                  'size-2 rounded-pill bg-border',
+                  on && 'bg-light shadow-[0_0_0_3px_var(--c-light-soft)]',
+                  'brutal:size-2.5 brutal:border-2 brutal:border-ink brutal:bg-transparent',
+                  on && 'brutal:bg-ink brutal:shadow-none',
+                )}
+              />
+            ))}
+          </div>
+        ) : null}
+        <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
+          {room.summary}
+        </p>
       </div>
       <div className="relative flex items-end justify-between gap-3">
-        <div className="grid min-w-0 gap-2">
-          {room.hasLights ? (
-            <div className="flex gap-1.5 modern:hidden" aria-hidden>
-              {room.lit.map((on, i) => (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: one dot per light, fixed order
-                  key={i}
-                  className={cn(
-                    'size-2 rounded-pill bg-border',
-                    on && 'bg-light shadow-[0_0_0_3px_var(--c-light-soft)]',
-                    'brutal:size-2.5 brutal:border-2 brutal:border-ink brutal:bg-transparent',
-                    on && 'brutal:bg-ink brutal:shadow-none',
-                  )}
-                />
-              ))}
-            </div>
-          ) : null}
-          <p className="text-display truncate text-2xl leading-tight text-ink walnut:text-[1.75rem] walnut:font-light">
-            {area.name}
-          </p>
-          <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
-            {room.summary}
-          </p>
-        </div>
+        <span className="text-display text-xl leading-none text-ink-muted tabular-nums modern:text-[2rem] modern:text-ink modern:tracking-[-0.04em]">
+          {room.tempId ? <RoomTemp entityId={room.tempId} /> : null}
+        </span>
         {room.hasLights ? (
           <button
             type="button"
-            onClick={() => void room.togglePower()}
+            {...powerPress}
             aria-label={`${room.isLit ? 'Turn off' : 'Turn on'} ${area.name} lights`}
             className={cn(
               'press relative z-[2] -mr-1 -mb-1 grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state hover:text-ink',
@@ -90,7 +93,7 @@ export function RoomCard({ area }: { area: AreaConfig }) {
               'brutal:border-2 brutal:border-ink',
             )}
           >
-            <Power className="size-5" />
+            <Power className="size-5" aria-hidden />
           </button>
         ) : null}
       </div>

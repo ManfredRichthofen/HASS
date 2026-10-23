@@ -13,6 +13,7 @@ import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { LabeledSlider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
+import { SCROLL_PRESS_THRESHOLD } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName, simpleToggleLights } from '#/lib/entityName'
 
@@ -38,7 +39,7 @@ const DRAG_THRESHOLD = 6
  * like liquid in a glass (Modern shows a level bar instead). The small "more"
  * target opens a sheet for colour and white temperature.
  */
-export function LightTile({ entityId }: { entityId: string }) {
+export function LightTile({ entityId, className }: { entityId: string; className?: string }) {
   // useLight only accepts light.* — callers must not pass switch.* or other domains.
   const light = useLight(entityId)
   const [open, setOpen] = useState(false)
@@ -151,6 +152,7 @@ export function LightTile({ entityId }: { entityId: string }) {
           on &&
             'modern:bg-none modern:bg-surface modern:text-ink modern:shadow-[inset_0_0_0_2px_var(--c-on-to)]',
           unavailable && 'cursor-default opacity-45',
+          className,
         )}
       >
         {/* Shade above the level: the "empty" part of the glass. */}

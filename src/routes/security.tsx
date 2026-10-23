@@ -60,11 +60,11 @@ function SecurityPage() {
       <Page>
         <PageHeader title="Security" />
 
-        <m.div variants={staggerItem} className="flex items-start gap-4">
+        <m.div variants={staggerItem} className="flex items-start gap-4 @xl:gap-3">
           <span className={cn('mt-1 shrink-0', secure ? 'text-success' : 'text-danger')}>
             {secure ? <ShieldCheck className="size-8" /> : <ShieldAlert className="size-8" />}
           </span>
-          <p className="text-display text-[1.75rem] leading-tight text-balance text-ink walnut:font-light">
+          <p className="text-display text-[1.75rem] leading-tight text-balance text-ink walnut:font-light @xl:text-[1.5rem]">
             {secure ? (
               'Everything is locked and dry.'
             ) : (
@@ -75,16 +75,27 @@ function SecurityPage() {
           </p>
         </m.div>
 
-        <div
-          className={cn(
-            'grid items-start gap-section',
-            securityCameras.length > 0 && '@2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:gap-8',
-          )}
-        >
+        {/*
+          Mobile: stacked cameras → door → mode → sensors.
+          Tablet (@xl): 2×2 mosaic so modes/sensors sit beside door, not under a short
+          camera column (max 4 cams → at most a 2×2 tile grid).
+        */}
+        <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-x-6 @xl:gap-y-5">
           {securityCameras.length > 0 ? (
-            <m.div variants={staggerItem}>
-              <Section title="Cameras">
-                <EntityGrid>
+            <m.div variants={staggerItem} className="min-w-0">
+              <Section
+                title="Cameras"
+                className="@xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
+              >
+                <EntityGrid
+                  className={cn(
+                    '@xl:gap-2.5',
+                    // Cap at 2 cols — page never shows more than 4 cameras.
+                    securityCameras.length === 1
+                      ? 'grid-cols-1 @md:grid-cols-1 @2xl:grid-cols-1 @5xl:grid-cols-1'
+                      : 'grid-cols-2 @md:grid-cols-2 @2xl:grid-cols-2 @5xl:grid-cols-2',
+                  )}
+                >
                   {securityCameras.map((cam) => {
                     const isDoorbell =
                       cam.id === entities.doorbell.cameraId ||
@@ -94,6 +105,10 @@ function SecurityPage() {
                         key={cam.id}
                         entityId={cam.id}
                         label={cam.label}
+                        className={cn(
+                          '@xl:min-h-[9.5rem]',
+                          securityCameras.length === 1 && '@xl:min-h-[12rem] @xl:aspect-video',
+                        )}
                         onOpen={isDoorbell ? () => openDoorbellPopup() : undefined}
                       />
                     )
@@ -103,75 +118,86 @@ function SecurityPage() {
             </m.div>
           ) : null}
 
-          <div className="flex min-w-0 flex-col gap-section">
-            <m.div variants={staggerItem}>
-              <Section title="Front door">
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
-                  <LockTile entityId={entities.lock} label="Front door" />
-                  {!door.isUnavailable ? (
-                    <DeviceList>
-                      <DeviceRow
-                        icon={door.isOn ? DoorOpen : DoorClosed}
-                        tone={door.isOn ? 'danger' : 'success'}
-                        name="Door"
-                        caption="Contact sensor"
-                        trailing={
-                          <StateWord
-                            value={door.isOn ? 'Open' : 'Closed'}
-                            tone={door.isOn ? 'bad' : 'ok'}
-                          />
-                        }
-                      />
-                    </DeviceList>
-                  ) : null}
-                </div>
-              </Section>
-            </m.div>
+          <m.div variants={staggerItem} className="min-w-0">
+            <Section
+              title="Front door"
+              className="@xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
+            >
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+                <LockTile
+                  entityId={entities.lock}
+                  label="Front door"
+                  className="@xl:gap-3 @xl:py-3.5 @xl:pr-3.5 @xl:pl-4"
+                />
+                {!door.isUnavailable ? (
+                  <DeviceList>
+                    <DeviceRow
+                      icon={door.isOn ? DoorOpen : DoorClosed}
+                      tone={door.isOn ? 'danger' : 'success'}
+                      name="Door"
+                      caption="Contact sensor"
+                      trailing={
+                        <StateWord
+                          value={door.isOn ? 'Open' : 'Closed'}
+                          tone={door.isOn ? 'bad' : 'ok'}
+                        />
+                      }
+                    />
+                  </DeviceList>
+                ) : null}
+              </div>
+            </Section>
+          </m.div>
 
-            <m.div variants={staggerItem}>
-              <Section title="House mode">
-                <div className="rounded-card border-ui border-border-subtle bg-surface px-5 py-1 shadow-card modern:border-transparent">
-                  <HouseModeGrid />
-                </div>
-              </Section>
-            </m.div>
+          <m.div variants={staggerItem} className="min-w-0">
+            <Section
+              title="House mode"
+              className="@xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
+            >
+              <div className="rounded-card border-ui border-border-subtle bg-surface px-5 py-1 shadow-card modern:border-transparent">
+                <HouseModeGrid />
+              </div>
+            </Section>
+          </m.div>
 
-            <m.div variants={staggerItem}>
-              <Section title="Water & presence">
-                <DeviceList>
-                  {entities.security.leaks.map((leak, i) => {
-                    const sensor = leaks[i]
-                    if (!sensor || sensor.state === 'unavailable') return null
-                    const wet = sensor.state === 'on'
-                    return (
-                      <DeviceRow
-                        key={leak.id}
-                        icon={Droplets}
-                        tone={wet ? 'danger' : 'info'}
-                        name={leak.label}
-                        caption="Leak sensor"
-                        trailing={
-                          <StateWord value={wet ? 'Leak!' : 'Dry'} tone={wet ? 'bad' : 'ok'} />
-                        }
-                      />
-                    )
-                  })}
-                  <DeviceRow
-                    icon={someoneHome ? UserRound : UserRoundX}
-                    tone={someoneHome ? 'success' : 'neutral'}
-                    name="Someone home"
-                    caption="Any room occupied"
-                    trailing={
-                      <StateWord
-                        value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'Empty'}
-                        tone={someoneHome ? 'ok' : 'muted'}
-                      />
-                    }
-                  />
-                </DeviceList>
-              </Section>
-            </m.div>
-          </div>
+          <m.div variants={staggerItem} className="min-w-0">
+            <Section
+              title="Water & presence"
+              className="@xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
+            >
+              <DeviceList>
+                {entities.security.leaks.map((leak, i) => {
+                  const sensor = leaks[i]
+                  if (!sensor || sensor.state === 'unavailable') return null
+                  const wet = sensor.state === 'on'
+                  return (
+                    <DeviceRow
+                      key={leak.id}
+                      icon={Droplets}
+                      tone={wet ? 'danger' : 'info'}
+                      name={leak.label}
+                      caption="Leak sensor"
+                      trailing={
+                        <StateWord value={wet ? 'Leak!' : 'Dry'} tone={wet ? 'bad' : 'ok'} />
+                      }
+                    />
+                  )
+                })}
+                <DeviceRow
+                  icon={someoneHome ? UserRound : UserRoundX}
+                  tone={someoneHome ? 'success' : 'neutral'}
+                  name="Someone home"
+                  caption="Any room occupied"
+                  trailing={
+                    <StateWord
+                      value={occupancy.isUnavailable ? '—' : someoneHome ? 'Yes' : 'Empty'}
+                      tone={someoneHome ? 'ok' : 'muted'}
+                    />
+                  }
+                />
+              </DeviceList>
+            </Section>
+          </m.div>
         </div>
       </Page>
     </m.div>

@@ -2,6 +2,7 @@ import { useLock } from 'hass-react'
 import { Lock, LockOpen } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 
@@ -16,7 +17,15 @@ function since(value?: Date | string) {
 }
 
 /** A lock stated in one big word, the time it changed, and the one button that reverses it. */
-export function LockTile({ entityId, label }: { entityId: string; label?: string }) {
+export function LockTile({
+  entityId,
+  label,
+  className,
+}: {
+  entityId: string
+  label?: string
+  className?: string
+}) {
   const lock = useLock(entityId)
   const name = label ?? entityName(entityId, lock.attributes.friendly_name)
   const unavailable = lock.isUnavailable
@@ -33,6 +42,8 @@ export function LockTile({ entityId, label }: { entityId: string; label?: string
     }
   }
 
+  const press = useScrollSafePress(() => void toggle())
+
   return (
     <div
       className={cn(
@@ -42,6 +53,7 @@ export function LockTile({ entityId, label }: { entityId: string; label?: string
           'border-danger/55 modern:border-transparent modern:shadow-[inset_0_0_0_2px_var(--c-danger)]',
         open && 'brutal:border-ink brutal:bg-danger brutal:text-white',
         unavailable && 'opacity-45',
+        className,
       )}
     >
       <span
@@ -75,7 +87,7 @@ export function LockTile({ entityId, label }: { entityId: string; label?: string
         size="sm"
         variant={open ? 'primary' : 'secondary'}
         disabled={unavailable}
-        onClick={() => void toggle()}
+        {...press}
       >
         {open ? 'Lock' : 'Unlock'}
       </Button>

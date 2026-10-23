@@ -6,6 +6,7 @@ import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
 import { notify } from '#/components/ui/toast'
 import { Toggle } from '#/components/ui/toggle'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
@@ -98,6 +99,8 @@ export function FanTile({
     }
   }
 
+  const togglePress = useScrollSafePress(() => void handleToggle())
+
   async function commitSpeed(pct: number) {
     try {
       if (pct <= 0) {
@@ -151,7 +154,7 @@ export function FanTile({
           <m.button
             type="button"
             disabled={unavailable}
-            onClick={() => void handleToggle()}
+            {...togglePress}
             whileTap={tap.soft}
             transition={snappy}
             className="flex min-h-11 min-w-0 flex-1 items-start gap-3 text-left"

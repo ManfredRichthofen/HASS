@@ -14,6 +14,7 @@ import { HouseModeGrid } from '#/components/home/HouseModeGrid'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, swapText } from '#/lib/motion'
 
@@ -46,6 +47,8 @@ export function HomeStatusCard() {
       notify('Lock failed', e instanceof Error ? e.message : 'Error')
     }
   }
+
+  const lockPress = useScrollSafePress(() => void toggleLock())
 
   return (
     <>
@@ -107,7 +110,7 @@ export function HomeStatusCard() {
           <button
             type="button"
             disabled={lock.isUnavailable}
-            onClick={() => void toggleLock()}
+            {...lockPress}
             aria-label={locked ? 'Unlock front door' : 'Lock front door'}
             className="block min-h-0 rounded-control text-left outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40"
           >

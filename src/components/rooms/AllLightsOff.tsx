@@ -3,6 +3,7 @@ import { LightbulbOff } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { entities, isRoomLight } from '#/config/dashboard'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 
 const allLights = (entities.allLightsOff as readonly string[]).filter(isRoomLight)
@@ -22,15 +23,18 @@ export function AllLightsOff({ className }: { className?: string }) {
     }
   }
 
+  const press = useScrollSafePress(() => void turnOff())
+
   return (
     <Button
       variant="secondary"
       size="sm"
       disabled={on === 0}
-      onClick={() => void turnOff()}
+      {...press}
+      aria-label={on === 0 ? 'All lights already off' : `Turn off all lights, ${on} on`}
       className={cn(className)}
     >
-      <LightbulbOff className="size-[18px]" />
+      <LightbulbOff className="size-[18px]" aria-hidden />
       {on === 0 ? 'All off' : `All lights off (${on})`}
     </Button>
   )

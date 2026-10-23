@@ -5,7 +5,7 @@ import { primaryAreas } from '#/config/dashboard'
 
 export const Route = createFileRoute('/rooms')({ component: RoomsLayout })
 
-/** Phone/portrait: just the child route. Wide tablet: room list + the open room. */
+/** Phone/tablet: card grid or full room page. Desktop (xl): room list + open room. */
 function RoomsLayout() {
   const params = useParams({ strict: false }) as { areaId?: string }
 

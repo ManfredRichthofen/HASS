@@ -32,13 +32,14 @@ export function PageHeader({
       {backTo ? (
         <Link
           to={backTo}
+          aria-label={`Back to ${backLabel}`}
           className={cn(
             '-mb-1 inline-flex min-h-11 items-center gap-1.5 justify-self-start text-sm font-semibold text-ink-muted transition-ui hover:text-ink',
             'brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:text-ink',
             backClassName,
           )}
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft className="size-4" aria-hidden />
           {backLabel}
         </Link>
       ) : null}

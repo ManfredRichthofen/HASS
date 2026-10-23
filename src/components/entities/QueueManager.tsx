@@ -129,6 +129,72 @@ function ActionChip({
   )
 }
 
+function PlayerSkeleton({
+  view,
+  artClassName,
+}: {
+  view: 'all' | 'player' | 'queue'
+  artClassName?: string
+}) {
+  return (
+    <section className="grid gap-4" aria-busy="true" aria-label="Loading now playing">
+      <div
+        className={cn(
+          'grid gap-4',
+          view === 'player' &&
+            'grid-cols-[5.5rem_minmax(0,1fr)] items-end @xl:grid-cols-1 @xl:items-stretch',
+        )}
+      >
+        <div
+          className={cn(
+            'relative mx-auto w-full',
+            view === 'player'
+              ? cn(
+                  '@max-xl:w-[5.5rem] @max-xl:[&_*]:rounded-control glass:@max-xl:[&_*]:rounded-pill',
+                  artClassName,
+                )
+              : artClassName,
+          )}
+        >
+          <div className="aspect-square w-full animate-pulse rounded-card bg-surface-hover glass:rounded-pill" />
+        </div>
+        <div className="grid gap-2">
+          <div className="h-3 w-20 animate-pulse rounded-control bg-surface-hover" />
+          <div className="h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover @xl:h-8" />
+          <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function QueueSkeleton() {
+  return (
+    <div className="space-y-2.5" aria-busy="true" aria-label="Loading queue">
+      <div className="space-y-1.5">
+        <div className="h-4 w-20 animate-pulse rounded-control bg-surface-hover" />
+        <div className="h-3 w-28 animate-pulse rounded-control bg-surface-hover" />
+      </div>
+      <div className="rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent brutal:border-ink">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex min-h-16 items-center gap-2 border-b border-border-subtle py-2 last:border-b-0 brutal:border-b-2 brutal:border-ink brutal:last:border-b-0"
+          >
+            <div className="h-3 w-5 shrink-0 animate-pulse rounded-control bg-surface-hover" />
+            <div className="size-12 shrink-0 animate-pulse rounded-control bg-surface-hover" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded-control bg-surface-hover" />
+              <div className="h-3 w-1/2 animate-pulse rounded-control bg-surface-hover" />
+            </div>
+            <div className="size-9 shrink-0 animate-pulse rounded-pill bg-surface-hover" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function QueueRow({
   item,
   position,
@@ -397,12 +463,11 @@ export function QueueManager({
         </div>
       ) : null}
 
-      {loading && (view === 'queue' ? upNext.length === 0 : !hasNowPlaying) ? (
-        <div className="rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent px-4 py-10 text-center">
-          <Loader2 className="mx-auto size-5 animate-spin text-ink-faint" />
-          <p className="mt-3 text-sm text-ink-muted">Loading…</p>
-        </div>
+      {loading && showPlayer && !hasNowPlaying ? (
+        <PlayerSkeleton view={view} artClassName={artClassName} />
       ) : null}
+
+      {loading && showQueue && upNext.length === 0 ? <QueueSkeleton /> : null}
 
       {!loading &&
       (view === 'queue'
@@ -423,7 +488,7 @@ export function QueueManager({
             className={cn(
               'grid gap-4',
               view === 'player' &&
-                'grid-cols-[5.5rem_minmax(0,1fr)] items-end @2xl:grid-cols-1 @2xl:items-stretch',
+                'grid-cols-[5.5rem_minmax(0,1fr)] items-end @xl:grid-cols-1 @xl:items-stretch',
             )}
           >
             <div
@@ -431,7 +496,7 @@ export function QueueManager({
                 'relative mx-auto w-full',
                 view === 'player'
                   ? cn(
-                      '@max-2xl:w-[5.5rem] @max-2xl:[&_*]:rounded-control glass:@max-2xl:[&_*]:rounded-pill',
+                      '@max-xl:w-[5.5rem] @max-xl:[&_*]:rounded-control glass:@max-xl:[&_*]:rounded-pill',
                       artClassName,
                     )
                   : artClassName,
@@ -446,7 +511,7 @@ export function QueueManager({
                 <p
                   className={cn(
                     'text-display mt-1.5 line-clamp-2 text-[1.75rem] leading-[1.1] text-ink',
-                    view === 'player' && '@max-2xl:text-xl',
+                    view === 'player' && '@max-xl:text-xl',
                   )}
                 >
                   {currentTitle ?? 'Unknown track'}

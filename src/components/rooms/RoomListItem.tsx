@@ -3,6 +3,7 @@ import { useSensor } from 'hass-react'
 import { Power } from 'lucide-react'
 import { useRoom } from '#/components/rooms/useRoom'
 import type { AreaConfig } from '#/config/dashboard'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 
 function Temp({ entityId }: { entityId: string }) {
@@ -15,6 +16,7 @@ function Temp({ entityId }: { entityId: string }) {
 export function RoomListItem({ area, active }: { area: AreaConfig; active: boolean }) {
   const room = useRoom(area)
   const { Icon } = room
+  const powerPress = useScrollSafePress(() => void room.togglePower())
 
   return (
     <div
@@ -35,7 +37,10 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
         className="absolute inset-0 z-[1] rounded-control"
       />
       <span className="shrink-0 glass:grid glass:size-11 glass:place-items-center glass:rounded-pill glass:bg-raised glass:shadow-card">
-        <Icon className={cn('size-[22px]', room.isLit ? 'text-light' : 'text-ink-faint')} />
+        <Icon
+          className={cn('size-[22px]', room.isLit ? 'text-light' : 'text-ink-faint')}
+          aria-hidden
+        />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-display truncate text-lg leading-tight">{area.name}</p>
@@ -52,10 +57,10 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
       {room.hasLights ? (
         <button
           type="button"
-          onClick={() => void room.togglePower()}
+          {...powerPress}
           aria-label={`${room.isLit ? 'Turn off' : 'Turn on'} ${area.name} lights`}
           className={cn(
-            'relative z-[2] grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state',
+            'press relative z-[2] grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state',
             room.isLit ? 'bg-on shadow-on text-on-ink' : 'bg-icon-well hover:text-ink',
           )}
         >

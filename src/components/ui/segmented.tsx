@@ -46,11 +46,11 @@ export function Segmented<T extends string>({
           value={o.value}
           disabled={o.disabled}
           className={cn(
-            'min-h-10 flex-1 cursor-pointer rounded-pill px-3.5 text-sm font-semibold whitespace-nowrap text-ink-muted capitalize transition-ui',
+            'min-h-11 flex-1 cursor-pointer rounded-pill px-3.5 text-sm font-semibold whitespace-nowrap text-ink-muted capitalize transition-ui',
             'hover:text-ink data-pressed:bg-accent data-pressed:text-on-accent',
             'modern:data-pressed:bg-surface modern:data-pressed:text-ink modern:data-pressed:shadow-[0_1px_3px_#14141326]',
             'glass:data-pressed:bg-raised glass:data-pressed:text-on-raised glass:data-pressed:shadow-card',
-            'brutal:min-h-11 brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:tracking-[0.04em] brutal:text-ink brutal:not-first:border-l-2 brutal:not-first:border-ink',
+            'brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:tracking-[0.04em] brutal:text-ink brutal:not-first:border-l-2 brutal:not-first:border-ink',
           )}
         >
           {o.label}

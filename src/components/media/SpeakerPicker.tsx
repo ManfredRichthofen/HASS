@@ -62,7 +62,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
   return (
     <div
       className={cn(
-        'flex min-h-15 items-center gap-3 rounded-control border-ui border-border-subtle transition-state',
+        'flex min-h-15 flex-wrap items-center gap-x-3 gap-y-1 rounded-control border-ui border-border-subtle transition-state',
         on && 'border-transparent bg-surface shadow-card',
         'modern:border-transparent',
         'brutal:border-ink brutal:not-first:-mt-0.5',
@@ -78,7 +78,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
         aria-label={`Play in ${label}`}
         disabled={unavailable}
         onClick={() => void toggle()}
-        className="flex min-h-14 min-w-36 items-center gap-3 pr-2 pl-2.5 text-left"
+        className="flex min-h-14 min-w-0 flex-1 basis-36 items-center gap-3 pr-2 pl-2.5 text-left"
       >
         <span
           className={cn(
@@ -99,7 +99,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
         </span>
       </button>
       {on ? (
-        <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-3">
+        <div className="flex min-w-0 flex-1 basis-40 items-center gap-2.5 px-2.5 pb-2.5 sm:pr-3 sm:pb-0">
           <Volume1 className="size-[18px] shrink-0 text-ink-faint brutal:text-ink" />
           <Slider
             aria-label={`${label} volume`}

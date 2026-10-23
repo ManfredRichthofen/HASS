@@ -38,8 +38,8 @@ function MusicPage() {
     <div
       className={cn(
         '@container flex min-h-[32rem] flex-col gap-4',
-        // Page height minus the shell's padding and the bottom nav (phone) / padding (tablet).
-        'h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4.5rem)]',
+        // Page height minus shell padding + bottom nav (phone) / padding (tablet).
+        'h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-8rem)]',
       )}
     >
       <header className="flex shrink-0 items-end justify-between gap-3 pt-[max(0.25rem,env(safe-area-inset-top))]">
@@ -48,17 +48,20 @@ function MusicPage() {
         </h1>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-5 @2xl:grid @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] @2xl:gap-8">
-        <div className="shrink-0 @2xl:flex @2xl:min-h-0 @2xl:flex-col @2xl:justify-center">
+      <div className="flex min-h-0 flex-1 flex-col gap-5 @xl:grid @xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] @xl:gap-8">
+        <div className="min-h-0 shrink @xl:flex @xl:min-h-0 @xl:shrink @xl:flex-col @xl:justify-center">
           <QueueManager
             view="player"
             target={target}
             onTargetChange={setTarget}
-            artClassName="@2xl:max-w-[min(100%,calc(100dvh-26rem))]"
+            artClassName="@xl:max-w-[min(100%,calc(100dvh-26rem))]"
           />
         </div>
 
-        <section aria-label="Music panel" className="flex min-h-0 flex-1 flex-col gap-3">
+        <section
+          aria-label="Music panel"
+          className="flex min-h-[40%] flex-1 flex-col gap-3 @xl:min-h-0"
+        >
           <Segmented label="Show" options={panels} value={panel} onChange={setPanel} />
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-card">
             {panel === 'queue' ? (

@@ -19,18 +19,18 @@ function LivingTempHistory() {
   return (
     <div className="rounded-card border-ui border-border-subtle bg-surface p-5 shadow-card modern:border-transparent">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <p className="text-display text-lg text-ink">Living room</p>
+        <h3 className="text-display text-lg text-ink">Living room</h3>
         <p className="text-label">Last 24 hours</p>
       </div>
       {loading && points.length < 2 ? (
-        <div className="h-[220px] animate-pulse rounded-control bg-surface-hover" />
+        <div className="h-[200px] animate-pulse rounded-control bg-surface-hover" />
       ) : points.length < 2 ? (
         <p className="py-16 text-center text-sm text-ink-muted">Not enough history yet</p>
       ) : (
         <TempHistoryChart
           points={points}
           variant="full"
-          height={220}
+          height={200}
           ariaLabel="Living room temperature over 24 hours"
         />
       )}
@@ -43,9 +43,9 @@ function ClimatePage() {
     <Page>
       <PageHeader title="Climate" subtitle="Comfort across the home" />
 
-      <div className="grid items-start gap-section @2xl:grid-cols-2 @2xl:gap-8">
+      <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
         <ClimateCard entityId={entities.climate} />
-        <div className="grid gap-section">
+        <div className="grid gap-4 @xl:gap-section">
           <Section title="Outside">
             <WeatherCard />
           </Section>
@@ -56,7 +56,7 @@ function ClimatePage() {
       </div>
 
       <Section title="Room by room">
-        <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 @xl:grid-cols-3 @xl:gap-4">
           {houseClimateReadings.map((room) => (
             <ClimateReadingCard key={room.tempId} {...room} />
           ))}

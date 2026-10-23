@@ -15,7 +15,7 @@ function RoomsPage() {
   const wide = useMediaQuery('(min-width: 1280px)')
   const lightsOn = useLightsOnCount()
 
-  // Wide layouts show the room list in the layout route, so open a room by default.
+  // Desktop (xl) shows the room list in the layout route, so open a room by default.
   useEffect(() => {
     if (wide && primaryAreas[0]) {
       void navigate({ to: '/rooms/$areaId', params: { areaId: primaryAreas[0].id }, replace: true })
@@ -38,7 +38,7 @@ function RoomsPage() {
         initial="initial"
         animate="animate"
         variants={staggerContainer}
-        className="grid grid-cols-2 gap-3 @xl:grid-cols-3 @4xl:grid-cols-4 @xl:gap-4 brutal:gap-0 brutal:[&>*]:-mt-0.5 brutal:[&>*]:-ml-0.5 brutal:[&>*]:shadow-none"
+        className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @lg:gap-4 @3xl:grid-cols-4 brutal:gap-0 brutal:[&>*]:-mt-0.5 brutal:[&>*]:-ml-0.5 brutal:[&>*]:shadow-none"
       >
         {primaryAreas.map((area) => (
           <RoomCard key={area.id} area={area} />

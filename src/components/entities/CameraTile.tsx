@@ -13,11 +13,13 @@ const CameraStream = lazy(() =>
 export function CameraTile({
   entityId,
   label,
+  className,
   /** When set, click opens this instead of the built-in live drawer (e.g. doorbell popup). */
   onOpen,
 }: {
   entityId: string
   label?: string
+  className?: string
   onOpen?: () => void
 }) {
   const camera = useCamera(entityId)
@@ -50,6 +52,7 @@ export function CameraTile({
           'group relative flex min-h-[8.5rem] flex-col overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent text-left transition-ui',
           'hover:border-border hover:bg-surface-hover',
           unavailable && 'opacity-40',
+          className,
         )}
       >
         <div className="relative min-h-0 flex-1 overflow-hidden bg-canvas">

@@ -40,7 +40,6 @@ export function WeatherCard() {
           <p className="truncate text-sm font-medium capitalize text-ink">
             {String(weather.condition ?? weather.state).replace(/-/g, ' ')}
           </p>
-          <p className="text-xs text-ink-muted">Outside</p>
           <p className="mt-1.5 text-display text-3xl tabular-nums text-ink sm:mt-2 sm:text-4xl">
             {temp != null && !Number.isNaN(temp) ? Math.round(temp) : '—'}
             <span className="text-lg text-ink-muted sm:text-xl">°F</span>
@@ -52,7 +51,7 @@ export function WeatherCard() {
             </p>
           ) : null}
         </div>
-        <Icon className="size-11 shrink-0 text-light sm:size-14" strokeWidth={1.35} />
+        <Icon className="size-11 shrink-0 text-light sm:size-14" strokeWidth={1.35} aria-hidden />
       </div>
 
       <div className="mt-auto grid grid-cols-5 gap-1 border-t border-border-subtle pt-3 sm:mt-4 sm:gap-1.5">

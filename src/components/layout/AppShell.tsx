@@ -142,7 +142,7 @@ export function AppShell() {
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
-              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10">
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10 modern:pb-[calc(5.25rem+env(safe-area-inset-bottom))] glass:pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:modern:pb-10 md:glass:pb-10">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />

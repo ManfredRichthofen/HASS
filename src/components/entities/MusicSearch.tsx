@@ -92,6 +92,26 @@ function TrackRow({
   )
 }
 
+function SearchResultsSkeleton() {
+  return (
+    <div className="space-y-2" aria-busy="true" aria-label="Searching">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-card border-ui border-border-subtle bg-surface p-2 shadow-card modern:border-transparent"
+        >
+          <div className="size-12 shrink-0 animate-pulse rounded-control bg-surface-hover" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-4 w-3/4 animate-pulse rounded-control bg-surface-hover" />
+            <div className="h-3 w-1/3 animate-pulse rounded-control bg-surface-hover" />
+          </div>
+          <div className="size-10 shrink-0 animate-pulse rounded-pill bg-surface-hover" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function MediaCard({
   item,
   busy,
@@ -233,7 +253,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   }
 
   return (
-    <div className="space-y-4 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4 sm:p-5">
+    <div className="space-y-4">
       <h3 className="text-display text-lg text-ink">Add music</h3>
 
       <form onSubmit={(e) => void runSearch(e)} className="flex gap-2">
@@ -295,7 +315,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       ) : null}
 
       <div className="space-y-5">
-        {searching ? <p className="py-8 text-center text-sm text-ink-muted">Searching…</p> : null}
+        {searching ? <SearchResultsSkeleton /> : null}
 
         {!searching && searched && !hasResults ? (
           <p className="py-8 text-center text-sm text-ink-muted">No matches. Try another query.</p>

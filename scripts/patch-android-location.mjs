@@ -30,6 +30,7 @@ if (!existsSync(manifestPath)) {
 mkdirSync(javaDir, { recursive: true })
 
 const kotlinSources = [
+  'MainActivity.kt',
   'LocationTrackingPlugin.kt',
   'LocationCredentialStore.kt',
   'LocationWorker.kt',

@@ -19,6 +19,7 @@ import { Section } from '#/components/layout/Section'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
+import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { entityName } from '#/lib/entityName'
 
 export const Route = createFileRoute('/rooms/$areaId')({
@@ -40,9 +41,20 @@ function RoomLightsButton({ ids, name }: { ids: string[]; name: string }) {
     }
   }
 
+  const press = useScrollSafePress(() => void toggle())
+
   return (
-    <Button size="sm" variant={on > 0 ? 'secondary' : 'primary'} onClick={() => void toggle()}>
-      {on > 0 ? <LightbulbOff className="size-[18px]" /> : <Lightbulb className="size-[18px]" />}
+    <Button
+      size="sm"
+      variant={on > 0 ? 'secondary' : 'primary'}
+      {...press}
+      aria-label={on > 0 ? `Turn off all ${name} lights` : `Turn on all ${name} lights`}
+    >
+      {on > 0 ? (
+        <LightbulbOff className="size-[18px]" aria-hidden />
+      ) : (
+        <Lightbulb className="size-[18px]" aria-hidden />
+      )}
       {on > 0 ? 'All lights off' : 'Lights on'}
     </Button>
   )
@@ -129,7 +141,7 @@ function RoomDetailPage() {
         </p>
       ) : null}
 
-      <div className="grid items-start gap-section @2xl:grid-cols-2 @2xl:gap-8">
+      <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
         <div className="grid min-w-0 gap-section">
           {standaloneLights.length > 0 ? (
             <Section title="Lights">
@@ -178,10 +190,12 @@ function RoomDetailPage() {
         <div className="grid min-w-0 gap-section">
           {extraReadings.length > 0 ? (
             <Section title="Climate">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {extraReadings.map((reading) => (
-                  <ClimateReadingCard key={reading.tempId} {...reading} />
-                ))}
+              <div className="@container">
+                <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3">
+                  {extraReadings.map((reading) => (
+                    <ClimateReadingCard key={reading.tempId} {...reading} />
+                  ))}
+                </div>
               </div>
             </Section>
           ) : null}
