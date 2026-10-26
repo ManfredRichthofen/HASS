@@ -1,4 +1,4 @@
-import { useMediaPlayers, useServiceCall } from 'hass-react'
+import { useEntityGroup, useServiceCall } from 'hass-react'
 import { useCallback, useMemo } from 'react'
 import { notify } from '#/components/ui/toast'
 import { mediaTargets } from '#/lib/musicAssistant'
@@ -53,7 +53,9 @@ export function sessionLabel(members: string[]) {
  * so `sessions[0]` is what the Music page should show.
  */
 export function useMusicSessions() {
-  const players = useMediaPlayers()
+  // Not `useMediaPlayers()`: it fetches every entity state per mount and
+  // re-renders on any media_player change in the house.
+  const players = useEntityGroup(roomIds)
 
   return useMemo(() => {
     const byId = new Map(players.map((p) => [p.entity_id, p]))

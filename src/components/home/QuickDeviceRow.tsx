@@ -29,6 +29,16 @@ function Swap({ text }: { text: string }) {
   )
 }
 
+/** Stretches the row's name link/button over the whole row so any tap opens it. */
+const rowTarget =
+  'outline-none after:absolute after:inset-0 after:rounded-control focus-visible:after:ring-2 focus-visible:after:ring-accent'
+
+const chevron = (
+  <RowChevron>
+    <ChevronRight className="size-[18px]" aria-hidden />
+  </RowChevron>
+)
+
 /** Home's "Around the house": music, climate and the vacuum in one calm list. */
 export function QuickDeviceRow({ className }: { className?: string }) {
   const media = useActiveMedia()
@@ -56,6 +66,8 @@ export function QuickDeviceRow({ className }: { className?: string }) {
       ? `${vacuumStatus} · ${vacuum.batteryLevel}%`
       : vacuumStatus
 
+  const handleOpenVacuum = () => setVacuumOpen(true)
+
   const togglePlayback = () => {
     const next = !isPlaying
     commit(next, async () => {
@@ -75,7 +87,11 @@ export function QuickDeviceRow({ className }: { className?: string }) {
         <DeviceRow
           icon={Music2}
           tone="success"
-          name={<Link to="/media">Music</Link>}
+          name={
+            <Link to="/media" aria-label="Open music" className={rowTarget}>
+              Music
+            </Link>
+          }
           caption={<Swap text={musicCaption} />}
           trailing={
             isActive ? (
@@ -90,7 +106,7 @@ export function QuickDeviceRow({ className }: { className?: string }) {
                   whileTap={tap.hard}
                   onClick={togglePlayback}
                   aria-label={isPlaying ? 'Pause' : 'Play'}
-                  className="mr-1.5 grid size-11 shrink-0 place-items-center rounded-pill bg-accent text-on-accent"
+                  className="relative z-10 mr-1.5 grid size-11 shrink-0 place-items-center rounded-pill bg-accent text-on-accent"
                 >
                   {isPlaying ? (
                     <Pause className="size-4" fill="currentColor" />
@@ -100,50 +116,42 @@ export function QuickDeviceRow({ className }: { className?: string }) {
                 </m.button>
               </AnimatePresence>
             ) : (
-              <Link to="/media" aria-label="Open music">
-                <RowChevron>
-                  <ChevronRight className="size-[18px]" />
-                </RowChevron>
-              </Link>
+              chevron
             )
           }
         />
         <DeviceRow
           icon={Thermometer}
           tone="light"
-          name={<Link to="/climate">Climate</Link>}
+          name={
+            <Link to="/climate" aria-label="Open climate" className={rowTarget}>
+              Climate
+            </Link>
+          }
           caption={
             inside.numericValue != null
               ? `${Math.round(inside.numericValue)}° in the living room`
               : '—'
           }
-          trailing={
-            <Link to="/climate" aria-label="Open climate">
-              <RowChevron>
-                <ChevronRight className="size-[18px]" />
-              </RowChevron>
-            </Link>
-          }
+          trailing={chevron}
         />
         <DeviceRow
           icon={RobotVacuum}
           tone="info"
           unavailable={vacuum.isUnavailable}
-          name="Vacuum"
-          caption={<Swap text={vacuumCaption} />}
-          trailing={
+          name={
             <button
               type="button"
               disabled={vacuum.isUnavailable}
               aria-label="Open vacuum"
-              onClick={() => setVacuumOpen(true)}
-              className={cn('rounded-pill hover:bg-surface-hover')}
+              onClick={handleOpenVacuum}
+              className={cn(rowTarget, 'text-left disabled:cursor-not-allowed')}
             >
-              <RowChevron>
-                <ChevronRight className="size-[18px]" />
-              </RowChevron>
+              Vacuum
             </button>
           }
+          caption={<Swap text={vacuumCaption} />}
+          trailing={chevron}
         />
       </DeviceList>
 

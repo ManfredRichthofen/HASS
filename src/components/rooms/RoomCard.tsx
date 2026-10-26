@@ -29,7 +29,7 @@ export function RoomCard({ area }: { area: AreaConfig }) {
       whileTap={tap.medium}
       transition={snappy}
       className={cn(
-        'card relative flex min-h-44 flex-col justify-between gap-7 overflow-hidden p-4.5',
+        'card relative flex min-h-40 flex-col justify-between gap-5 overflow-hidden p-4',
       )}
     >
       {/* Lit glow / dot / bar */}

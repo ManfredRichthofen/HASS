@@ -42,7 +42,12 @@ export function VacuumMap({
   return (
     <div className={cn('relative overflow-hidden rounded-card bg-canvas', className)}>
       {src && !camera.isUnavailable ? (
-        <img src={src} alt="Vacuum map" className="aspect-[4/3] w-full object-contain" />
+        <img
+          src={src}
+          alt="Vacuum map"
+          decoding="async"
+          className="aspect-[4/3] w-full object-contain"
+        />
       ) : (
         <div className="grid aspect-[4/3] place-items-center gap-2 text-ink-faint">
           <MapIcon className="size-7 opacity-40" />

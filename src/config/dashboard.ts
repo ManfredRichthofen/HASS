@@ -63,7 +63,7 @@ export const areas: AreaConfig[] = [
     lights: [
       'light.inovelli_vzm32_sn',
       'light.doughnut_lamp',
-      'light.floor_lamp',
+      'light.living_room_floor_lamp',
       'light.entry',
       'light.living_room_led',
     ],
@@ -279,7 +279,7 @@ export const entities = {
     lights: [
       'light.inovelli_vzm32_sn',
       'light.entry',
-      'light.floor_lamp',
+      'light.living_room_floor_lamp',
       'light.kitchen_under_cabinets',
       'light.kitchen_lights',
       'light.doughnut_lamp',
@@ -350,7 +350,7 @@ export const entities = {
           domain: 'light',
           service: 'turn_on',
           data: {
-            entity_id: ['light.doughnut_lamp', 'light.floor_lamp'],
+            entity_id: ['light.doughnut_lamp', 'light.living_room_floor_lamp'],
             brightness_pct: 90,
             color_temp_kelvin: 4200,
           },
@@ -375,7 +375,7 @@ export const entities = {
           domain: 'light',
           service: 'turn_on',
           data: {
-            entity_id: ['light.doughnut_lamp', 'light.floor_lamp'],
+            entity_id: ['light.doughnut_lamp', 'light.living_room_floor_lamp'],
             brightness_pct: 45,
             color_temp_kelvin: 2500,
           },
@@ -416,7 +416,7 @@ export const entities = {
           domain: 'light',
           service: 'turn_on',
           data: {
-            entity_id: 'light.floor_lamp',
+            entity_id: 'light.living_room_floor_lamp',
             brightness_pct: 18,
             color_temp_kelvin: 2200,
           },
@@ -495,7 +495,7 @@ export const entities = {
   allLightsOff: [
     'light.inovelli_vzm32_sn',
     'light.doughnut_lamp',
-    'light.floor_lamp',
+    'light.living_room_floor_lamp',
     'light.entry',
     'light.living_room_led',
     'light.kitchen_lights',

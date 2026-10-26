@@ -8,7 +8,7 @@ import { cn } from '#/lib/cn'
  */
 export function DeviceList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('card grid grid-cols-[minmax(0,1fr)] pr-1.5 pl-4.5', className)}>
+    <div className={cn('card grid grid-cols-[minmax(0,1fr)] pr-1 pl-3.5', className)}>
       {children}
     </div>
   )
@@ -45,7 +45,7 @@ export function DeviceRow({
   return (
     <div
       className={cn(
-        'flex min-h-17 items-center gap-4 border-b border-border-subtle py-2.5 last:border-b-0',
+        'relative flex min-h-15 items-center gap-3 border-b border-border-subtle py-2 last:border-b-0',
         unavailable && 'opacity-45',
         className,
       )}

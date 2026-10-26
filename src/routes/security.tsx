@@ -149,7 +149,7 @@ function SecurityPage() {
             title="House mode"
             className="min-w-0 @xl:[&>div:first-child]:mb-2.5 @xl:[&>div:first-child]:min-h-9"
           >
-            <div className="rounded-card border-ui border-border-subtle bg-surface px-5 py-1 shadow-card modern:border-transparent">
+            <div className="rounded-card border-ui border-border-subtle bg-surface px-4 py-1 shadow-card modern:border-transparent">
               <HouseModeGrid />
             </div>
           </Section>

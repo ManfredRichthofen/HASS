@@ -44,7 +44,7 @@ function SettingsPage() {
           ) : null}
 
           <Section title="Connection">
-            <div className="grid gap-4 rounded-card border-ui border-border-subtle bg-surface p-5 shadow-card modern:border-transparent">
+            <div className="grid gap-4 rounded-card border-ui border-border-subtle bg-surface p-4 shadow-card sm:p-5 modern:border-transparent">
               <div className="flex min-h-11 items-center justify-between gap-3">
                 <span className="text-label">Status</span>
                 <span

@@ -22,7 +22,7 @@ export function Section({
   return (
     <m.section variants={staggerItem} className={cn('min-w-0', className)}>
       {(title || action) && (
-        <div className="mb-3.5 flex min-h-11 items-end justify-between gap-3">
+        <div className="mb-2.5 flex min-h-9 items-end justify-between gap-3">
           {title ? (
             <h2
               className={cn(

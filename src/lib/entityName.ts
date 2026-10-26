@@ -3,7 +3,7 @@ export const entityLabels: Record<string, string> = {
   // Living room lights
   'light.inovelli_vzm32_sn': 'Living Room lights',
   'light.doughnut_lamp': 'Doughnut lamp',
-  'light.floor_lamp': 'Floor lamp',
+  'light.living_room_floor_lamp': 'Floor lamp',
   'light.entry': 'Entry',
   'light.living_room_led': 'LED strip',
 

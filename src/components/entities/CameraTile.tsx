@@ -60,6 +60,8 @@ export function CameraTile({
             <img
               src={src}
               alt={name}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 size-full object-cover transition-ui group-hover:scale-[1.02]"
             />
           ) : (

@@ -81,8 +81,8 @@
 
 @theme {
   --spacing-touch: 2.75rem;
-  --spacing-page: 1.25rem;
-  --spacing-section: 2.5rem;
+  --spacing-page: 1rem;
+  --spacing-section: 1.75rem;
 
   /* Motion — keep in sync with src/lib/motion.ts */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -471,6 +471,12 @@
   --nav-gap: 0.75rem;
   --nav-clearance: calc(var(--nav-h) + var(--nav-offset));
   --now-playing-space: 0px;
+}
+
+@media (width >= 48rem) {
+  :root {
+    --spacing-section: 2.25rem;
+  }
 }
 
 :root:is([data-theme="modern"], [data-theme="glass"], [data-theme="forest"]) {

@@ -10,7 +10,9 @@ import { ToastProvider } from '#/components/ui/toast'
 import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
 import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
-import { domMax, LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+import { LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+
+const loadMotionFeatures = () => import('#/lib/motionFeatures').then((mod) => mod.default)
 
 function ConnectingSplash({ label }: { label: string }) {
   return (
@@ -74,7 +76,7 @@ function ReconnectBanner({
     <div
       role="status"
       aria-live="polite"
-      className="sticky top-0 z-40 border-b border-border-subtle bg-surface/95 px-page py-2 backdrop-blur-sm sm:px-6 md:px-8 lg:px-10"
+      className="sticky top-0 z-40 border-b border-border-subtle bg-surface/95 px-page py-2 backdrop-blur-sm sm:px-5 md:px-6 lg:px-8"
     >
       <div className="mx-auto flex max-w-[80rem] items-center gap-3">
         <div className="size-2.5 shrink-0 animate-pulse rounded-pill bg-accent" aria-hidden />
@@ -209,11 +211,11 @@ export function AppShell() {
   return (
     <ToastProvider>
       <MotionConfig reducedMotion="user">
-        <LazyMotion features={domMax} strict>
+        <LazyMotion features={loadMotionFeatures} strict>
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
-              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1.5rem+var(--now-playing-space))] pt-4 transition-[padding-bottom] duration-slow ease-out sm:px-6 md:px-8 md:pb-[calc(2.5rem+var(--now-playing-space))] md:pt-8 lg:px-10">
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1rem+var(--now-playing-space))] pt-3 transition-[padding-bottom] duration-slow ease-out sm:px-5 md:px-6 md:pb-[calc(2rem+var(--now-playing-space))] md:pt-6 lg:px-8">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />
