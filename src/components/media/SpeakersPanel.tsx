@@ -57,13 +57,13 @@ export function SpeakersPanel({
             <button
               type="button"
               onClick={() => (allSelected ? clear() : void actions.selectAll(current.leader))}
-              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
             >
               {allSelected ? 'Clear' : 'Select all'}
             </button>
           ) : null}
         </div>
-        <div className="grid gap-2 brutal:gap-0">
+        <div className="grid gap-2">
           {rooms.map((room) => (
             <RoomRow
               key={room.id}
@@ -91,7 +91,7 @@ function OtherSession({ session, onControl }: { session: MusicSession; onControl
       whileTap={tap.soft}
       transition={snappy}
       onClick={onControl}
-      className="flex min-h-14 items-center gap-3 rounded-control border-ui border-border-subtle bg-surface px-3 text-left shadow-card transition-state modern:border-transparent brutal:border-ink brutal:shadow-none"
+      className="flex min-h-14 items-center gap-3 rounded-control border-ui border-border-subtle bg-surface px-3 text-left shadow-card transition-state modern:border-transparent"
     >
       <span className="grid size-8 shrink-0 place-items-center rounded-pill bg-surface-hover text-ink-muted">
         <Icon className="size-3.5 fill-current" />
@@ -104,9 +104,7 @@ function OtherSession({ session, onControl }: { session: MusicSession; onControl
           {session.title ?? (session.state === 'playing' ? 'Playing' : 'Paused')}
         </span>
       </span>
-      <span className="shrink-0 pr-1 text-sm font-semibold text-ink-muted brutal:font-label brutal:text-xs brutal:uppercase">
-        Control
-      </span>
+      <span className="shrink-0 pr-1 text-sm font-semibold text-ink-muted">Control</span>
     </m.button>
   )
 }
@@ -163,8 +161,6 @@ function RoomRow({
         'grid gap-x-3 rounded-control border-ui border-border-subtle transition-state',
         on && 'border-transparent bg-surface shadow-card',
         'modern:border-transparent',
-        'brutal:border-ink brutal:shadow-none brutal:not-first:-mt-0.5',
-        on && 'brutal:bg-surface',
         room.unavailable && 'opacity-45',
       )}
     >
@@ -185,7 +181,6 @@ function RoomRow({
               'grid size-8 shrink-0 place-items-center rounded-pill border-2 border-border-strong text-ink-muted transition-state',
               on && 'border-accent bg-accent text-on-accent',
               locked && 'opacity-60',
-              on && 'brutal:border-ink brutal:bg-ink brutal:text-on-from',
             )}
           >
             {on ? <Check className="size-4" /> : <Plus className="size-4" />}
@@ -200,9 +195,7 @@ function RoomRow({
               {room.label}
             </span>
             {status ? (
-              <span className="block truncate text-[0.8125rem] text-ink-faint brutal:font-label brutal:text-xs">
-                {status}
-              </span>
+              <span className="block truncate text-[0.8125rem] text-ink-faint">{status}</span>
             ) : null}
           </span>
         </button>
@@ -212,7 +205,7 @@ function RoomRow({
             type="button"
             onClick={() => void actions.moveTo(current.leader, room.id)}
             disabled={room.unavailable}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-pill px-3 text-sm font-semibold text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink brutal:rounded-none brutal:font-label brutal:text-xs brutal:uppercase"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-pill px-3 text-sm font-semibold text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink"
             aria-label={`Move the music to ${room.label}`}
           >
             <ArrowRightLeft className="size-3.5" />

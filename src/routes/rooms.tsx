@@ -16,7 +16,7 @@ function RoomsLayout() {
           <h2 className="text-display text-3xl text-ink walnut:font-light">Rooms</h2>
           <AllLightsOff />
         </div>
-        <nav aria-label="Rooms" className="flex flex-col gap-1 brutal:gap-0">
+        <nav aria-label="Rooms" className="flex flex-col gap-1">
           {primaryAreas.map((area) => (
             <RoomListItem key={area.id} area={area} active={params.areaId === area.id} />
           ))}

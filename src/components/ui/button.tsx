@@ -12,12 +12,9 @@ type Size = 'sm' | 'md' | 'lg' | 'icon'
 const variants: Record<Variant, string> = {
   primary: 'bg-accent text-on-accent hover:bg-accent-strong',
   accent: 'bg-accent text-on-accent hover:bg-accent-strong',
-  secondary:
-    'border-ui border-border bg-transparent text-ink hover:bg-surface-hover brutal:bg-surface',
-  ghost:
-    'bg-transparent text-ink-muted shadow-none! hover:bg-surface-hover hover:text-ink brutal:underline brutal:underline-offset-4',
-  danger:
-    'border-ui border-danger/45 bg-transparent text-danger hover:bg-danger/10 brutal:border-ink brutal:bg-surface',
+  secondary: 'border-ui border-border bg-transparent text-ink hover:bg-surface-hover',
+  ghost: 'bg-transparent text-ink-muted shadow-none! hover:bg-surface-hover hover:text-ink',
+  danger: 'border-ui border-danger/45 bg-transparent text-danger hover:bg-danger/10',
 }
 
 const sizes: Record<Size, string> = {
@@ -40,7 +37,6 @@ export function Button({
     <BaseButton
       className={cn(
         'press inline-flex shrink-0 items-center justify-center rounded-pill font-semibold whitespace-nowrap select-none',
-        'brutal:font-label brutal:text-[0.8125rem] brutal:font-medium brutal:uppercase brutal:tracking-[0.04em] brutal:shadow-press',
         'disabled:pointer-events-none disabled:opacity-40',
         variants[variant],
         sizes[size],

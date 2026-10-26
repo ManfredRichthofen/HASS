@@ -25,8 +25,6 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
         active
           ? 'border-border-subtle bg-surface shadow-card modern:border-transparent'
           : 'hover:bg-surface/60',
-        'brutal:border-ink brutal:not-first:-mt-0.5',
-        active && 'brutal:bg-ink brutal:text-surface brutal:shadow-none',
       )}
     >
       <Link
@@ -44,12 +42,7 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-display truncate text-lg leading-tight">{area.name}</p>
-        <p
-          className={cn(
-            'truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs',
-            active && 'brutal:text-surface/80',
-          )}
-        >
+        <p className={cn('truncate text-[0.8125rem] text-ink-muted')}>
           {room.summary}
           {room.tempId ? <Temp entityId={room.tempId} /> : null}
         </p>

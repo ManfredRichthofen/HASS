@@ -126,7 +126,7 @@ export function FanLightTile({
         'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
         showInline || (!fanOn && showFanControls) ? 'min-h-[12.5rem]' : 'min-h-[8.5rem]',
         active
-          ? 'bg-on shadow-on border-transparent brutal:border-ink'
+          ? 'bg-on shadow-on border-transparent'
           : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
         unavailable && 'opacity-40',
       )}

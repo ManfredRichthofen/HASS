@@ -40,8 +40,7 @@ function SceneCard({
         'flex min-h-16 min-w-0 items-center gap-3 rounded-card border-ui border-border-subtle bg-surface px-4 py-3 text-left shadow-card transition-state',
         'modern:min-h-13 modern:rounded-pill modern:border-transparent modern:py-2',
         'glass:rounded-[1.25rem]',
-        'brutal:-mt-0.5 brutal:-ml-0.5 brutal:border-ink brutal:shadow-none',
-        selected && 'border-transparent bg-accent text-on-accent brutal:border-ink',
+        selected && 'border-transparent bg-accent text-on-accent',
       )}
     >
       <Icon
@@ -94,7 +93,6 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
         // Every scene visible at once: 2×2 on phones, one row of four when
         // the page is wide but single-column, back to 2×2 beside Home's summary.
         'grid grid-cols-2 gap-2.5 @md:grid-cols-4 @xl:grid-cols-2',
-        'brutal:gap-0 brutal:pt-0.5 brutal:pl-0.5',
       )}
     >
       {scenes.map((scene) => (

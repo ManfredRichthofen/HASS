@@ -54,10 +54,9 @@ export function LockTile({
     <div
       className={cn(
         'flex items-center gap-4 rounded-card border-ui border-border-subtle bg-surface py-4.5 pr-4.5 pl-5 shadow-card transition-state',
-        'modern:border-transparent brutal:border-ink',
+        'modern:border-transparent',
         open &&
           'border-danger/55 modern:border-transparent modern:shadow-[inset_0_0_0_2px_var(--c-danger)]',
-        open && 'brutal:border-ink brutal:bg-danger brutal:text-white',
         unavailable && 'opacity-45',
         className,
       )}
@@ -65,26 +64,16 @@ export function LockTile({
       <span
         className={cn(
           'text-success modern:grid modern:size-12 modern:place-items-center modern:rounded-pill modern:bg-success/12',
-          open && 'text-danger modern:bg-danger/12 brutal:text-white',
+          open && 'text-danger modern:bg-danger/12',
         )}
       >
         {open ? <LockOpen className="size-7" /> : <Lock className="size-7" />}
       </span>
       <div className="min-w-0 flex-1">
-        <span
-          className={cn(
-            'text-display block text-2xl leading-tight',
-            open && 'text-danger brutal:text-white',
-          )}
-        >
+        <span className={cn('text-display block text-2xl leading-tight', open && 'text-danger')}>
           {unavailable ? 'Unavailable' : open ? 'Unlocked' : 'Locked'}
         </span>
-        <span
-          className={cn(
-            'block truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs',
-            open && 'brutal:text-white',
-          )}
-        >
+        <span className={cn('block truncate text-[0.8125rem] text-ink-muted')}>
           {name}
           {changed ? ` · ${changed}` : ''}
         </span>

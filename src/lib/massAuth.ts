@@ -146,9 +146,12 @@ export async function ensureMassFromHomeAssistant(
   const discovered = await discoverMassUrl(connection)
   push(discovered)
 
-  for (const candidate of candidates) {
-    if (!(await probeMassUrl(candidate))) continue
-    if (!(await probeMassApi(candidate, token))) continue
+  const index = await firstReachable(
+    candidates,
+    async (candidate) => (await probeMassUrl(candidate)) && (await probeMassApi(candidate, token)),
+  )
+  const candidate = candidates[index]
+  if (candidate) {
     const config: MassConfig = {
       url: candidate,
       token,
@@ -229,10 +232,23 @@ export async function discoverMassUrl(connection?: HaConnection | null): Promise
     /* ignore */
   }
 
-  for (const candidate of candidates) {
-    if (await probeMassUrl(candidate)) return candidate
+  const index = await firstReachable(candidates, (candidate) => probeMassUrl(candidate))
+  return candidates[index] ?? candidates[0] ?? null
+}
+
+/**
+ * Probe every candidate at once, then return the index of the highest-priority
+ * one that succeeded (-1 if none). Total wait is one timeout, not one per candidate.
+ */
+async function firstReachable(
+  candidates: string[],
+  probe: (candidate: string) => Promise<boolean>,
+): Promise<number> {
+  const probes = candidates.map((candidate) => probe(candidate))
+  for (const [index, result] of probes.entries()) {
+    if (await result) return index
   }
-  return candidates[0] ?? null
+  return -1
 }
 
 export type MassLoginProvider = {

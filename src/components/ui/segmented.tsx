@@ -40,7 +40,6 @@ export function Segmented<T extends string>({
         disabled={disabled}
         className={cn(
           'flex gap-1 rounded-pill bg-surface-hover p-1',
-          'brutal:gap-0 brutal:border-2 brutal:border-ink brutal:bg-surface brutal:p-0',
           disabled && 'opacity-40',
           className,
         )}
@@ -57,8 +56,6 @@ export function Segmented<T extends string>({
                 pressed ? 'text-on-accent' : 'text-ink-muted hover:text-ink',
                 'modern:data-pressed:text-ink',
                 'glass:data-pressed:text-on-raised',
-                'brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:tracking-[0.04em] brutal:text-ink brutal:not-first:border-l-2 brutal:not-first:border-ink',
-                pressed && 'brutal:text-surface',
               )}
             >
               {pressed ? (
@@ -70,7 +67,6 @@ export function Segmented<T extends string>({
                     'absolute inset-0 rounded-pill bg-accent',
                     'modern:bg-surface modern:shadow-[0_1px_3px_#14141326]',
                     'glass:bg-raised glass:shadow-card',
-                    'brutal:rounded-none brutal:bg-ink',
                   )}
                 />
               ) : null}

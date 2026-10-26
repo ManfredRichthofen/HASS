@@ -39,7 +39,7 @@ function RoomsPage() {
         />
         <m.div
           variants={staggerContainer}
-          className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @lg:gap-4 @3xl:grid-cols-4 brutal:gap-0 brutal:[&>*]:-mt-0.5 brutal:[&>*]:-ml-0.5 brutal:[&>*]:shadow-none"
+          className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @lg:gap-4 @3xl:grid-cols-4"
         >
           {primaryAreas.map((area) => (
             <RoomCard key={area.id} area={area} />

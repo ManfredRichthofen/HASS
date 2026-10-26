@@ -8,7 +8,7 @@ export function Input({ className, ...props }: ComponentProps<typeof BaseInput>)
       className={cn(
         'h-12 w-full rounded-pill border-ui border-border-subtle bg-surface px-5 text-[0.9375rem] text-ink outline-none transition-ui',
         'placeholder:text-ink-faint focus:border-accent focus:ring-3 focus:ring-accent-soft',
-        'modern:border-transparent brutal:border-ink brutal:focus:ring-0',
+        'modern:border-transparent',
         'disabled:opacity-40',
         className,
       )}

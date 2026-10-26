@@ -164,7 +164,7 @@ export function FanTile({
           'relative flex min-w-0 flex-col overflow-hidden rounded-card border-ui p-4.5 transition-state',
           showInline ? 'min-h-[11.5rem]' : 'min-h-[7.5rem]',
           isOn
-            ? 'bg-on shadow-on border-transparent brutal:border-ink'
+            ? 'bg-on shadow-on border-transparent'
             : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
           unavailable && 'opacity-40',
         )}

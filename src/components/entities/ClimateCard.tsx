@@ -140,12 +140,7 @@ export function ClimateCard({
   const knob = point(at)
   const tick = current != null ? angleFor(current) : null
   const heatLike = mode === 'heat' || mode === 'heat_cool' || mode === 'auto'
-  const arcColor =
-    mode === 'cool'
-      ? 'stroke-info'
-      : heatLike
-        ? 'stroke-on-to brutal:stroke-ink'
-        : 'stroke-ink-faint'
+  const arcColor = mode === 'cool' ? 'stroke-info' : heatLike ? 'stroke-on-to' : 'stroke-ink-faint'
 
   function valueFromPointer(e: PointerEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -162,15 +157,13 @@ export function ClimateCard({
       className={cn(
         'grid h-full justify-items-center gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 pt-5 pb-4 shadow-card',
         '@md:gap-5 @md:px-5 @md:pt-6 @md:pb-5',
-        'modern:border-transparent brutal:border-ink',
+        'modern:border-transparent',
         unavailable && 'opacity-45',
       )}
     >
       <div className="flex w-full items-baseline justify-between gap-3">
         <h3 className="text-display truncate text-xl text-ink">{name}</h3>
-        <span className="shrink-0 text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
-          {statusLine}
-        </span>
+        <span className="shrink-0 text-[0.8125rem] text-ink-muted">{statusLine}</span>
       </div>
 
       <div className="relative h-[220px] w-[248px]">
@@ -215,16 +208,13 @@ export function ClimateCard({
         >
           <path
             d={arcPath(A0, A1)}
-            className="fill-none stroke-surface-hover brutal:[stroke-linecap:butt]"
+            className="fill-none stroke-surface-hover"
             strokeWidth={14}
             strokeLinecap="round"
           />
           <path
             d={arcPath(A0, Math.max(A0 + 0.5, at))}
-            className={cn(
-              'fill-none modern:[stroke-width:8] brutal:[stroke-linecap:butt]',
-              arcColor,
-            )}
+            className={cn('fill-none modern:[stroke-width:8]', arcColor)}
             strokeWidth={14}
             strokeLinecap="round"
           />
@@ -243,7 +233,7 @@ export function ClimateCard({
             cx={knob.x}
             cy={knob.y}
             r={12}
-            className="fill-ink stroke-surface modern:fill-surface modern:stroke-ink brutal:fill-on-from brutal:stroke-ink"
+            className="fill-ink stroke-surface modern:fill-surface modern:stroke-ink"
             strokeWidth={4}
           />
         </svg>
@@ -251,7 +241,7 @@ export function ClimateCard({
           <span className="text-label">
             {mode === 'off' ? 'Off' : `${modeLabel[mode] ?? mode} to`}
           </span>
-          <span className="text-[4rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em] brutal:text-[4.5rem] brutal:font-bold brutal:tracking-[-0.06em]">
+          <span className="text-[4rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em]">
             {Math.round(target)}°
           </span>
         </div>
@@ -267,7 +257,7 @@ export function ClimateCard({
         >
           <Minus className="size-5" aria-hidden />
         </Button>
-        <span className="text-[0.8125rem] text-ink-faint tabular-nums brutal:font-label brutal:text-xs">
+        <span className="text-[0.8125rem] text-ink-faint tabular-nums">
           {Math.round(lo)}° – {Math.round(hi)}°
         </span>
         <Button

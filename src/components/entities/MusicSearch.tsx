@@ -1,10 +1,23 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useServiceCall } from 'hass-react'
-import { Disc3, ListPlus, ListStart, Loader2, Music2, Play, Radio, Search } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import {
+  Disc3,
+  History,
+  ListPlus,
+  ListStart,
+  Loader2,
+  Music2,
+  Play,
+  Radio,
+  Search,
+  X,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Toggle } from '#/components/ui/toggle'
 import { notify } from '#/components/ui/toast'
+import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
 import { cn } from '#/lib/cn'
 import { getMassBaseUrl } from '#/lib/massConfig'
@@ -14,9 +27,35 @@ import {
   type MediaSearchItem,
   mediaClassFilters,
   mediaClassLabel,
+  parseMassSearchResults,
   parseSearchResults,
   resolveMediaThumbnail,
 } from '#/lib/musicAssistant'
+
+const SEARCH_DEBOUNCE_MS = 350
+const MIN_TYPED_LENGTH = 2
+const RECENT_KEY = 'music-recent-searches'
+const RECENT_LIMIT = 8
+
+/** Last query, so reopening the Search sheet shows the same (cached) results. */
+let lastQuery = ''
+
+const readRecentSearches = (): string[] => {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as unknown
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+const writeRecentSearches = (recent: string[]) => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
+}
+
+const itemSubtitle = (item: MediaSearchItem) => item.subtitle || mediaClassLabel(item.media_class)
 
 const GROUP_ORDER = ['track', 'album', 'artist', 'playlist', 'radio'] as const
 const GROUP_TITLES: Record<string, string> = {
@@ -77,7 +116,7 @@ function TrackRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
-        <p className="truncate text-xs text-ink-muted">{mediaClassLabel(item.media_class)}</p>
+        <p className="truncate text-xs text-ink-muted">{itemSubtitle(item)}</p>
       </div>
       <Button
         size="icon"
@@ -162,7 +201,7 @@ function MediaCard({
         {item.title}
       </p>
       <p className={cn('truncate text-xs text-ink-muted', round && 'text-center')}>
-        {mediaClassLabel(item.media_class)}
+        {itemSubtitle(item)}
       </p>
     </button>
   )
@@ -170,15 +209,76 @@ function MediaCard({
 
 export function MusicSearch({ target, onQueued }: { target: string; onQueued?: () => void }) {
   const { callService, callServiceWithResponse } = useServiceCall()
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(lastQuery)
+  const [activeQuery, setActiveQuery] = useState(lastQuery)
   const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
   const [endlessMix, setEndlessMix] = useState(false)
   const [filter, setFilter] = useState<string>('all')
-  const [results, setResults] = useState<MediaSearchItem[]>([])
-  const [searching, setSearching] = useState(false)
   const [playingId, setPlayingId] = useState<string | null>(null)
-  const [searched, setSearched] = useState(false)
-  const searchRequestId = useRef(0)
+  const [recentSearches, setRecentSearches] = useState<string[]>(readRecentSearches)
+
+  // Search as you type, after a short pause.
+  useEffect(() => {
+    const q = query.trim()
+    lastQuery = q
+    if (q.length < MIN_TYPED_LENGTH) {
+      if (!q) setActiveQuery('')
+      return
+    }
+    const id = window.setTimeout(() => setActiveQuery(q), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(id)
+  }, [query])
+
+  const searchQuery = useQuery({
+    queryKey: ['music-search', target, activeQuery],
+    enabled: activeQuery.length > 0,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<MediaSearchItem[]> => {
+      // Music Assistant's own search returns artists and albums for each result.
+      if (entities.musicAssistantEntryId) {
+        try {
+          const response = await callServiceWithResponse('music_assistant', 'search', {
+            config_entry_id: entities.musicAssistantEntryId,
+            name: activeQuery,
+            limit: 20,
+          })
+          const items = parseMassSearchResults(response)
+          if (items.length > 0) return items
+        } catch {
+          /* fall back to the media player search */
+        }
+      }
+      const response = await callServiceWithResponse('media_player', 'search_media', {
+        entity_id: target,
+        search_query: activeQuery,
+      })
+      return parseSearchResults(response, target)
+    },
+  })
+
+  const searched = activeQuery.length > 0
+  const results = useMemo(
+    () => (searched && !searchQuery.isError ? (searchQuery.data ?? []) : []),
+    [searched, searchQuery.data, searchQuery.isError],
+  )
+  const searching = searched && searchQuery.isLoading
+  const refreshing = searched && searchQuery.isFetching
+
+  // Remember queries that found something.
+  useEffect(() => {
+    if (!activeQuery || searchQuery.isPlaceholderData || !searchQuery.data?.length) return
+    setRecentSearches((prev) => {
+      const next = [
+        activeQuery,
+        ...prev.filter((q) => q.toLowerCase() !== activeQuery.toLowerCase()),
+      ].slice(0, RECENT_LIMIT)
+      writeRecentSearches(next)
+      return next
+    })
+  }, [activeQuery, searchQuery.data, searchQuery.isPlaceholderData])
 
   const groups = useMemo(() => {
     const visible = filter === 'all' ? results : results.filter((i) => i.media_class === filter)
@@ -196,28 +296,31 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
   const hasResults = groups.length > 0
 
-  async function runSearch(event?: React.FormEvent) {
-    event?.preventDefault()
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
     const q = query.trim()
     if (!q) return
-
-    const requestId = ++searchRequestId.current
-    setSearching(true)
-    setSearched(true)
-    try {
-      const response = await callServiceWithResponse('media_player', 'search_media', {
-        entity_id: target,
-        search_query: q,
-      })
-      if (requestId !== searchRequestId.current) return
-      setResults(parseSearchResults(response, target))
-    } catch (e) {
-      if (requestId !== searchRequestId.current) return
-      setResults([])
-      notify('Search failed', e instanceof Error ? e.message : 'Could not search')
-    } finally {
-      if (requestId === searchRequestId.current) setSearching(false)
+    if (q === activeQuery) {
+      void searchQuery.refetch()
+      return
     }
+    setActiveQuery(q)
+  }
+
+  const handleClear = () => {
+    setQuery('')
+    setActiveQuery('')
+    setFilter('all')
+  }
+
+  const handleRecent = (recent: string) => {
+    setQuery(recent)
+    setActiveQuery(recent)
+  }
+
+  const handleClearRecent = () => {
+    setRecentSearches([])
+    writeRecentSearches([])
   }
 
   async function playItem(item: MediaSearchItem, mode: EnqueueMode = enqueue) {
@@ -276,22 +379,62 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
     <div className="space-y-4">
       <h3 className="text-display text-lg text-ink">Add music</h3>
 
-      <form onSubmit={(e) => void runSearch(e)} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2" role="search">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />
           <Input
+            type="search"
             value={query}
             onValueChange={(value) => setQuery(value)}
             placeholder="Song, artist, album, playlist…"
-            className="pl-10"
+            aria-label="Search music"
+            className="pr-11 pl-10 [&::-webkit-search-cancel-button]:hidden"
             enterKeyHint="search"
             autoComplete="off"
           />
+          {query ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={handleClear}
+              className="absolute top-1/2 right-1.5 grid size-9 -translate-y-1/2 place-items-center rounded-pill text-ink-faint transition-ui hover:bg-surface-hover hover:text-ink"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
-        <Button type="submit" variant="accent" disabled={searching || !query.trim()}>
-          {searching ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
+        <Button type="submit" variant="accent" disabled={!query.trim()}>
+          {refreshing ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
         </Button>
       </form>
+
+      {!query && recentSearches.length > 0 ? (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-label">Recent</p>
+            <button
+              type="button"
+              onClick={handleClearRecent}
+              className="text-xs font-medium text-ink-muted transition-ui hover:text-ink"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recentSearches.map((recent) => (
+              <button
+                key={recent}
+                type="button"
+                onClick={() => handleRecent(recent)}
+                className="touch-target flex max-w-full items-center gap-1.5 rounded-pill border border-border-subtle px-3.5 text-xs font-medium text-ink-muted transition-ui hover:text-ink"
+              >
+                <History className="size-3.5 shrink-0" />
+                <span className="truncate">{recent}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         <p className="text-label">Tapping a result will</p>
@@ -343,10 +486,27 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
         </div>
       ) : null}
 
-      <div className="space-y-5">
+      <p className="sr-only" aria-live="polite">
+        {searching
+          ? 'Searching'
+          : searched && !searchQuery.isError
+            ? `${results.length} ${results.length === 1 ? 'result' : 'results'}`
+            : ''}
+      </p>
+
+      <div className={cn('space-y-5 transition-opacity', refreshing && !searching && 'opacity-60')}>
         {searching ? <SearchResultsSkeleton /> : null}
 
-        {!searching && searched && !hasResults ? (
+        {searched && searchQuery.isError && !searching ? (
+          <div className="rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            {searchQuery.error instanceof Error ? searchQuery.error.message : 'Search failed'}{' '}
+            <button type="button" className="underline" onClick={() => void searchQuery.refetch()}>
+              Retry
+            </button>
+          </div>
+        ) : null}
+
+        {!searching && searched && !searchQuery.isError && !hasResults ? (
           <p className="py-8 text-center text-sm text-ink-muted">No matches. Try another query.</p>
         ) : null}
 

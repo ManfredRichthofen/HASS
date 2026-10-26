@@ -112,9 +112,9 @@ function MusicPage() {
         <button
           type="button"
           onClick={() => setPanel('speakers')}
-          className="hidden min-h-11 max-w-xs items-center gap-2 rounded-pill bg-surface px-4 text-sm font-semibold text-ink shadow-card transition-ui hover:bg-surface-hover @xl:inline-flex walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised brutal:rounded-none brutal:border-2 brutal:border-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:shadow-none"
+          className="hidden min-h-11 max-w-xs items-center gap-2 rounded-pill bg-surface px-4 text-sm font-semibold text-ink shadow-card transition-ui hover:bg-surface-hover @xl:inline-flex walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised"
         >
-          <Speaker className="size-[18px] shrink-0 text-ink-muted glass:text-on-raised brutal:text-ink" />
+          <Speaker className="size-[18px] shrink-0 text-ink-muted glass:text-on-raised" />
           <span className="truncate">{label}</span>
         </button>
       </m.header>
@@ -231,7 +231,6 @@ function SheetButton({
         wide ? 'flex-1 px-4' : 'w-12 shrink-0',
         'bg-surface hover:bg-surface-hover [&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-ink-muted',
         'walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised glass:[&_svg]:text-on-raised',
-        'brutal:rounded-none brutal:border-2 brutal:border-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:[&_svg]:text-ink',
       )}
     >
       {icon}

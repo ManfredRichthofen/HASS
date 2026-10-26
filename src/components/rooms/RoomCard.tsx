@@ -30,7 +30,6 @@ export function RoomCard({ area }: { area: AreaConfig }) {
       transition={snappy}
       className={cn(
         'card relative flex min-h-44 flex-col justify-between gap-7 overflow-hidden p-4.5',
-        'brutal:border-ink',
       )}
     >
       {/* Lit glow / dot / bar */}
@@ -40,7 +39,6 @@ export function RoomCard({ area }: { area: AreaConfig }) {
           'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-slow',
           'bg-[radial-gradient(120%_90%_at_100%_0%,var(--c-light-soft),transparent_65%)]',
           'modern:inset-auto modern:top-4.5 modern:right-4.5 modern:size-2.5 modern:rounded-pill modern:bg-none modern:bg-on-to modern:shadow-[0_0_0_4px_var(--c-light-soft)]',
-          'brutal:inset-x-0 brutal:top-0 brutal:bottom-auto brutal:h-2.5 brutal:border-b-2 brutal:border-ink brutal:bg-none brutal:bg-on-from',
           room.isLit && 'opacity-100',
         )}
       />
@@ -54,7 +52,7 @@ export function RoomCard({ area }: { area: AreaConfig }) {
         className="pointer-events-none absolute top-4.5 right-4.5 z-[1] size-[22px] text-ink-faint modern:hidden"
         aria-hidden
       />
-      <div className="relative grid min-w-0 gap-2 pr-8 brutal:pt-1.5 modern:pr-6">
+      <div className="relative grid min-w-0 gap-2 pr-8 modern:pr-6">
         <p className="text-display line-clamp-2 text-2xl leading-tight text-ink walnut:text-[1.75rem] walnut:font-light">
           {area.name}
         </p>
@@ -67,16 +65,12 @@ export function RoomCard({ area }: { area: AreaConfig }) {
                 className={cn(
                   'size-2 rounded-pill bg-border',
                   on && 'bg-light shadow-[0_0_0_3px_var(--c-light-soft)]',
-                  'brutal:size-2.5 brutal:border-2 brutal:border-ink brutal:bg-transparent',
-                  on && 'brutal:bg-ink brutal:shadow-none',
                 )}
               />
             ))}
           </div>
         ) : null}
-        <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
-          {room.summary}
-        </p>
+        <p className="truncate text-[0.8125rem] text-ink-muted">{room.summary}</p>
       </div>
       <div className="relative flex items-end justify-between gap-3">
         <span className="text-display text-xl leading-none text-ink-muted tabular-nums modern:text-[2rem] modern:text-ink modern:tracking-[-0.04em]">
@@ -90,7 +84,6 @@ export function RoomCard({ area }: { area: AreaConfig }) {
             className={cn(
               'press relative z-[2] -mr-1 -mb-1 grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state hover:text-ink',
               room.isLit ? 'bg-on shadow-on text-on-ink hover:text-on-ink' : 'bg-icon-well',
-              'brutal:border-2 brutal:border-ink',
             )}
           >
             <Power className="size-5" aria-hidden />

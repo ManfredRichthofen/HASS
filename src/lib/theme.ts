@@ -24,10 +24,10 @@ export const themes = [
     chrome: { light: '#e4e5ec', dark: '#0c0f22' },
   },
   {
-    id: 'brutalist',
-    name: 'Brutalist',
-    description: 'Raw, ruled, signal yellow',
-    chrome: { light: '#e8e6df', dark: '#121212' },
+    id: 'forest',
+    name: 'Forest',
+    description: 'Glass over a misty pine forest',
+    chrome: { light: '#e3ebe4', dark: '#0b1914' },
   },
 ] as const
 
@@ -49,9 +49,13 @@ function isModeSetting(value: unknown): value is ModeSetting {
   return value === 'light' || value === 'dark' || value === 'system'
 }
 
+/** Themes that were renamed or replaced, so a saved choice still lands somewhere sensible. */
+const replaced: Record<string, string> = { brutalist: 'forest' }
+
 function read<T>(key: string, check: (v: unknown) => v is T, fallback: T): T {
   try {
-    const value = localStorage.getItem(key)
+    const stored = localStorage.getItem(key)
+    const value = stored && replaced[stored] ? replaced[stored] : stored
     return check(value) ? value : fallback
   } catch {
     return fallback
@@ -150,4 +154,4 @@ export function useTheme(): [ThemeId, (id: ThemeId) => void] {
  */
 export const themeBootScript = `(function(){var d=document.documentElement;try{var ok=${JSON.stringify(
   themes.map((t) => t.id),
-)};var c=${JSON.stringify(Object.fromEntries(themes.map((t) => [t.id, t.chrome])))};var t=localStorage.getItem('${THEME_KEY}');if(ok.indexOf(t)<0)t='${defaultTheme}';var m=localStorage.getItem('${MODE_KEY}');if(m!=='light'&&m!=='dark')m=window.matchMedia&&window.matchMedia('${DARK_MQ}').matches?'dark':'light';d.setAttribute('data-theme',t);d.setAttribute('data-mode',m);var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',c[t][m]);}catch(e){d.setAttribute('data-theme','${defaultTheme}');d.setAttribute('data-mode','dark')}})();`
+)};var c=${JSON.stringify(Object.fromEntries(themes.map((t) => [t.id, t.chrome])))};var t=localStorage.getItem('${THEME_KEY}');var r=${JSON.stringify(replaced)};if(r[t])t=r[t];if(ok.indexOf(t)<0)t='${defaultTheme}';var m=localStorage.getItem('${MODE_KEY}');if(m!=='light'&&m!=='dark')m=window.matchMedia&&window.matchMedia('${DARK_MQ}').matches?'dark':'light';d.setAttribute('data-theme',t);d.setAttribute('data-mode',m);var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',c[t][m]);}catch(e){d.setAttribute('data-theme','${defaultTheme}');d.setAttribute('data-mode','dark')}})();`

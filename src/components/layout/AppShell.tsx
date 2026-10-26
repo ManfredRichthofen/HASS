@@ -42,7 +42,7 @@ function ConnectionAction({
       <button
         type="button"
         onClick={onAction}
-        className="press touch-target rounded-pill bg-accent px-5 text-sm font-semibold text-on-accent brutal:font-label brutal:uppercase brutal:shadow-press"
+        className="press touch-target rounded-pill bg-accent px-5 text-sm font-semibold text-on-accent"
       >
         {actionLabel}
       </button>
@@ -88,7 +88,7 @@ function ReconnectBanner({
           onKeyDown={handleKeyDown}
           tabIndex={0}
           aria-label="Retry Home Assistant connection"
-          className="press touch-target shrink-0 rounded-pill bg-accent px-3 text-xs font-semibold text-on-accent brutal:font-label brutal:uppercase brutal:shadow-press"
+          className="press touch-target shrink-0 rounded-pill bg-accent px-3 text-xs font-semibold text-on-accent"
         >
           Retry
         </button>
@@ -213,7 +213,7 @@ export function AppShell() {
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
-              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10 modern:pb-[calc(5.25rem+env(safe-area-inset-bottom))] glass:pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:modern:pb-10 md:glass:pb-10">
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1.5rem+var(--now-playing-space))] pt-4 transition-[padding-bottom] duration-slow ease-out sm:px-6 md:px-8 md:pb-[calc(2.5rem+var(--now-playing-space))] md:pt-8 lg:px-10">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />

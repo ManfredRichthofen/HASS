@@ -41,6 +41,18 @@ function fixtureIcon(name: string): LucideIcon {
 
 /** Hold briefly before a vertical drag can dim — otherwise scroll always wins. */
 const DIM_HOLD_MS = 180
+/** Minimum gap between live brightness calls while dragging. */
+const LIVE_UPDATE_MS = 250
+/** Ignore HA echoes of in-flight live updates for this long after release. */
+const SETTLE_MS = 1500
+
+type GesturePhase = 'idle' | 'armed' | 'dimming'
+
+const clampLevel = (pct: number) => Math.max(1, Math.min(100, Math.round(pct)))
+
+const buzz = (ms: number) => {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(ms)
+}
 
 type DragGesture = {
   pointerId: number
@@ -59,6 +71,8 @@ type DragGesture = {
 
 /**
  * The tile IS the light: tap to toggle, hold then drag up or down to dim.
+ * The lamp follows the finger live (throttled), and dragging an off light up
+ * turns it on at that level.
  * When on, the tile fills with light and the part above the brightness level
  * is shaded, like liquid in a glass (Modern shows a level bar instead). The
  * small "more" target opens a sheet for colour and white temperature.
@@ -76,8 +90,14 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const [open, setOpen] = useState(false)
   const haLevel = Math.max(1, Math.round(light.brightnessPercent) || 1)
   const [level, setLevel] = useState(haLevel)
+  const [phase, setPhase] = useState<GesturePhase>('idle')
   const drag = useRef<DragGesture | null>(null)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastLiveSentAt = useRef(0)
+  const settling = useRef(false)
+  const haLevelRef = useRef(haLevel)
   const suppressClick = useRef(false)
   const detachScrollGuards = useRef<(() => void) | null>(null)
   const tileRef = useRef<HTMLDivElement>(null)
@@ -99,20 +119,30 @@ export function LightTile({ entityId, className }: { entityId: string; className
   const maxK = light.maxColorTempKelvin
   const canTemp = !isSimple && light.supportsColorTemp && minK != null && maxK != null
   const hasSheet = canColor || canTemp || canDim
-  const { value: on, commit: commitOn } = useOptimisticValue(light.isOn && !unavailable)
+  const {
+    value: on,
+    commit: commitOn,
+    setOverride: setOnOverride,
+  } = useOptimisticValue(light.isOn && !unavailable)
+  const dimming = phase === 'dimming'
+  const lit = on || dimming
   const swatch = on && canColor ? rgbCss(light.rgbColor) : undefined
   const Icon = fixtureIcon(name)
   onRef.current = on
   canDimRef.current = canDim
+  haLevelRef.current = haLevel
 
   useEffect(() => {
-    if (!drag.current) setLevel(haLevel)
+    if (drag.current?.dimming || settling.current) return
+    setLevel(haLevel)
   }, [haLevel])
 
   useEffect(
     () => () => {
       detachScrollGuards.current?.()
-      if (holdTimer.current != null) clearTimeout(holdTimer.current)
+      for (const timer of [holdTimer, liveTimer, settleTimer]) {
+        if (timer.current != null) clearTimeout(timer.current)
+      }
     },
     [],
   )
@@ -129,6 +159,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
     if (d) d.cancelled = true
     suppressClick.current = true
     clearHoldTimer()
+    setPhase('idle')
   }
 
   const endGesture = () => {
@@ -136,6 +167,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
     detachScrollGuards.current?.()
     detachScrollGuards.current = null
     drag.current = null
+    setPhase('idle')
   }
 
   const toggle = () => {
@@ -149,10 +181,49 @@ export function LightTile({ entityId, className }: { entityId: string; className
     })
   }
 
+  const sendLevel = (pct: number) => light.setBrightness(Math.round((pct / 100) * 255))
+
+  const clearLiveTimer = () => {
+    if (liveTimer.current == null) return
+    clearTimeout(liveTimer.current)
+    liveTimer.current = null
+  }
+
+  const sendLiveLevel = (pct: number) => {
+    lastLiveSentAt.current = Date.now()
+    // Live updates are best-effort; the release commit reports failures.
+    void sendLevel(pct).catch(() => {})
+  }
+
+  /** Throttled leading + trailing update so the lamp tracks the finger. */
+  const scheduleLiveLevel = (pct: number) => {
+    clearLiveTimer()
+    const wait = LIVE_UPDATE_MS - (Date.now() - lastLiveSentAt.current)
+    if (wait <= 0) {
+      sendLiveLevel(pct)
+      return
+    }
+    liveTimer.current = setTimeout(() => {
+      liveTimer.current = null
+      sendLiveLevel(pct)
+    }, wait)
+  }
+
+  const resyncLevel = () => {
+    settling.current = false
+    setLevel(haLevelRef.current)
+  }
+
   async function commitLevel(pct: number) {
+    clearLiveTimer()
+    if (settleTimer.current != null) clearTimeout(settleTimer.current)
+    settling.current = true
     try {
-      await light.setBrightness(Math.round((pct / 100) * 255))
+      await sendLevel(pct)
+      settleTimer.current = setTimeout(resyncLevel, SETTLE_MS)
     } catch (e) {
+      setOnOverride(null)
+      resyncLevel()
       notify('Brightness failed', e instanceof Error ? e.message : 'Error')
     }
   }
@@ -162,9 +233,13 @@ export function LightTile({ entityId, className }: { entityId: string; className
     if (!d) return
     const dy = d.y - clientY
     const height = tileRef.current?.offsetHeight ?? 160
-    const next = Math.max(1, Math.min(100, Math.round(d.start + (dy / height) * 100)))
+    const next = clampLevel(d.start + (dy / height) * 100)
+    if (next === d.level) return
+    if ((next === 1 || next === 100) && d.level !== next) buzz(6)
     d.level = next
     setLevel(next)
+    if (!onRef.current) setOnOverride(true)
+    scheduleLiveLevel(next)
   }
 
   function beginDim(clientY: number, target: HTMLElement) {
@@ -176,6 +251,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
     d.start = d.level
     suppressClick.current = true
     clearHoldTimer()
+    setPhase('dimming')
     try {
       target.setPointerCapture(d.pointerId)
     } catch {
@@ -204,7 +280,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
     const absY = Math.abs(clientY - d.y)
     if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return false
 
-    if (onRef.current && canDimRef.current && absY > absX) {
+    if (canDimRef.current && absY > absX) {
       beginDim(clientY, target)
       return true
     }
@@ -264,6 +340,9 @@ export function LightTile({ entityId, className }: { entityId: string; className
       // Fresh origin after the hold so the first drag does not include jitter.
       d.x = d.lastX
       d.y = d.lastY
+      if (!canDimRef.current) return
+      setPhase('armed')
+      buzz(10)
     }, DIM_HOLD_MS)
   }
 
@@ -316,13 +395,13 @@ export function LightTile({ entityId, className }: { entityId: string; className
       toggle()
     } else if (on && canDim && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault()
-      const next = Math.max(1, Math.min(100, level + (e.key === 'ArrowUp' ? 10 : -10)))
+      const next = clampLevel(level + (e.key === 'ArrowUp' ? 10 : -10))
       setLevel(next)
       void commitLevel(next)
     }
   }
 
-  const state = unavailable ? 'Unavailable' : on ? (canDim ? `${level}%` : 'On') : 'Off'
+  const state = unavailable ? 'Unavailable' : lit ? (canDim ? `${level}%` : 'On') : 'Off'
 
   return (
     <>
@@ -332,21 +411,22 @@ export function LightTile({ entityId, className }: { entityId: string; className
         tabIndex={unavailable ? -1 : 0}
         aria-checked={on}
         aria-disabled={unavailable}
-        aria-label={`${name}, ${state}${on && canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`}
+        aria-label={`${name}, ${state}${canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onClick={onClick}
         onKeyDown={onKeyDown}
-        style={{ '--lvl': `${on ? level : 100}%` } as React.CSSProperties}
+        style={{ '--lvl': `${lit ? level : 100}%` } as React.CSSProperties}
         className={cn(
           'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
-          'transition-[background-color,box-shadow,transform] duration-slow ease-out active:scale-[0.97]',
+          'transition-[background-color,box-shadow,transform] duration-slow ease-out',
+          phase === 'idle' && 'active:scale-[0.97]',
+          phase !== 'idle' && 'scale-[1.03] shadow-press',
           'walnut:aspect-[1/1.2]',
           'modern:aspect-auto modern:min-h-34 modern:pb-8',
-          'brutal:active:translate-x-[3px] brutal:active:translate-y-[3px] brutal:active:scale-100 brutal:active:shadow-none',
-          on && 'bg-on border-transparent shadow-on brutal:border-ink',
+          on && 'bg-on border-transparent shadow-on',
           on &&
             'modern:bg-none modern:bg-surface modern:text-ink modern:shadow-[inset_0_0_0_2px_var(--c-on-to)]',
           unavailable && 'cursor-default opacity-45',
@@ -357,11 +437,10 @@ export function LightTile({ entityId, className }: { entityId: string; className
         <span
           aria-hidden
           className={cn(
-            'pointer-events-none absolute inset-x-0 top-0 h-0 border-b border-transparent bg-white/36 transition-[height] duration-200',
-            on && canDim && 'h-[calc(100%-var(--lvl))] border-black/8',
+            'pointer-events-none absolute inset-x-0 top-0 h-0 border-b border-transparent bg-white/36',
+            !dimming && 'transition-[height] duration-200',
+            lit && canDim && 'h-[calc(100%-var(--lvl))] border-black/8',
             'modern:hidden glass:bg-black/[0.05]',
-            'brutal:bg-[repeating-linear-gradient(-45deg,#11111114_0_2px,transparent_2px_8px)] brutal:border-b-2',
-            on && canDim && 'brutal:border-ink',
           )}
         />
         {/* Modern: a level bar along the bottom instead of a fill. */}
@@ -417,9 +496,9 @@ export function LightTile({ entityId, className }: { entityId: string; className
         <div className="relative grid gap-1.5">
           <span
             className={cn(
-              on && canDim
+              lit && canDim
                 ? 'text-display text-[1.75rem] leading-none tabular-nums modern:text-2xl'
-                : 'text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs',
+                : 'text-[0.8125rem] text-ink-muted',
               on && 'text-on-ink modern:text-ink',
             )}
           >
@@ -429,7 +508,6 @@ export function LightTile({ entityId, className }: { entityId: string; className
             className={cn(
               'line-clamp-2 text-[0.9375rem] leading-5 font-semibold text-ink',
               on && 'text-on-ink modern:text-ink',
-              'brutal:font-bold brutal:uppercase brutal:tracking-[-0.01em]',
             )}
           >
             {name}
@@ -478,7 +556,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
                   format={(v) => `${v}K`}
                   value={light.colorTemp ?? Math.round(((minK ?? 2200) + (maxK ?? 6500)) / 2)}
                   onValueCommitted={(value) => {
-                    const next = Array.isArray(value) ? (value[0] ?? level) : value
+                    const next = Array.isArray(value) ? (value[0] ?? minK ?? 2200) : value
                     void light
                       .setColorTemp(next)
                       .catch((e) =>

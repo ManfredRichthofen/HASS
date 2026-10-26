@@ -2,18 +2,27 @@
 
 /* ──────────────────────────────────────────────────────────────────────────
    Themes
-   Three themes share one component structure. Each theme sets raw values
+   The themes share one component structure. Each theme sets raw values
    (--c-*, --r-*, --ui-*) on <html data-theme="…">; Tailwind utilities read
    them through `@theme inline`, so `bg-surface`, `rounded-card`,
    `font-display` etc. follow the active theme. Per-theme construction
    (different shapes, not just colours) uses the `walnut:` `modern:`
-   `brutal:` variants below.
+   `glass:` (Glass and Forest) and `forest:` variants below.
    ────────────────────────────────────────────────────────────────────────── */
 
 @custom-variant walnut (&:where([data-theme="walnut"], [data-theme="walnut"] *));
 @custom-variant modern (&:where([data-theme="modern"], [data-theme="modern"] *));
-@custom-variant brutal (&:where([data-theme="brutalist"], [data-theme="brutalist"] *));
-@custom-variant glass (&:where([data-theme="glass"], [data-theme="glass"] *));
+/* Forest is built on Glass: every `glass:` rule applies to it too, and
+   `forest:` adds the few things that are its own. */
+@custom-variant glass (
+  &:where(
+    [data-theme="glass"],
+    [data-theme="glass"] *,
+    [data-theme="forest"],
+    [data-theme="forest"] *
+  )
+);
+@custom-variant forest (&:where([data-theme="forest"], [data-theme="forest"] *));
 
 @theme inline {
   --font-sans: var(--ui-text);
@@ -21,8 +30,7 @@
   --font-label: var(--ui-label);
   --font-serif: "Fraunces", ui-serif, Georgia, serif;
   --font-geist: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-grotesk: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-mono: ui-monospace, Menlo, monospace;
 
   --color-canvas: var(--c-canvas);
   --color-canvas-elevated: var(--c-canvas-elevated);
@@ -248,55 +256,6 @@
     radial-gradient(45% 40% at 0% 90%, #ece2dc 0%, transparent 70%);
 }
 
-/* ── Brutalist: concrete, black rules, signal yellow, no curves ── */
-[data-theme="brutalist"] {
-  color-scheme: light;
-  --c-canvas: #e8e6df;
-  --c-canvas-elevated: #f6f5f0;
-  --c-surface: #f6f5f0;
-  --c-surface-hover: #dedcd4;
-  --c-border: #111111;
-  --c-border-subtle: #111111;
-  --c-border-strong: #111111;
-  --c-ink: #111111;
-  --c-ink-muted: #3b3b38;
-  --c-ink-faint: #4f4f4b;
-  --c-accent: #111111;
-  --c-accent-soft: #11111114;
-  --c-accent-strong: #000000;
-  --c-on-accent: #f6f5f0;
-  --c-light: #735b00;
-  --c-light-soft: #ffd400;
-  --c-on-from: #ffd400;
-  --c-on-to: #ffd400;
-  --c-on-ink: #111111;
-  --c-on-ink-muted: #3a3300;
-  --c-success: #0b6b45;
-  --c-danger: #b8250a;
-  --c-info: #1f47c4;
-  --c-icon-well: #e8e6df;
-
-  --ui-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --ui-text: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --ui-label: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  --display-weight: 700;
-  --display-track: -0.04em;
-  --display-case: uppercase;
-
-  --r-card: 0px;
-  --r-control: 0px;
-  --r-pill: 0px;
-  --bw: 2px;
-  --icon-stroke: 2.25;
-
-  --s-card: 4px 4px 0 #111111;
-  --s-on: 4px 4px 0 #111111;
-  --s-sheet: 0 -4px 0 #111111;
-  --s-press: 3px 3px 0 #111111;
-
-  --grain: none;
-}
-
 /* ──────────────────────────────────────────────────────────────────────────
    Light / dark modes
    Every theme has both. <html data-mode="light|dark"> is set from the user's
@@ -365,34 +324,6 @@
   --s-sheet: 0 -12px 40px -16px #000000;
 }
 
-/* Brutalist, dark: black slab, bone rules, the same signal yellow. */
-[data-theme="brutalist"][data-mode="dark"] {
-  color-scheme: dark;
-  --c-canvas: #121212;
-  --c-canvas-elevated: #1b1b1b;
-  --c-surface: #1b1b1b;
-  --c-surface-hover: #2a2a2a;
-  --c-border: #f2f0e8;
-  --c-border-subtle: #f2f0e8;
-  --c-border-strong: #f2f0e8;
-  --c-ink: #f2f0e8;
-  --c-ink-muted: #d0cec5;
-  --c-ink-faint: #b8b6ad;
-  --c-accent: #f2f0e8;
-  --c-accent-soft: #f2f0e81f;
-  --c-accent-strong: #ffffff;
-  --c-on-accent: #121212;
-  --c-light: #ffd400;
-  --c-success: #3fd18b;
-  --c-danger: #ff6a4d;
-  --c-info: #8aa8ff;
-  --c-icon-well: #121212;
-  --s-card: 4px 4px 0 #f2f0e8;
-  --s-on: 4px 4px 0 #f2f0e8;
-  --s-sheet: 0 -4px 0 #f2f0e8;
-  --s-press: 3px 3px 0 #f2f0e8;
-}
-
 /* Fluid Glass, dark: frosted glass over a deep, glowing colour mesh. */
 [data-theme="glass"][data-mode="dark"] {
   color-scheme: dark;
@@ -437,9 +368,124 @@
     radial-gradient(44% 42% at 6% 96%, #ff9f5a 0%, transparent 70%);
 }
 
+/* ── Forest: Fluid Glass over a misty pine forest at dawn ──
+   Dark: deep green frost over the photo, warm autumn-gold light.
+   Light: the same forest washed in morning mist, dark pine type. */
+[data-theme="forest"] {
+  color-scheme: dark;
+  --c-base: #0b1914;
+  --c-canvas: #06110d8c;
+  --c-canvas-elevated: #0e1f19e6;
+  /* Green-tinted frost, dense enough to read over the light rays. */
+  --c-surface: #0c1d1873;
+  --c-surface-hover: #16302899;
+  --c-border: #ffffff2e;
+  --c-border-subtle: #ffffff1f;
+  --c-border-strong: #e3efe2a6;
+  --c-ink: #f3f8f1;
+  --c-ink-muted: #d9e7dbe6;
+  --c-ink-faint: #c3d6c7d9;
+  --c-accent: #eef6ea;
+  --c-accent-soft: #ffffff1f;
+  --c-accent-strong: #ffffff;
+  --c-on-accent: #0d1f19;
+  --c-light: #ffcf6b;
+  --c-light-soft: #ffc2573d;
+  --c-on-from: #ffe8ad;
+  --c-on-to: #f0a33c;
+  --c-on-ink: #2a1804;
+  --c-on-ink-muted: #5a3a0e;
+  --c-success: #96e8b6;
+  --c-danger: #ffa08a;
+  --c-info: #a9dcff;
+  --c-icon-well: #ffffff17;
+  --c-raised: #ffffff2e;
+  --c-on-raised: #ffffff;
+  /* Darkens the photo so page-level type stays readable. */
+  --forest-veil: linear-gradient(180deg, #04100cb3 0%, #04100c66 40%, #04100c99 100%);
+
+  --ui-display: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-text: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ui-label: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --display-track: -0.025em;
+  --display-case: none;
+
+  --r-card: 1.5rem;
+  --r-control: 1.125rem;
+  --r-pill: 9999px;
+  --bw: 1px;
+  --icon-stroke: 1.75;
+
+  --s-card: inset 0 1px 0 #ffffff26, 0 24px 48px -24px #010805b3;
+  --s-on: 0 0 0 1px #ffe8ad66, 0 18px 48px -12px #f0a33ca6;
+  --s-sheet: inset 0 1px 0 #ffffff26, 0 -24px 60px -24px #010805cc;
+  --s-press: none;
+  --grain: none;
+}
+
+/* Forest, light: morning mist over the pines. */
+[data-theme="forest"][data-mode="light"] {
+  color-scheme: light;
+  --c-base: #e3ebe4;
+  --c-canvas: #ffffff66;
+  --c-canvas-elevated: #f7faf6e6;
+  --c-surface: #ffffff9e;
+  --c-surface-hover: #ffffffd9;
+  --c-border: #ffffffcc;
+  --c-border-subtle: #ffffff99;
+  --c-border-strong: #6f8277;
+  --c-ink: #10241d;
+  --c-ink-muted: #2f463c;
+  --c-ink-faint: #3a5046;
+  --c-accent: #10241d;
+  --c-accent-soft: #10241d12;
+  --c-accent-strong: #000000;
+  --c-on-accent: #ffffff;
+  --c-light: #8a5608;
+  --c-light-soft: #f6c46a59;
+  --c-on-from: #fff1cc;
+  --c-on-to: #f3b552;
+  --c-on-ink: #2a1804;
+  --c-on-ink-muted: #5a3a0e;
+  --c-success: #1c6b45;
+  --c-danger: #a8361f;
+  --c-info: #22599c;
+  --c-icon-well: #ffffffcc;
+  --c-raised: #ffffff;
+  --c-on-raised: #10241d;
+  --forest-veil: linear-gradient(180deg, #eef3edd9 0%, #eef3edad 45%, #eef3edcc 100%);
+  --s-card: inset 0 1px 0 #ffffff, 0 12px 32px -20px #0f2a2059;
+  --s-on: inset 0 1px 0 #ffffff, 0 0 0 1px #ffffff, 0 18px 48px -10px #f3b552b3;
+  --s-sheet: inset 0 1px 0 #ffffff, 0 -20px 50px -24px #0f2a2066;
+}
+
+/* ── Phone nav geometry ──
+   BottomNav, NowPlayingBar and <main> all derive their offsets from these, so
+   the gaps between them hold on every theme and with or without a home indicator.
+   --nav-h: the bar itself · --nav-offset: safe area below it (padding on Walnut,
+   float distance on Modern / Glass) · --nav-gap: space above it. */
+:root {
+  --nav-h: 3.875rem;
+  --nav-offset: max(1rem, env(safe-area-inset-bottom));
+  --nav-gap: 0.75rem;
+  --nav-clearance: calc(var(--nav-h) + var(--nav-offset));
+  --now-playing-space: 0px;
+}
+
+:root:is([data-theme="modern"], [data-theme="glass"], [data-theme="forest"]) {
+  --nav-h: 3.75rem;
+  --nav-offset: max(0.875rem, env(safe-area-inset-bottom));
+}
+
+/* The now-playing bar (4rem) plus a gap; <main> eases its padding by this. */
+:root:has([data-now-playing]) {
+  --now-playing-space: 4.75rem;
+}
+
 /* ── Utilities shared by every component ── */
 
-/* Theme border width: 1px, or 2px in Brutalist. */
+/* Theme border width. */
 @utility border-ui {
   border-width: var(--bw);
 }
@@ -452,20 +498,16 @@
   text-transform: var(--display-case);
 }
 
-/* Small labels: Geist in Walnut/Modern, mono uppercase in Brutalist. */
+/* Small labels in the theme's label face. */
 @utility text-label {
   font-family: var(--ui-label);
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 500;
   color: var(--c-ink-faint);
-  &:where([data-theme="brutalist"] *) {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
 }
 
-/* Lit fill: honey / amber / flat signal yellow. Pair with `shadow-on` for the glow. */
+/* Lit fill: honey / amber / warm white / autumn gold. Pair with `shadow-on` for the glow. */
 @utility bg-on {
   background-image: linear-gradient(170deg, var(--c-on-from), var(--c-on-to));
   color: var(--c-on-ink);
@@ -483,16 +525,12 @@
   }
 }
 
-/* Press feedback for plain buttons: Brutalist shifts into its shadow. */
+/* Press feedback for plain buttons. */
 @utility press {
   transition-property: transform, box-shadow, background-color, color, border-color;
   transition-duration: var(--duration-fast);
   &:active {
     transform: scale(0.97);
-  }
-  &:where([data-theme="brutalist"] *):active {
-    transform: translate(3px, 3px);
-    box-shadow: none;
   }
 }
 
@@ -512,6 +550,22 @@
   transition-property: color, background-color, border-color, background-image, box-shadow;
   transition-duration: var(--duration-slow);
   transition-timing-function: var(--ease-out);
+}
+
+/* Nav label reveal when a compact (icon-only) tab becomes active. */
+@utility animate-label-in {
+  animation: label-in var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes label-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @utility no-scrollbar {
@@ -588,12 +642,16 @@ svg.lucide {
   .press {
     transition-duration: 0.01ms;
   }
+
+  .animate-label-in {
+    animation: none;
+  }
 }
 
 /* ── Fluid Glass extras ── */
 
-/* Frosted glass behind every translucent surface. */
-[data-theme="glass"]
+/* Frosted glass behind every translucent surface (Glass and Forest). */
+:is([data-theme="glass"], [data-theme="forest"])
 :is(
   .bg-surface,
   .bg-surface-hover,
@@ -609,6 +667,34 @@ svg.lucide {
 [data-theme="glass"] body {
   background-color: var(--c-base);
   background-attachment: fixed;
+}
+
+/* Forest: body stays clear so the photo layer below shows through. */
+[data-theme="forest"] body {
+  background: transparent;
+}
+
+/* Forest: the photo, fixed behind everything, under a veil for legibility.
+   A portrait crop keeps the light rays in frame on phones. */
+[data-theme="forest"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    var(--forest-veil),
+    url("/backgrounds/forest.webp") center 40% / cover no-repeat,
+    var(--c-base);
+}
+
+@media (max-aspect-ratio: 4 / 5) {
+  [data-theme="forest"] body::before {
+    background:
+      var(--forest-veil),
+      url("/backgrounds/forest-portrait.webp") center / cover no-repeat,
+      var(--c-base);
+  }
 }
 
 /* The light drifts slowly behind the glass. */

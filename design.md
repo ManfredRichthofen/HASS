@@ -203,7 +203,7 @@ Shell width constants (hard-coded in layout components):
 | Rooms aside | `18rem` |
 | Content max | `80rem` |
 
-Themes (`walnut` / `modern` / `brutalist` / `glass`) change radii, borders, and nav chrome—not breakpoints.
+Themes (`walnut` / `modern` / `glass` / `forest`) change radii, borders, and nav chrome—not breakpoints.
 
 ---
 
@@ -260,7 +260,7 @@ Utilities: `transition-ui` (colour / opacity / transform, normal), `transition-s
 |---------|-----------|
 | **Route change** | Soft fade + 8px rise (`pageFade`) |
 | **Page load** | Header + sections stagger in (Home, Rooms, Climate, Music, Security, Settings, room detail) |
-| **BottomNav / SideNav** | Active indicator slides via `layoutId` + `fluid` spring (requires `domMax`). Walnut: top tick. Modern/Glass/Brutalist: sliding pill/fill. SideNav includes Settings in the same morph group. |
+| **BottomNav / SideNav** | Active indicator slides via `layoutId` + `fluid` spring (requires `domMax`). Walnut: top tick. Modern/Glass/Forest: sliding pill/fill. SideNav includes Settings in the same morph group. |
 | **Segmented** | Selected pill slides via `layoutId` + `fluid` |
 | **Tiles / scenes / rooms** | `whileTap` press scale |
 | **House mode** | Selected radio dot morphs between rows |

@@ -39,7 +39,6 @@ export function PageHeader({
           aria-label={`Back to ${backLabel}`}
           className={cn(
             '-mb-1 inline-flex min-h-11 items-center gap-1.5 justify-self-start text-sm font-semibold text-ink-muted transition-ui hover:text-ink',
-            'brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase brutal:text-ink',
             backClassName,
           )}
         >
@@ -50,7 +49,7 @@ export function PageHeader({
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           {eyebrow ? <div className="text-label mb-1.5">{eyebrow}</div> : null}
-          <h1 className="text-display text-[2.25rem] leading-[1.02] text-ink md:text-[2.75rem] walnut:font-light brutal:text-[2.75rem] brutal:leading-[0.92] md:brutal:text-[3.25rem]">
+          <h1 className="text-display text-[2.25rem] leading-[1.02] text-ink md:text-[2.75rem] walnut:font-light">
             {title}
           </h1>
           {subtitle ? <div className="mt-2 text-[0.9375rem] text-ink-muted">{subtitle}</div> : null}

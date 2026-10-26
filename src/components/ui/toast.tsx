@@ -48,7 +48,6 @@ function ToastList() {
         toast={toast}
         className={cn(
           'relative flex min-h-12 max-w-full items-center gap-2.5 rounded-pill bg-ink py-2.5 pr-5 pl-3.5 text-[0.9375rem] text-canvas shadow-sheet transition-ui',
-          'brutal:font-label brutal:text-[0.8125rem] brutal:uppercase brutal:shadow-[4px_4px_0_#ffd400]',
           'data-ending-style:translate-y-2 data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0',
           onClick && 'cursor-pointer',
         )}

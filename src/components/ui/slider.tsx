@@ -70,16 +70,14 @@ export function Slider({
             className={cn(
               'relative h-1.5 w-full min-w-0 grow rounded-pill bg-surface-hover',
               'glass:bg-ink/10',
-              'brutal:h-2.5 brutal:rounded-none brutal:border-2 brutal:border-ink brutal:bg-surface',
               'data-disabled:opacity-40',
             )}
           >
-            <BaseSlider.Indicator className="absolute h-full rounded-pill bg-ink transition-none brutal:rounded-none" />
+            <BaseSlider.Indicator className="absolute h-full rounded-pill bg-ink transition-none" />
             <BaseSlider.Thumb
               aria-label={ariaLabel}
               className={cn(
                 'size-4 rounded-pill bg-ink outline-none select-none',
-                'brutal:h-[22px] brutal:w-1.5 brutal:rounded-none',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               )}
             />
@@ -92,7 +90,6 @@ export function Slider({
               'relative h-11 w-full min-w-0 grow overflow-hidden rounded-control border-ui border-transparent',
               onCard ? 'bg-on-ink/12' : 'bg-surface-hover',
               'glass:bg-ink/8',
-              'brutal:border-ink',
               'data-disabled:opacity-40',
             )}
           >
@@ -114,7 +111,6 @@ export function Slider({
                 'after:absolute after:top-1/2 after:left-1/2 after:-mt-[9px] after:h-[18px] after:w-1 after:-translate-x-[10px] after:rounded-full after:content-[""]',
                 onCard || tone === 'light' ? 'after:bg-on-ink/60' : 'after:bg-on-accent/60',
                 'glass:after:bg-on-raised/70',
-                'brutal:after:top-0 brutal:after:mt-0 brutal:after:h-full brutal:after:w-0.5 brutal:after:translate-x-[-12px] brutal:after:rounded-none brutal:after:bg-ink',
                 'focus-visible:after:bg-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
               )}
             />

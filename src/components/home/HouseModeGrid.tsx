@@ -32,7 +32,6 @@ function ModeRow({
       className={cn(
         'flex min-h-16 items-center justify-between gap-4 border-b border-border-subtle py-3 text-left last:border-b-0',
         '@xl:min-h-14 @xl:py-2.5',
-        'brutal:border-b-2 brutal:border-ink brutal:last:border-b-0',
       )}
     >
       <span className="text-display text-xl text-ink">{label}</span>

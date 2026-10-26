@@ -12,7 +12,6 @@ export function EntityGrid({ children, className }: { children: ReactNode; class
       <div
         className={cn(
           'grid grid-cols-2 gap-3 @md:grid-cols-3 @2xl:grid-cols-4 @5xl:grid-cols-5 [&>*]:min-w-0',
-          'brutal:gap-0 brutal:pt-0.5 brutal:pl-0.5 brutal:[&>*]:-mt-0.5 brutal:[&>*]:-ml-0.5 brutal:[&>*]:shadow-none!',
           className,
         )}
       >

@@ -31,7 +31,7 @@ function StateWord({ value, tone }: { value: string; tone: 'ok' | 'bad' | 'muted
   return (
     <span
       className={cn(
-        'mr-3 shrink-0 text-sm font-semibold brutal:font-label brutal:text-xs brutal:uppercase',
+        'mr-3 shrink-0 text-sm font-semibold',
         tone === 'ok' && 'text-success',
         tone === 'bad' && 'text-danger',
         tone === 'muted' && 'text-ink-muted',

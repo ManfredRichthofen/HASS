@@ -55,7 +55,6 @@ function greetingFor(hour: number) {
 const phrase = cn(
   'underline decoration-border-strong decoration-1 underline-offset-[0.18em] transition-ui [font:inherit] [letter-spacing:inherit] [text-transform:inherit] hover:decoration-current',
   'modern:rounded-[0.25em] modern:bg-accent-soft modern:px-[0.18em] modern:no-underline',
-  'brutal:decoration-on-from brutal:decoration-[3px]',
 )
 
 /**
@@ -119,7 +118,7 @@ export function HouseSummary() {
             {!weather.isUnavailable ? (
               <Link
                 to="/climate"
-                className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] text-ink-muted capitalize brutal:font-label brutal:text-xs @xl:min-h-9"
+                className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] text-ink-muted capitalize @xl:min-h-9"
               >
                 <WeatherIcon className="size-[18px]" />
                 {temp != null && !Number.isNaN(temp) ? `${Math.round(temp)}° ` : ''}
@@ -140,9 +139,8 @@ export function HouseSummary() {
           className={cn(
             'text-display text-[2.125rem] leading-[1.1] text-balance text-ink',
             'walnut:text-[2.25rem] walnut:font-light',
-            'brutal:text-[2.5rem] brutal:leading-none',
             '@xl:max-w-[26ch] @xl:text-[1.75rem] @xl:leading-[1.15] @xl:text-pretty',
-            'walnut:@xl:text-[1.875rem] brutal:@xl:text-[2rem]',
+            'walnut:@xl:text-[1.875rem]',
           )}
         >
           {greetingFor(now.getHours())}
@@ -151,8 +149,7 @@ export function HouseSummary() {
             to="/rooms"
             className={cn(
               phrase,
-              lightsOn > 0 &&
-                'text-light decoration-current modern:bg-light-soft modern:text-ink brutal:bg-on-from brutal:px-[0.1em] brutal:text-ink brutal:no-underline',
+              lightsOn > 0 && 'text-light decoration-current modern:bg-light-soft modern:text-ink',
             )}
           >
             {lightsOn === 0
@@ -181,7 +178,6 @@ export function HouseSummary() {
             className={cn(
               'press inline-flex min-h-11 items-center gap-2 justify-self-start rounded-pill border-ui border-border pr-4 pl-3 text-sm font-semibold text-ink',
               'modern:border-transparent modern:bg-surface',
-              'brutal:bg-surface brutal:font-label brutal:text-xs brutal:uppercase brutal:shadow-press',
             )}
           >
             <span
@@ -204,7 +200,6 @@ export function HouseSummary() {
                 'press grid size-11 shrink-0 place-items-center rounded-pill border-ui border-border outline-none',
                 'focus-visible:ring-2 focus-visible:ring-accent',
                 'modern:border-transparent modern:bg-surface',
-                'brutal:bg-surface brutal:shadow-press',
                 locked ? 'text-success' : 'text-danger',
               )}
             >
@@ -233,7 +228,7 @@ export function HouseSummary() {
           }
           actions={
             <>
-              <DialogClose className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink brutal:font-label brutal:uppercase brutal:underline">
+              <DialogClose className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink">
                 Cancel
               </DialogClose>
               <Button

@@ -8,13 +8,7 @@ import { cn } from '#/lib/cn'
  */
 export function DeviceList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        'card grid grid-cols-[minmax(0,1fr)] pr-1.5 pl-4.5',
-        'brutal:[counter-reset:device] brutal:border-ink',
-        className,
-      )}
-    >
+    <div className={cn('card grid grid-cols-[minmax(0,1fr)] pr-1.5 pl-4.5', className)}>
       {children}
     </div>
   )
@@ -52,8 +46,6 @@ export function DeviceRow({
     <div
       className={cn(
         'flex min-h-17 items-center gap-4 border-b border-border-subtle py-2.5 last:border-b-0',
-        'brutal:border-b-2 brutal:border-ink brutal:last:border-b-0',
-        'brutal:before:w-5 brutal:before:shrink-0 brutal:before:font-label brutal:before:text-xs brutal:before:[counter-increment:device] brutal:before:content-[counter(device,decimal-leading-zero)]',
         unavailable && 'opacity-45',
         className,
       )}
@@ -62,7 +54,6 @@ export function DeviceRow({
         className={cn(
           'grid size-10 shrink-0 place-items-center rounded-control bg-icon-well',
           'modern:w-7 modern:bg-transparent',
-          'brutal:border-2 brutal:border-ink brutal:bg-surface',
           'glass:rounded-pill glass:bg-raised glass:shadow-card',
           toneClass[tone],
         )}
@@ -74,7 +65,7 @@ export function DeviceRow({
           {name}
         </span>
         {caption ? (
-          <span className="block truncate text-[0.8125rem] leading-[1.125rem] text-ink-muted first-letter:uppercase brutal:font-label brutal:text-xs">
+          <span className="block truncate text-[0.8125rem] leading-[1.125rem] text-ink-muted first-letter:uppercase">
             {caption}
           </span>
         ) : null}

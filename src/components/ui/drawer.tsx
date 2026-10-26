@@ -36,7 +36,7 @@ export function DrawerContent({
 }) {
   return (
     <BaseDrawer.Portal>
-      <BaseDrawer.Backdrop className="fixed inset-0 z-50 bg-black/55 transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0 modern:bg-ink/30 brutal:bg-[repeating-linear-gradient(45deg,#11111126_0_2px,transparent_2px_7px)]" />
+      <BaseDrawer.Backdrop className="fixed inset-0 z-50 bg-black/55 transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0 modern:bg-ink/30" />
       <BaseDrawer.Viewport className="fixed inset-0 z-50 flex items-end justify-center modern:p-2.5 glass:p-2.5 sm:p-4">
         <BaseDrawer.Popup
           className={cn(
@@ -48,7 +48,7 @@ export function DrawerContent({
             className,
           )}
         >
-          <div className="mx-auto mt-3 h-1 w-9 rounded-pill bg-border-strong brutal:h-1.5" />
+          <div className="mx-auto mt-3 h-1 w-9 rounded-pill bg-border-strong" />
           {(title || description) && (
             <div className="px-6 pt-5 pb-2">
               {title ? (

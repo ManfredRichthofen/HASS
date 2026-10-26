@@ -35,12 +35,12 @@ export function DialogContent({
 }) {
   return (
     <BaseDialog.Portal>
-      <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-black/55 transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0 modern:bg-ink/35 brutal:bg-[repeating-linear-gradient(45deg,#11111126_0_2px,transparent_2px_7px)]" />
+      <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-black/55 transition-ui data-ending-style:opacity-0 data-starting-style:opacity-0 modern:bg-ink/35" />
       <BaseDialog.Popup
         className={cn(
           'fixed top-1/2 left-1/2 z-50 w-[min(100%-2rem,23rem)] -translate-x-1/2 -translate-y-1/2 rounded-card border-ui border-border bg-canvas-elevated p-6 pb-5 shadow-sheet outline-none',
           'transition-ui duration-slow data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
-          'modern:border-transparent brutal:shadow-[6px_6px_0_var(--c-ink)]',
+          'modern:border-transparent',
           className,
         )}
       >
@@ -55,7 +55,7 @@ export function DialogContent({
         {children ? <div className="mt-4">{children}</div> : null}
         <div className="mt-6 flex justify-end gap-2">
           {actions ?? (
-            <BaseDialog.Close className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink brutal:font-label brutal:uppercase brutal:underline">
+            <BaseDialog.Close className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink">
               Close
             </BaseDialog.Close>
           )}

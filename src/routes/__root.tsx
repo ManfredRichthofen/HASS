@@ -7,10 +7,10 @@ import { defaultTheme, themeBootScript, themes } from '#/lib/theme'
 
 import appCss from '../styles.css?url'
 
-// Fonts for all three themes: Fraunces (Walnut & Cream), Geist (Walnut & Cream, Modern),
-// Space Grotesk + JetBrains Mono (Brutalist), Plus Jakarta Sans (Fluid Glass).
+// Fonts for every theme: Fraunces (Walnut & Cream), Geist (Walnut & Cream, Modern),
+// Plus Jakarta Sans (Glass, Forest).
 const fontCss =
-  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Geist:wght@400..700&family=JetBrains+Mono:wght@400..600&family=Space+Grotesk:wght@500..700&family=Plus+Jakarta+Sans:wght@400..700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Geist:wght@400..700&family=Plus+Jakarta+Sans:wght@400..700&display=swap'
 
 const Devtools = import.meta.env.DEV
   ? lazy(() => import('#/components/Devtools').then((mod) => ({ default: mod.Devtools })))

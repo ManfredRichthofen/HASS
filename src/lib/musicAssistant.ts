@@ -8,6 +8,8 @@ export interface MediaSearchItem {
   can_play?: boolean
   can_expand?: boolean
   thumbnail?: string | null
+  /** "Artist · Album" for tracks, "Artist" for albums (Music Assistant search only). */
+  subtitle?: string | null
   children?: MediaSearchItem[]
 }
 
@@ -127,6 +129,77 @@ export function parseSearchResults(response: unknown, entityId: string): MediaSe
   const bucket = map[entityId] ?? map[Object.keys(map)[0] ?? '']
   const results = bucket?.result
   return Array.isArray(results) ? results : []
+}
+
+type MassSearchArtist = { name?: string }
+
+type MassSearchItem = {
+  media_type?: string
+  uri?: string
+  name?: string
+  version?: string
+  image?: string | { path?: string | null; url?: string | null } | null
+  artists?: MassSearchArtist[]
+  album?: { name?: string } | null
+}
+
+const massSearchBuckets = [
+  { key: 'tracks', mediaClass: 'track' },
+  { key: 'albums', mediaClass: 'album' },
+  { key: 'artists', mediaClass: 'artist' },
+  { key: 'playlists', mediaClass: 'playlist' },
+  { key: 'radio', mediaClass: 'radio' },
+] as const
+
+const massSearchImage = (image: MassSearchItem['image']) => {
+  if (!image) return null
+  if (typeof image === 'string') return image
+  return image.url ?? image.path ?? null
+}
+
+const massSearchSubtitle = (item: MassSearchItem, mediaClass: string) => {
+  const artists = (item.artists ?? [])
+    .map((artist) => artist.name?.trim())
+    .filter(Boolean)
+    .join(', ')
+  if (mediaClass === 'track') {
+    return [artists, item.album?.name?.trim()].filter(Boolean).join(' · ') || null
+  }
+  if (mediaClass === 'album') return artists || null
+  return null
+}
+
+/** Parse `music_assistant.search` (grouped by media type) into flat search items. */
+export function parseMassSearchResults(response: unknown): MediaSearchItem[] {
+  if (!response || typeof response !== 'object') return []
+  const wrapped = response as {
+    response?: Record<string, unknown>
+    service_response?: Record<string, unknown>
+  }
+  const data = (wrapped.response ?? wrapped.service_response ?? response) as Record<
+    string,
+    unknown
+  >
+
+  const results: MediaSearchItem[] = []
+  for (const { key, mediaClass } of massSearchBuckets) {
+    const bucket = data[key]
+    if (!Array.isArray(bucket)) continue
+    for (const raw of bucket as MassSearchItem[]) {
+      if (!raw?.uri || !raw.name) continue
+      const title = raw.version ? `${raw.name} (${raw.version})` : raw.name
+      results.push({
+        title,
+        media_class: mediaClass,
+        media_content_type: raw.media_type ?? mediaClass,
+        media_content_id: raw.uri,
+        can_play: true,
+        thumbnail: massSearchImage(raw.image),
+        subtitle: massSearchSubtitle(raw, mediaClass),
+      })
+    }
+  }
+  return results
 }
 
 export function parseQueueResponse(response: unknown, entityId: string): MusicQueue | null {

@@ -84,29 +84,29 @@ export function ThemePicker() {
  */
 function Swatch({ id, mode }: { id: ThemeId; mode: Mode }) {
   const modern = id === 'modern'
-  const brutal = id === 'brutalist'
-  const radius = brutal ? 'rounded-none' : 'rounded-[calc(var(--r-card)*0.4)]'
+  const radius = 'rounded-[calc(var(--r-card)*0.4)]'
   return (
     <span
       data-theme={id}
       data-mode={mode}
       aria-hidden
       className={cn(
-        'pointer-events-none flex aspect-[4/5] flex-col justify-between overflow-hidden bg-canvas p-2 text-left [background-image:var(--grain)]',
+        'pointer-events-none flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[calc(var(--r-control)*0.8)] bg-canvas p-2 text-left [background-image:var(--grain)]',
         id === 'glass' && 'bg-[var(--c-base)]',
-        brutal ? 'rounded-none' : 'rounded-[calc(var(--r-control)*0.8)]',
+        // Forest shows its photo, under the same veil the app uses.
+        id === 'forest' &&
+          'bg-[var(--c-base)] [background-image:var(--forest-veil),url(/backgrounds/forest-thumb.webp)] bg-cover bg-center',
       )}
     >
       <span className="text-display block text-[0.95rem] leading-none text-ink">Aa</span>
-      <span className={cn('grid grid-cols-2', brutal ? 'gap-0' : 'gap-1')}>
+      <span className="grid grid-cols-2 gap-1">
         <span
           className={cn(
             'block aspect-square border-ui',
             radius,
             modern
               ? 'border-transparent bg-surface shadow-[inset_0_0_0_1.5px_var(--c-on-to)]'
-              : 'bg-on shadow-on',
-            brutal ? 'border-ink' : !modern && 'border-transparent',
+              : 'border-transparent bg-on shadow-on',
           )}
         />
         <span
@@ -114,7 +114,6 @@ function Swatch({ id, mode }: { id: ThemeId; mode: Mode }) {
             'block aspect-square border-ui bg-surface',
             radius,
             modern ? 'border-transparent' : 'border-border-subtle',
-            brutal && '-ml-0.5',
           )}
         />
       </span>

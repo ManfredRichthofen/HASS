@@ -90,17 +90,41 @@ export function isMassConfigured() {
   return readMassConfig() !== null
 }
 
+const DISCOVERED_URL_KEY = 'mass-discovered-url'
+
+const readDiscoveredUrl = () => {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    return localStorage.getItem(DISCOVERED_URL_KEY)
+  } catch {
+    return null
+  }
+}
+
 /** URL-only cache for artwork (imageproxy) when full MA API auth is not configured. */
-let discoveredMassUrl: string | null = null
+let discoveredMassUrl: string | null = readDiscoveredUrl()
 
 export function getMassBaseUrl(): string | null {
   return readMassConfig()?.url ?? discoveredMassUrl
+}
+
+/** Discovered URL from a previous session, so artwork works before discovery reruns. */
+export function getDiscoveredMassUrl() {
+  return discoveredMassUrl
 }
 
 export function setDiscoveredMassUrl(url: string | null) {
   const next = url ? trimSlash(url) : null
   if (discoveredMassUrl === next) return
   discoveredMassUrl = next
+  if (typeof localStorage !== 'undefined') {
+    try {
+      if (next) localStorage.setItem(DISCOVERED_URL_KEY, next)
+      else localStorage.removeItem(DISCOVERED_URL_KEY)
+    } catch {
+      /* ignore */
+    }
+  }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('mass-config-changed'))
   }

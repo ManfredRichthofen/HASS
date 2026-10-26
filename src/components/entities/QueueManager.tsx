@@ -22,7 +22,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MediaArt, uniqueArtCandidates } from '#/components/media/MediaArt'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
@@ -44,6 +44,10 @@ import {
   playerArtSources,
 } from '#/lib/musicAssistant'
 
+const ROW_PAGE = 50
+
+type Player = ReturnType<typeof useMusicQueue>['player']
+
 function useLivePosition(position: number | null, duration: number | null, playing: boolean) {
   const [now, setNow] = useState(() => Date.now())
   const [base, setBase] = useState({ position: position ?? 0, at: Date.now() })
@@ -58,10 +62,87 @@ function useLivePosition(position: number | null, duration: number | null, playi
     return () => window.clearInterval(id)
   }, [playing])
 
-  const live = playing ? base.position + (now - base.at) / 1000 : (position ?? 0)
+  const live = playing ? base.position + (now - base.at) / 1000 : base.position
   const clamped = duration != null ? Math.min(Math.max(live, 0), duration) : Math.max(live, 0)
   const pct = duration && duration > 0 ? Math.min(100, (clamped / duration) * 100) : 0
-  return { position: clamped, pct }
+  const jumpTo = useCallback((seconds: number) => {
+    setBase({ position: seconds, at: Date.now() })
+    setNow(Date.now())
+  }, [])
+  return { position: clamped, pct, jumpTo }
+}
+
+/**
+ * Progress and times. Owns the once-a-second tick so only this component
+ * re-renders while a track plays. Seekable when the player supports it.
+ */
+function PlaybackProgress({
+  player,
+  duration,
+  playing,
+  disabled,
+}: {
+  player: Player
+  duration: number | null
+  playing: boolean
+  disabled: boolean
+}) {
+  const { position, pct, jumpTo } = useLivePosition(player.mediaPosition, duration, playing)
+  const [dragPosition, setDragPosition] = useState<number | null>(null)
+  const canSeek = player.supportsSeek && duration != null && duration > 0
+  const shown = dragPosition ?? position
+
+  const handleSeekCommit = (value: number | readonly number[]) => {
+    const seconds = Array.isArray(value) ? (value[0] ?? 0) : (value as number)
+    setDragPosition(null)
+    jumpTo(seconds)
+    void player.seek(seconds).catch((e) => {
+      notify('Seek failed', e instanceof Error ? e.message : 'Error')
+    })
+  }
+
+  return (
+    <div className="grid gap-2.5">
+      {canSeek ? (
+        <Slider
+          size="thin"
+          className="-my-4"
+          aria-label="Seek"
+          min={0}
+          max={Math.floor(duration)}
+          step={1}
+          disabled={disabled}
+          value={Math.floor(position)}
+          onValueChange={(value) => setDragPosition(Array.isArray(value) ? value[0] : value)}
+          onValueCommitted={handleSeekCommit}
+        />
+      ) : (
+        <div
+          className="relative h-1.5 rounded-pill bg-surface-hover"
+          role="progressbar"
+          aria-label="Playback progress"
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <span
+            className="absolute inset-y-0 left-0 rounded-pill bg-ink"
+            style={{ width: `${pct}%` }}
+          />
+          <span
+            className="absolute top-1/2 -mt-2 -ml-2 size-4 rounded-pill bg-ink"
+            style={{ left: `${pct}%` }}
+          />
+        </div>
+      )}
+      <div className="flex justify-between text-xs text-ink-faint tabular-nums">
+        <span>{formatDuration(shown)}</span>
+        <span>
+          {duration ? `−${formatDuration(Math.max(0, duration - shown))}` : formatDuration(duration)}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function ActionChip({
@@ -80,7 +161,7 @@ function ActionChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex min-h-10 items-center gap-1.5 rounded-pill border-ui border-border px-3.5 text-xs font-semibold transition-ui hover:bg-surface-hover brutal:font-label brutal:uppercase',
+        'flex min-h-10 items-center gap-1.5 rounded-pill border-ui border-border px-3.5 text-xs font-semibold transition-ui hover:bg-surface-hover',
         danger ? 'text-danger' : 'text-ink',
       )}
     >
@@ -111,7 +192,7 @@ function PlayerSkeleton({
           <div className="h-7 w-3/4 max-w-xs animate-pulse rounded-control bg-surface-hover" />
           <div className="h-4 w-1/2 max-w-[12rem] animate-pulse rounded-control bg-surface-hover" />
         </div>
-        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover brutal:h-2.5" />
+        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover" />
         <div className="flex items-center justify-between px-1">
           <div className="size-11 animate-pulse rounded-pill bg-surface-hover" />
           <div className="size-14 animate-pulse rounded-pill bg-surface-hover" />
@@ -141,7 +222,7 @@ function PlayerSkeleton({
       </div>
 
       <div className="grid gap-2.5">
-        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover brutal:h-2.5" />
+        <div className="h-1.5 animate-pulse rounded-pill bg-surface-hover" />
         <div className="flex justify-between">
           <div className="h-3 w-8 animate-pulse rounded-control bg-surface-hover" />
           <div className="h-3 w-10 animate-pulse rounded-control bg-surface-hover" />
@@ -169,11 +250,11 @@ function QueueSkeleton() {
         </div>
         <div className="h-8 w-24 animate-pulse rounded-control bg-surface-hover" />
       </div>
-      <div className="rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent brutal:border-ink">
+      <div className="rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex min-h-16 items-center gap-2 border-b border-border-subtle py-2 last:border-b-0 brutal:border-b-2 brutal:border-ink brutal:last:border-b-0"
+            className="flex min-h-16 items-center gap-2 border-b border-border-subtle py-2 last:border-b-0"
           >
             <div className="h-3 w-5 shrink-0 animate-pulse rounded-control bg-surface-hover" />
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -192,55 +273,51 @@ function QueueSkeleton() {
   )
 }
 
-function QueueRow({
+type QueueRowAction = 'play' | 'remove' | 'up' | 'down' | 'next' | 'end'
+
+const QueueRow = memo(function QueueRow({
   item,
+  itemId,
+  index,
   position,
   massUrl,
-  busy,
+  rowBusy,
   disabled,
   canManage,
   supportMoveToEnd,
   isFirstMovable,
   isLast,
-  onPlay,
-  onRemove,
-  onMoveUp,
-  onMoveDown,
-  onPlayNext,
-  onMoveEnd,
+  onAction,
 }: {
   item: QueueItem
+  itemId: string
+  index: number
   position: number
   massUrl: string | null
-  busy: string | null
+  rowBusy: boolean
   disabled: boolean
   canManage: boolean
   supportMoveToEnd: boolean
   isFirstMovable: boolean
   isLast: boolean
-  onPlay: () => void
-  onRemove: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  onPlayNext: () => void
-  onMoveEnd: () => void
+  onAction: (action: QueueRowAction, item: QueueItem, itemId: string, index: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const title = queueItemTitle(item) ?? 'Unknown track'
   const artist = queueItemArtist(item)
   const art = queueItemImage(item, massUrl, 160)
-  const itemId = item.queue_item_id ?? String(position)
-  const rowBusy = busy === itemId
 
-  function act(fn: () => void) {
+  const onPlay = () => onAction('play', item, itemId, index)
+  const act = (action: QueueRowAction) => {
     setExpanded(false)
-    fn()
+    onAction(action, item, itemId, index)
   }
 
   return (
     <div
       className={cn(
-        'border-b border-border-subtle transition-ui last:border-b-0 brutal:border-b-2 brutal:border-ink brutal:last:border-b-0',
+        'border-b border-border-subtle transition-ui last:border-b-0',
+        '[content-visibility:auto] [contain-intrinsic-size:auto_4rem]',
         expanded && 'bg-surface-hover/50',
       )}
     >
@@ -258,9 +335,7 @@ function QueueRow({
           <MediaArt src={art} label="" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.9375rem] font-semibold text-ink">{title}</p>
-            <p className="truncate text-[0.8125rem] text-ink-muted brutal:font-label brutal:text-xs">
-              {artist ?? 'Queued'}
-            </p>
+            <p className="truncate text-[0.8125rem] text-ink-muted">{artist ?? 'Queued'}</p>
           </div>
         </button>
 
@@ -296,45 +371,45 @@ function QueueRow({
           <ActionChip
             icon={<Play className="size-3.5" />}
             label="Play now"
-            onClick={() => act(onPlay)}
+            onClick={() => act('play')}
           />
           <ActionChip
             icon={<ListStart className="size-3.5" />}
             label="Play next"
-            onClick={() => act(onPlayNext)}
+            onClick={() => act('next')}
           />
           {!isFirstMovable ? (
             <ActionChip
               icon={<ArrowUp className="size-3.5" />}
               label="Up"
-              onClick={() => act(onMoveUp)}
+              onClick={() => act('up')}
             />
           ) : null}
           {!isLast ? (
             <ActionChip
               icon={<ArrowDown className="size-3.5" />}
               label="Down"
-              onClick={() => act(onMoveDown)}
+              onClick={() => act('down')}
             />
           ) : null}
           {supportMoveToEnd && !isLast ? (
             <ActionChip
               icon={<ListEnd className="size-3.5" />}
               label="To end"
-              onClick={() => act(onMoveEnd)}
+              onClick={() => act('end')}
             />
           ) : null}
           <ActionChip
             danger
             icon={<X className="size-3.5" />}
             label="Remove"
-            onClick={() => act(onRemove)}
+            onClick={() => act('remove')}
           />
         </div>
       ) : null}
     </div>
   )
-}
+})
 
 /**
  * The music player and its queue. `view` lets the Music page place the player
@@ -376,7 +451,8 @@ export function QueueManager({
   const showPlayer = view !== 'queue'
   const showQueue = view !== 'player'
   const { callService } = useServiceCall()
-  const queueApi = useMusicQueue(target)
+  // The player view drives refreshes; a queue view next to it only reads the shared query.
+  const queueApi = useMusicQueue(target, { primary: view !== 'queue' })
   const {
     queue,
     items,
@@ -394,6 +470,8 @@ export function QueueManager({
     repeatMode,
   } = queueApi
   const [busy, setBusy] = useState<string | null>(null)
+  const [skipping, setSkipping] = useState<'prev' | 'next' | null>(null)
+  const [visibleCount, setVisibleCount] = useState(ROW_PAGE)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const { value: isPlaying, commit: commitPlaying } = useOptimisticValue(player.isPlaying)
@@ -409,7 +487,10 @@ export function QueueManager({
     const id = window.setTimeout(() => setConfirmClear(false), 4_000)
     return () => window.clearTimeout(id)
   }, [confirmClear])
-  useEffect(() => setConfirmClear(false), [target])
+  useEffect(() => {
+    setConfirmClear(false)
+    setVisibleCount(ROW_PAGE)
+  }, [target])
   useEffect(() => {
     setVolume(serverVolume)
   }, [serverVolume])
@@ -417,7 +498,7 @@ export function QueueManager({
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
   const playerArt = playerArtSources(player.attributes, haUrl)
-  const queueArt = queueItemImage(queue?.current_item, massUrl, 256)
+  const queueArt = queueItemImage(queue?.current_item, massUrl, 512)
   const playerArtKey = playerArt.join('|')
   // biome-ignore lint/correctness/useExhaustiveDependencies: playerArtKey is the by-value key for playerArt
   const currentArtSources = useMemo(
@@ -425,7 +506,6 @@ export function QueueManager({
     [queueArt, playerArtKey],
   )
   const duration = player.mediaDuration ?? queue?.current_item?.duration ?? null
-  const { position, pct } = useLivePosition(player.mediaPosition, duration, isPlaying)
 
   const shuffle = shuffleEnabled
   const repeat = repeatMode
@@ -444,10 +524,35 @@ export function QueueManager({
     return mapped.filter(({ index }) => index > currentIndex)
   }, [currentIndex, items])
 
+  // The server sends one page of the queue; `queue.items` is the full length.
+  const totalUpNext =
+    queue && queue.items > 0 && queue.current_index != null
+      ? Math.max(queue.items - queue.current_index - 1, upNext.length)
+      : upNext.length
+  const fullyLoaded = totalUpNext <= upNext.length
+  const visibleUpNext = useMemo(() => upNext.slice(0, visibleCount), [upNext, visibleCount])
+  const hiddenCount = totalUpNext - visibleUpNext.length
+
   const upNextDuration = useMemo(
     () => upNext.reduce((sum, { item }) => sum + (item.duration ?? 0), 0),
     [upNext],
   )
+
+  // Warm the cache with the next track's artwork so the change is instant.
+  const nextArt = queueItemImage(upNext[0]?.item ?? queue?.next_item, massUrl, 512)
+  useEffect(() => {
+    if (!nextArt || !showPlayer) return
+    const img = new Image()
+    img.referrerPolicy = 'no-referrer'
+    img.decoding = 'async'
+    img.src = nextArt
+  }, [nextArt, showPlayer])
+
+  const handleShowMore = () => {
+    const next = visibleCount + ROW_PAGE
+    setVisibleCount(next)
+    if (next > upNext.length && !fullyLoaded) queueApi.loadMore()
+  }
 
   const unavailable = player.isUnavailable
   const hasNowPlaying = Boolean(currentTitle) && (isPlaying || player.isPaused || items.length > 0)
@@ -467,6 +572,45 @@ export function QueueManager({
       setBusy(null)
     }
   }
+
+  const handleSkip = async (direction: 'prev' | 'next') => {
+    setSkipping(direction)
+    try {
+      await (direction === 'prev' ? player.previousTrack() : player.nextTrack())
+    } catch (e) {
+      notify(
+        direction === 'prev' ? 'Previous failed' : 'Next failed',
+        e instanceof Error ? e.message : 'Error',
+      )
+    } finally {
+      setSkipping(null)
+    }
+  }
+
+  // Rows get one stable handler so memoized rows skip re-rendering when the hook updates.
+  const rowActionRef = useRef<
+    (action: QueueRowAction, item: QueueItem, itemId: string, index: number) => void
+  >(() => {})
+  useEffect(() => {
+    rowActionRef.current = (action, item, itemId, index) => {
+      const actions: Record<QueueRowAction, () => Promise<void>> = {
+        play: () => queueApi.playIndex(item.queue_item_id ?? String(index)),
+        remove: () => queueApi.removeItem(itemId),
+        up: () => queueApi.moveUp(itemId),
+        down: () => queueApi.moveDown(itemId),
+        next: () => queueApi.playNext(itemId),
+        end: () => queueApi.moveToEnd(itemId),
+      }
+      const failLabel =
+        action === 'play' ? 'Play failed' : action === 'remove' ? 'Remove failed' : 'Move failed'
+      void run(itemId, actions[action], failLabel)
+    }
+  })
+  const handleRowAction = useCallback(
+    (action: QueueRowAction, item: QueueItem, itemId: string, index: number) =>
+      rowActionRef.current(action, item, itemId, index),
+    [],
+  )
 
   /** Instant toggles — optimistic UI in the hook; don't lock the whole player. */
   function runToggle(action: () => Promise<void>, failLabel: string) {
@@ -535,7 +679,7 @@ export function QueueManager({
       )}
     >
       {endlessToggle ? (
-        <div className="flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 py-2.5 shadow-card modern:border-transparent brutal:border-ink">
+        <div className="flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 py-2.5 shadow-card modern:border-transparent">
           <div className="flex min-w-0 items-center gap-3">
             <Radio className="size-5 shrink-0 text-ink-muted" />
             <div className="min-w-0">
@@ -631,9 +775,14 @@ export function QueueManager({
                 ) : null}
               </div>
               <div className="relative shrink-0">
-                {(fetching && !loading) || ensuring ? (
-                  <Loader2 className="m-3 size-5 animate-spin text-ink-faint" />
-                ) : view === 'player' ? null : (
+                {view === 'player' ? (
+                  ensuring ? (
+                    <Loader2
+                      className="m-3 size-5 animate-spin text-ink-faint"
+                      aria-label="Connecting to Music Assistant"
+                    />
+                  ) : null
+                ) : (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -663,40 +812,19 @@ export function QueueManager({
             </div>
           </div>
 
-          <div className="grid gap-2.5">
-            <div
-              className="relative h-1.5 rounded-pill bg-surface-hover brutal:h-2.5 brutal:border-2 brutal:border-ink brutal:bg-surface"
-              role="progressbar"
-              aria-label="Playback progress"
-              aria-valuenow={Math.round(pct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <span
-                className="absolute inset-y-0 left-0 rounded-pill bg-ink"
-                style={{ width: `${pct}%` }}
-              />
-              <span
-                className="absolute top-1/2 -mt-2 -ml-2 size-4 rounded-pill bg-ink brutal:-mt-[11px] brutal:-ml-[3px] brutal:h-[22px] brutal:w-1.5"
-                style={{ left: `${pct}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-ink-faint tabular-nums brutal:font-label brutal:text-ink">
-              <span>{formatDuration(position)}</span>
-              <span>
-                {duration
-                  ? `−${formatDuration(Math.max(0, duration - position))}`
-                  : formatDuration(duration)}
-              </span>
-            </div>
-          </div>
+          <PlaybackProgress
+            player={player}
+            duration={duration}
+            playing={isPlaying}
+            disabled={unavailable}
+          />
 
           <div className="flex items-center justify-between px-1">
             <button
               type="button"
               className={cn(
                 'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
-                shuffle && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
+                shuffle && 'bg-accent-soft text-ink',
               )}
               disabled={unavailable}
               aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
@@ -708,15 +836,20 @@ export function QueueManager({
             <button
               type="button"
               className="grid size-14 place-items-center rounded-pill text-ink disabled:opacity-40"
-              disabled={unavailable || busy !== null}
+              disabled={unavailable || skipping === 'prev'}
               aria-label="Previous"
-              onClick={() => void run('prev', () => player.previousTrack(), 'Previous failed')}
+              aria-busy={skipping === 'prev'}
+              onClick={() => void handleSkip('prev')}
             >
-              <SkipBack className="size-6 fill-current" />
+              {skipping === 'prev' ? (
+                <Loader2 className="size-6 animate-spin" />
+              ) : (
+                <SkipBack className="size-6 fill-current" />
+              )}
             </button>
             <button
               type="button"
-              className="press grid size-[4.5rem] place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 brutal:border-2 brutal:border-ink brutal:shadow-press @xl:size-19"
+              className="press grid size-[4.5rem] place-items-center rounded-pill bg-accent text-on-accent disabled:opacity-40 @xl:size-19"
               disabled={unavailable}
               aria-label={isPlaying ? 'Pause' : 'Play'}
               onClick={togglePlayback}
@@ -730,17 +863,22 @@ export function QueueManager({
             <button
               type="button"
               className="grid size-14 place-items-center rounded-pill text-ink disabled:opacity-40"
-              disabled={unavailable || busy !== null}
+              disabled={unavailable || skipping === 'next'}
               aria-label="Next"
-              onClick={() => void run('next', () => player.nextTrack(), 'Next failed')}
+              aria-busy={skipping === 'next'}
+              onClick={() => void handleSkip('next')}
             >
-              <SkipForward className="size-6 fill-current" />
+              {skipping === 'next' ? (
+                <Loader2 className="size-6 animate-spin" />
+              ) : (
+                <SkipForward className="size-6 fill-current" />
+              )}
             </button>
             <button
               type="button"
               className={cn(
                 'grid size-11 place-items-center rounded-pill text-ink-muted transition-ui hover:text-ink',
-                repeat !== 'off' && 'bg-accent-soft text-ink brutal:bg-ink brutal:text-surface',
+                repeat !== 'off' && 'bg-accent-soft text-ink',
               )}
               disabled={unavailable}
               aria-label={repeatModeLabel(repeat)}
@@ -798,8 +936,7 @@ export function QueueManager({
               type="button"
               className={cn(
                 'inline-flex h-9 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-xs font-semibold text-ink-muted transition-ui hover:text-ink @xl:h-11 @xl:gap-2 @xl:px-4 @xl:text-sm',
-                endlessMixEnabled &&
-                  'border-transparent bg-accent-soft text-ink brutal:border-ink brutal:bg-ink brutal:text-surface',
+                endlessMixEnabled && 'border-transparent bg-accent-soft text-ink',
               )}
               disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
               aria-label={endlessMixEnabled ? 'Turn off Endless Mix' : 'Turn on Endless Mix'}
@@ -820,15 +957,20 @@ export function QueueManager({
               <h3
                 className={cn(
                   heading ? 'block' : 'sr-only',
-                  'text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink brutal:font-label brutal:text-xs brutal:font-medium brutal:uppercase',
+                  'text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink',
                 )}
               >
                 Up next
               </h3>
-              <p className="text-xs text-ink-muted">
-                {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}
-                {upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
-                {endlessMixEnabled ? ' · Endless Mix' : ''}
+              <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span>
+                  {totalUpNext} {totalUpNext === 1 ? 'track' : 'tracks'}
+                  {fullyLoaded && upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
+                  {endlessMixEnabled ? ' · Endless Mix' : ''}
+                </span>
+                {fetching && !loading ? (
+                  <Loader2 className="size-3 animate-spin text-ink-faint" aria-label="Refreshing" />
+                ) : null}
               </p>
             </div>
             <Button
@@ -857,54 +999,46 @@ export function QueueManager({
           <div
             className={cn(
               view === 'all' && 'max-h-[30rem] overflow-y-auto overscroll-contain',
-              'rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent brutal:border-ink',
+              'rounded-card border-ui border-border-subtle bg-surface pr-1.5 pl-3 shadow-card modern:border-transparent',
             )}
           >
             <div>
-              {upNext.map((entry, rowIndex) => {
-                const { item, index } = entry
+              {visibleUpNext.map(({ item, index }, rowIndex) => {
                 const itemId = item.queue_item_id ?? `idx-${index}`
                 return (
-                  <div key={item.queue_item_id ?? `q-${index}`}>
-                    <QueueRow
-                      item={item}
-                      position={rowIndex + 1}
-                      massUrl={massUrl}
-                      busy={busy}
-                      disabled={unavailable || busy !== null}
-                      canManage={canManageItems}
-                      supportMoveToEnd={!viaMassQueue}
-                      isFirstMovable={
-                        currentIndex == null ? index === 0 : index <= currentIndex + 1
-                      }
-                      isLast={index === items.length - 1}
-                      onPlay={() =>
-                        void run(
-                          itemId,
-                          () => queueApi.playIndex(item.queue_item_id ?? String(index)),
-                          'Play failed',
-                        )
-                      }
-                      onRemove={() =>
-                        void run(itemId, () => queueApi.removeItem(itemId), 'Remove failed')
-                      }
-                      onMoveUp={() =>
-                        void run(itemId, () => queueApi.moveUp(itemId), 'Move failed')
-                      }
-                      onMoveDown={() =>
-                        void run(itemId, () => queueApi.moveDown(itemId), 'Move failed')
-                      }
-                      onPlayNext={() =>
-                        void run(itemId, () => queueApi.playNext(itemId), 'Move failed')
-                      }
-                      onMoveEnd={() =>
-                        void run(itemId, () => queueApi.moveToEnd(itemId), 'Move failed')
-                      }
-                    />
-                  </div>
+                  <QueueRow
+                    key={item.queue_item_id ?? `q-${index}`}
+                    item={item}
+                    itemId={itemId}
+                    index={index}
+                    position={rowIndex + 1}
+                    massUrl={massUrl}
+                    rowBusy={busy === itemId}
+                    disabled={unavailable || busy !== null}
+                    canManage={canManageItems}
+                    supportMoveToEnd={!viaMassQueue}
+                    isFirstMovable={
+                      currentIndex == null ? index === 0 : index <= currentIndex + 1
+                    }
+                    isLast={fullyLoaded && index === items.length - 1}
+                    onAction={handleRowAction}
+                  />
                 )
               })}
             </div>
+            {hiddenCount > 0 ? (
+              <button
+                type="button"
+                className="flex min-h-12 w-full items-center justify-center gap-2 border-t border-border-subtle text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
+                disabled={fetching && visibleCount >= upNext.length}
+                onClick={handleShowMore}
+              >
+                {fetching && visibleCount >= upNext.length ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
+                Show more ({hiddenCount} left)
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

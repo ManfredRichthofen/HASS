@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHAConnection, useMediaPlayer, useServiceCall } from 'hass-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { discoverMassUrl, ensureMassFromHomeAssistant } from '#/lib/massAuth'
 import {
   clearQueue,
@@ -51,6 +51,10 @@ export type MusicQueueState = {
   fetching: boolean
   ensuring: boolean
   error: Error | null
+  /** How many upcoming items are requested from the server. */
+  itemLimit: number
+  /** Request another page of upcoming items. */
+  loadMore: () => void
   refresh: () => Promise<void>
   player: ReturnType<typeof useMediaPlayer>
   clear: () => Promise<void>
@@ -70,29 +74,56 @@ export type MusicQueueState = {
   repeatMode: string
 }
 
-/** Cache entity_id → unique_id so we don't re-list the registry every poll. */
+const QUEUE_PAGE_SIZE = 200
+const MASS_QUEUE_FLAG_KEY = 'mass-queue-available'
+
+/** Cache entity_id → unique_id so we don't hit the registry every poll. */
 const playerIdCache = new Map<string, string>()
 
-async function resolvePlayerId(
+/** Upcoming-item limit per player, shared by every hook instance so they reuse one query. */
+const itemLimits = new Map<string, number>()
+const itemLimitListeners = new Set<() => void>()
+
+const subscribeItemLimits = (listener: () => void) => {
+  itemLimitListeners.add(listener)
+  return () => {
+    itemLimitListeners.delete(listener)
+  }
+}
+
+const raiseItemLimit = (entityId: string) => {
+  itemLimits.set(entityId, (itemLimits.get(entityId) ?? QUEUE_PAGE_SIZE) + QUEUE_PAGE_SIZE)
+  for (const listener of itemLimitListeners) listener()
+}
+
+const readCachedMassQueueFlag = (): boolean | undefined => {
+  if (typeof localStorage === 'undefined') return undefined
+  const value = localStorage.getItem(MASS_QUEUE_FLAG_KEY)
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return undefined
+}
+
+const writeCachedMassQueueFlag = (value: boolean) => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(MASS_QUEUE_FLAG_KEY, String(value))
+}
+
+async function lookupPlayerId(
   connection: HaConnection | null,
   entityId: string,
-  attributes: Record<string, unknown>,
 ): Promise<string | null> {
-  const activeQueue = attributes.active_queue
-  if (typeof activeQueue === 'string' && activeQueue) return activeQueue
-
   const cached = playerIdCache.get(entityId)
   if (cached) return cached
-
   if (!connection) return null
   try {
-    const entries = await connection.sendMessagePromise<EntityRegistryEntry[]>({
-      type: 'config/entity_registry/list',
+    const entry = await connection.sendMessagePromise<EntityRegistryEntry>({
+      type: 'config/entity_registry/get',
+      entity_id: entityId,
     })
-    const match = entries.find((entry) => entry.entity_id === entityId)
-    if (match?.unique_id) {
-      playerIdCache.set(entityId, match.unique_id)
-      return match.unique_id
+    if (entry?.unique_id) {
+      playerIdCache.set(entityId, entry.unique_id)
+      return entry.unique_id
     }
   } catch {
     /* ignore */
@@ -107,11 +138,15 @@ async function detectMassQueue(connection: HaConnection | null): Promise<boolean
       type: 'config_entries/get',
       domain: 'mass_queue',
     })
-    return Array.isArray(entries) && entries.length > 0
+    const available = Array.isArray(entries) && entries.length > 0
+    writeCachedMassQueueFlag(available)
+    return available
   } catch {
     return false
   }
 }
+
+const fetchMaQueue = (queueId: string) => getActiveQueue(queueId).catch(() => getQueue(queueId))
 
 type QueueCache = { items: QueueItem[]; queue: MusicQueue | null }
 
@@ -138,7 +173,7 @@ const removeFromQueue = (old: QueueCache | undefined, itemId: string): QueueCach
   return {
     ...old,
     items,
-    queue: old.queue ? { ...old.queue, items: items.length } : old.queue,
+    queue: old.queue ? { ...old.queue, items: Math.max(0, old.queue.items - 1) } : old.queue,
   }
 }
 
@@ -164,7 +199,11 @@ const moveItemNext = (old: QueueCache | undefined, itemId: string): QueueCache |
   if (!old) return old
   const index = old.items.findIndex((item) => item.queue_item_id === itemId)
   if (index < 0) return old
-  const currentIndex = old.queue?.current_index ?? 0
+  const currentId = old.queue?.current_item?.queue_item_id
+  const foundCurrent = currentId
+    ? old.items.findIndex((item) => item.queue_item_id === currentId)
+    : -1
+  const currentIndex = foundCurrent >= 0 ? foundCurrent : (old.queue?.current_index ?? 0)
   const insertAt = Math.min(currentIndex + 1, old.items.length - 1)
   if (index === insertAt) return old
   const items = [...old.items]
@@ -186,17 +225,32 @@ const moveItemToEnd = (old: QueueCache | undefined, itemId: string): QueueCache 
   return { ...old, items }
 }
 
-export function useMusicQueue(entityId: string): MusicQueueState {
+type UseMusicQueueOptions = {
+  /**
+   * The instance that follows HA state and refreshes the shared query. Other
+   * instances for the same player only read it, so nothing is fetched twice.
+   */
+  primary?: boolean
+}
+
+export function useMusicQueue(
+  entityId: string,
+  { primary = true }: UseMusicQueueOptions = {},
+): MusicQueueState {
   const { callService, callServiceWithResponse } = useServiceCall()
   const { connection, connected } = useHAConnection()
   const player = useMediaPlayer(entityId)
   const queryClient = useQueryClient()
   const [massApiConfigured, setMassApiConfigured] = useState(() => isMassConfigured())
   const [massUrl, setMassUrl] = useState(() => getMassBaseUrl())
-  const [massQueueAvailable, setMassQueueAvailable] = useState<boolean | null>(null)
-  const [ensuring, setEnsuring] = useState(false)
   const active = player.isPlaying || player.isPaused
-  const configured = Boolean(massQueueAvailable) || massApiConfigured
+  const haReady = connected && Boolean(connection)
+
+  const itemLimit = useSyncExternalStore(
+    subscribeItemLimits,
+    () => itemLimits.get(entityId) ?? QUEUE_PAGE_SIZE,
+    () => QUEUE_PAGE_SIZE,
+  )
 
   useEffect(() => {
     const sync = () => {
@@ -212,66 +266,64 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   }, [])
 
   // Prefer Music Assistant Queue Actions (mass_queue) when installed on HA.
-  useEffect(() => {
-    if (!connected || !connection) return
-    let cancelled = false
-    void detectMassQueue(connection).then((available) => {
-      if (!cancelled) setMassQueueAvailable(available)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [connected, connection])
+  // Last session's answer is used as a placeholder so the queue fetch starts immediately.
+  const massQueueQuery = useQuery({
+    queryKey: ['mass-queue-available'],
+    enabled: haReady,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    placeholderData: readCachedMassQueueFlag,
+    queryFn: () => detectMassQueue(connection),
+  })
+  const massQueueAvailable = massQueueQuery.data ?? null
+  const configured = Boolean(massQueueAvailable) || massApiConfigured
 
-  // Always resolve a MA base URL for artwork (imageproxy), even when mass_queue
-  // handles queue mutations and full MA API auth is not required.
-  useEffect(() => {
-    if (!connected || !connection || massUrl) return
-    let cancelled = false
-    void discoverMassUrl(connection).then((url) => {
-      if (cancelled || !url) return
-      setDiscoveredMassUrl(url)
-      setMassUrl(url)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [connected, connection, massUrl])
+  // Resolve a MA base URL for artwork (imageproxy) even when mass_queue handles mutations.
+  // Runs once per session; the result is persisted and broadcast via `mass-config-changed`.
+  useQuery({
+    queryKey: ['mass-url'],
+    enabled: haReady && !massApiConfigured,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    queryFn: async () => {
+      const url = await discoverMassUrl(connection)
+      if (url) setDiscoveredMassUrl(url)
+      return url ?? ''
+    },
+  })
 
   // Optional fallback: reuse HA music_assistant integration token for direct MA API.
-  useEffect(() => {
-    if (!connected || !connection || massApiConfigured) return
-    if (massQueueAvailable !== false) return
-    let cancelled = false
-    setEnsuring(true)
-    void ensureMassFromHomeAssistant(connection)
-      .then((result) => {
-        if (cancelled) return
-        if (result.status === 'ready' || result.status === 'already') {
-          setMassApiConfigured(true)
-          setDiscoveredMassUrl(result.config.url)
-          setMassUrl(result.config.url)
-          void queryClient.invalidateQueries({ queryKey: ['music-queue'] })
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setEnsuring(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [connected, connection, massApiConfigured, massQueueAvailable, queryClient])
+  const ensureQuery = useQuery({
+    queryKey: ['mass-ensure'],
+    enabled: haReady && !massApiConfigured && massQueueAvailable === false,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    queryFn: async () => {
+      const result = await ensureMassFromHomeAssistant(connection)
+      if (result.status === 'ready' || result.status === 'already') {
+        setDiscoveredMassUrl(result.config.url)
+        setMassApiConfigured(true)
+        void queryClient.invalidateQueries({ queryKey: ['music-queue'] })
+      }
+      return result.status
+    },
+  })
+  const ensuring = ensureQuery.isFetching
 
   const activeQueueId = (player.attributes as { active_queue?: string }).active_queue
 
   // Drive freshness from HA media_player state without thrashing the query key.
   useEffect(() => {
-    if (!entityId || !connected || massQueueAvailable === null) return
+    if (!primary || !entityId || !connected || massQueueAvailable === null) return
     void queryClient.invalidateQueries({ queryKey: ['music-queue', entityId] })
   }, [
+    primary,
     entityId,
     connected,
     massQueueAvailable,
+    massApiConfigured,
     player.mediaTitle,
     player.state,
     activeQueueId,
@@ -279,11 +331,12 @@ export function useMusicQueue(entityId: string): MusicQueueState {
   ])
 
   const query = useQuery({
-    queryKey: ['music-queue', entityId, massQueueAvailable, massApiConfigured],
+    queryKey: ['music-queue', entityId, itemLimit],
     enabled: Boolean(entityId) && connected && massQueueAvailable !== null,
     staleTime: 8_000,
+    placeholderData: keepPreviousData,
     // HA-driven invalidation above; poll as a backstop.
-    refetchInterval: configured ? (active ? 15_000 : 30_000) : active ? 15_000 : 30_000,
+    refetchInterval: active ? 15_000 : 30_000,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<{
       queueId: string | null
@@ -293,55 +346,41 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       viaMassQueue: boolean
     }> => {
       const attrs = player.attributes as Record<string, unknown>
-      let queueId =
-        (typeof attrs.active_queue === 'string' && attrs.active_queue) ||
-        (await resolvePlayerId(connection, entityId, attrs))
+      const attrQueueId =
+        typeof attrs.active_queue === 'string' && attrs.active_queue ? attrs.active_queue : null
 
-      // Primary path: Music Assistant Queue Actions on Home Assistant.
+      // Primary path: Music Assistant Queue Actions on Home Assistant — one parallel batch.
       if (massQueueAvailable) {
-        try {
-          const [haSettled, itemsSettled] = await Promise.allSettled([
-            callServiceWithResponse('music_assistant', 'get_queue', {
-              entity_id: entityId,
-            }),
-            callServiceWithResponse('mass_queue', 'get_queue_items', {
-              ...massQueueEntityData(entityId),
-              limit: 500,
-              limit_before: 50,
-              limit_after: 450,
-            }),
-          ])
+        const [haSettled, itemsSettled, maSettled] = await Promise.allSettled([
+          callServiceWithResponse('music_assistant', 'get_queue', { entity_id: entityId }),
+          callServiceWithResponse('mass_queue', 'get_queue_items', {
+            ...massQueueEntityData(entityId),
+            limit: itemLimit + 2,
+            limit_before: 1,
+            limit_after: itemLimit,
+          }),
+          // HA get_queue often omits dont_stop_the_music / autoplay — pull flags from MA.
+          massApiConfigured && attrQueueId ? fetchMaQueue(attrQueueId) : Promise.resolve(null),
+        ])
 
-          let haQueue: MusicQueue | null = null
-          if (haSettled.status === 'fulfilled') {
-            haQueue = parseQueueResponse(haSettled.value, entityId)
-            if (haQueue?.queue_id) queueId = haQueue.queue_id
+        if (itemsSettled.status === 'fulfilled') {
+          const haQueue =
+            haSettled.status === 'fulfilled' ? parseQueueResponse(haSettled.value, entityId) : null
+          const maQueue =
+            maSettled.status === 'fulfilled' && maSettled.value
+              ? normalizeQueue(maSettled.value)
+              : null
+          const queue = maQueue ?? haQueue
+          const items = parseMassQueueItemsResponse(itemsSettled.value, entityId)
+          return {
+            queueId: queue?.queue_id ?? attrQueueId,
+            queue,
+            items: items.length > 0 ? items : queueItemsFromHaSummary(queue),
+            haQueueAvailable: Boolean(queue) || items.length > 0,
+            viaMassQueue: true,
           }
-
-          if (itemsSettled.status === 'fulfilled') {
-            const items = parseMassQueueItemsResponse(itemsSettled.value, entityId)
-            // HA get_queue often omits dont_stop_the_music / autoplay — pull flags from MA when configured.
-            let queue = haQueue
-            const id = queueId ?? haQueue?.queue_id ?? null
-            if (massApiConfigured && id) {
-              try {
-                const queueRaw = await getActiveQueue(id).catch(() => getQueue(id))
-                if (queueRaw) queue = normalizeQueue(queueRaw)
-              } catch {
-                /* keep haQueue */
-              }
-            }
-            return {
-              queueId: queue?.queue_id ?? id,
-              queue,
-              items: items.length > 0 ? items : queueItemsFromHaSummary(queue),
-              haQueueAvailable: Boolean(queue ?? haQueue) || items.length > 0,
-              viaMassQueue: true,
-            }
-          }
-        } catch {
-          // Fall through to MA API / HA summary.
         }
+        // Fall through to MA API / HA summary.
       }
 
       let haQueue: MusicQueue | null = null
@@ -350,33 +389,38 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           entity_id: entityId,
         })
         haQueue = parseQueueResponse(haResponse, entityId)
-        if (haQueue?.queue_id) queueId = haQueue.queue_id
       } catch {
         /* idle / no active queue via HA */
       }
 
-      if (massApiConfigured && queueId) {
-        try {
-          const [queueRaw, items] = await Promise.all([
-            getActiveQueue(queueId).catch(() => getQueue(queueId)),
-            getQueueItems(queueId),
-          ])
-          const queue = queueRaw ? normalizeQueue(queueRaw) : haQueue
-          return {
-            queueId: queue?.queue_id ?? queueId,
-            queue,
-            items:
-              Array.isArray(items) && items.length > 0 ? items : queueItemsFromHaSummary(queue),
-            haQueueAvailable: Boolean(queue ?? haQueue),
-            viaMassQueue: false,
+      if (massApiConfigured) {
+        const queueId =
+          haQueue?.queue_id ?? attrQueueId ?? (await lookupPlayerId(connection, entityId))
+        if (queueId) {
+          try {
+            // Start one before the current track so the up-next list is never empty.
+            const offset = Math.max(0, (haQueue?.current_index ?? 0) - 1)
+            const [queueRaw, items] = await Promise.all([
+              fetchMaQueue(queueId),
+              getQueueItems(queueId, itemLimit + 2, offset),
+            ])
+            const queue = queueRaw ? normalizeQueue(queueRaw) : haQueue
+            return {
+              queueId: queue?.queue_id ?? queueId,
+              queue,
+              items:
+                Array.isArray(items) && items.length > 0 ? items : queueItemsFromHaSummary(queue),
+              haQueueAvailable: Boolean(queue),
+              viaMassQueue: false,
+            }
+          } catch {
+            /* fall through */
           }
-        } catch {
-          /* fall through */
         }
       }
 
       return {
-        queueId: queueId ?? haQueue?.queue_id ?? null,
+        queueId: haQueue?.queue_id ?? attrQueueId,
         queue: haQueue,
         items: queueItemsFromHaSummary(haQueue),
         haQueueAvailable: Boolean(haQueue),
@@ -431,6 +475,8 @@ export function useMusicQueue(entityId: string): MusicQueueState {
     await queryClient.invalidateQueries({ queryKey: ['music-queue', entityId] })
   }, [queryClient, entityId])
 
+  const loadMore = useCallback(() => raiseItemLimit(entityId), [entityId])
+
   const afterMutation = useCallback(() => {
     // Soft refresh — don't block the UI on Music Assistant catching up.
     void refresh()
@@ -468,7 +514,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       updater: (old: QueueCache | undefined) => QueueCache | undefined,
       action: () => Promise<void>,
     ) => {
-      // Full query keys include player state — snapshot every match so rollback is exact.
+      // Snapshot every page-size variant of the key so rollback is exact.
       const snapshots = queryClient.getQueriesData<QueueCache>({
         queryKey: ['music-queue', entityId],
       })
@@ -596,7 +642,7 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       viaMassQueue,
       haQueueAvailable: Boolean(query.data?.haQueueAvailable ?? query.data?.queue),
       massUrl,
-      loading: query.isLoading || ensuring || massQueueAvailable === null,
+      loading: !query.data && (query.isLoading || massQueueAvailable === null),
       fetching: query.isFetching,
       ensuring,
       error:
@@ -605,6 +651,8 @@ export function useMusicQueue(entityId: string): MusicQueueState {
           : query.error
             ? new Error(String(query.error))
             : null,
+      itemLimit,
+      loadMore,
       refresh,
       player,
       endlessMixEnabled,
@@ -727,13 +775,14 @@ export function useMusicQueue(entityId: string): MusicQueueState {
       ensuring,
       endlessMixEnabled,
       entityId,
+      itemLimit,
+      loadMore,
       massApiConfigured,
       massQueueAvailable,
       massUrl,
       player,
       queue,
-      query.data?.haQueueAvailable,
-      query.data?.items,
+      query.data,
       query.error,
       query.isFetching,
       query.isLoading,

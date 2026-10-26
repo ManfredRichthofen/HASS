@@ -22,7 +22,6 @@ export function Reading({
     <div
       className={cn(
         'min-w-22 flex-1 border-l border-border-subtle px-4 first:border-l-0 first:pl-0',
-        'brutal:border-l-2 brutal:border-ink brutal:first:border-l-0',
         'glass:min-w-0 glass:flex-none glass:rounded-pill glass:border-l-0 glass:bg-surface-hover glass:px-4 glass:py-2 glass:shadow-card glass:first:pl-4',
         muted && 'opacity-45',
       )}

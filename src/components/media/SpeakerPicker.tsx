@@ -60,7 +60,7 @@ async function toggleSpeaker(
  */
 export function SpeakerPicker({ leader }: { leader: string }) {
   return (
-    <div className="grid gap-2 brutal:gap-0">
+    <div className="grid gap-2">
       {speakers.map((s) => (
         <SpeakerRow key={s.id} id={s.id} label={s.label} leader={leader} />
       ))}
@@ -108,8 +108,6 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
         'flex min-h-15 flex-wrap items-center gap-x-3 gap-y-1 rounded-control border-ui border-border-subtle transition-state',
         on && 'border-transparent bg-surface shadow-card',
         'modern:border-transparent',
-        'brutal:border-ink brutal:not-first:-mt-0.5',
-        on && 'brutal:border-ink brutal:bg-on-from brutal:shadow-none',
         unavailable && 'opacity-45',
       )}
     >
@@ -127,7 +125,6 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
           className={cn(
             'grid size-8 shrink-0 place-items-center rounded-pill border-2 border-border-strong text-ink-muted transition-state',
             on && 'border-accent bg-accent text-on-accent',
-            on && 'brutal:border-ink brutal:bg-ink brutal:text-on-from',
           )}
         >
           {on ? <Check className="size-4" /> : <Plus className="size-4" />}
@@ -143,7 +140,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
       </button>
       {on ? (
         <div className="flex min-w-0 flex-1 basis-40 items-center gap-2.5 px-2.5 pb-2.5 sm:pr-3 sm:pb-0">
-          <Volume1 className="size-[18px] shrink-0 text-ink-faint brutal:text-ink" />
+          <Volume1 className="size-[18px] shrink-0 text-ink-faint" />
           <Slider
             aria-label={`${label} volume`}
             min={0}
@@ -163,9 +160,7 @@ function SpeakerRow({ id, label, leader }: { id: string; label: string; leader: 
           />
         </div>
       ) : (
-        <span className="ml-auto pr-4 text-[0.8125rem] text-ink-faint brutal:font-label brutal:text-xs">
-          Idle
-        </span>
+        <span className="ml-auto pr-4 text-[0.8125rem] text-ink-faint">Idle</span>
       )}
     </m.div>
   )
@@ -209,9 +204,7 @@ function SpeakerChip({ id, label, leader }: { id: string; label: string; leader:
       onClick={handleToggle}
       className={cn(
         'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-sm font-medium transition-state',
-        on
-          ? 'border-transparent bg-accent text-on-accent brutal:border-ink brutal:bg-ink brutal:text-on-from'
-          : 'text-ink-muted hover:text-ink',
+        on ? 'border-transparent bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
         unavailable && 'opacity-45',
       )}
     >
@@ -235,7 +228,7 @@ export function SpeakerChips({ leader }: { leader: string }) {
             <button
               type="button"
               onClick={() => setVolumesOpen(true)}
-              className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+              className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
               aria-label="Adjust speaker volumes"
             >
               <Volume2 className="size-3.5" />
@@ -244,7 +237,7 @@ export function SpeakerChips({ leader }: { leader: string }) {
             <button
               type="button"
               onClick={() => void groupAll()}
-              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink brutal:font-label brutal:text-xs brutal:uppercase brutal:underline"
+              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
             >
               Group all
             </button>
