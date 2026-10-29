@@ -40,7 +40,11 @@ function fixtureIcon(name: string): LucideIcon {
 }
 
 /** Hold briefly before a vertical drag can dim — otherwise scroll always wins. */
-const DIM_HOLD_MS = 180
+const DIM_HOLD_MS = 110
+/** Movement after arming that starts a dim — small so it feels immediate. */
+const DIM_START_PX = 3
+/** Fraction of tile height that spans the full 1–100% range (<1 = more sensitive). */
+const DIM_RANGE = 0.65
 /** Minimum gap between live brightness calls while dragging. */
 const LIVE_UPDATE_MS = 250
 /** Ignore HA echoes of in-flight live updates for this long after release. */
@@ -233,7 +237,14 @@ export function LightTile({ entityId, className }: { entityId: string; className
     if (!d) return
     const dy = d.y - clientY
     const height = tileRef.current?.offsetHeight ?? 160
-    const next = clampLevel(d.start + (dy / height) * 100)
+    const raw = d.start + (dy / (height * DIM_RANGE)) * 100
+    const next = clampLevel(raw)
+    // Pushed past either end: re-base here so reversing dims immediately
+    // instead of first travelling back over the overshoot.
+    if (raw >= 100 || raw <= 1) {
+      d.y = clientY
+      d.start = next
+    }
     if (next === d.level) return
     if ((next === 1 || next === 100) && d.level !== next) buzz(6)
     d.level = next
@@ -278,9 +289,10 @@ export function LightTile({ entityId, className }: { entityId: string; className
 
     const absX = Math.abs(clientX - d.x)
     const absY = Math.abs(clientY - d.y)
-    if (absX * absX + absY * absY < SCROLL_PRESS_THRESHOLD * SCROLL_PRESS_THRESHOLD) return false
+    if (absX * absX + absY * absY < DIM_START_PX * DIM_START_PX) return false
 
-    if (canDimRef.current && absY > absX) {
+    // Armed by a deliberate hold, so be forgiving about diagonal drags.
+    if (canDimRef.current && absY >= absX * 0.6) {
       beginDim(clientY, target)
       return true
     }
