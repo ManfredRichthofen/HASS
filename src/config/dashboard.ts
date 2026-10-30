@@ -298,12 +298,10 @@ export const entities = {
     /**
      * Live cameras for the Security page.
      * Stills use camera_proxy; live view uses HLS via hls.js (MJPEG fallback).
-     * Temporarily hidden — restore: [{ id: 'camera.doorbell', label: 'Doorbell' }]
      */
-    cameras: [] as readonly {
-      id: string
-      label: string
-    }[],
+    cameras: [
+      { id: 'camera.doorbell', label: 'Doorbell' },
+    ] as const,
   },
 
   /**
