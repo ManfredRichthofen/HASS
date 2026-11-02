@@ -592,7 +592,7 @@ export function useMusicQueue(
 
         if (!enabled) {
           throw new Error(
-            'Turn off Endless Mix from Music Assistant, or connect the Music Assistant API in Settings',
+            'Turn off Endless Mix in Music Assistant, or sign in from Settings',
           )
         }
 

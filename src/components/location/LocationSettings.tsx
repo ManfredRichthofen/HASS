@@ -12,13 +12,13 @@ export function LocationSettings() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <MapPin className="size-4 shrink-0 text-accent" aria-hidden />
-            <p className="text-sm font-semibold text-ink">Enable location based automations</p>
+            <p className="text-sm font-semibold text-ink">Home and away</p>
           </div>
           <p className="mt-1 text-xs text-ink-muted">
             {location.native
-              ? 'Reports this phone to its own Template device_tracker webhook in the background.'
-              : 'Reports this browser to its own Template device_tracker webhook while Casa is open.'}{' '}
-            Each person/device gets a separate tracker.
+              ? 'Uses this phone’s location so the house knows when you’re home or away, even with the app in the background.'
+              : 'Uses this browser’s location while Casa is open so the house knows when you’re home or away.'}{' '}
+            Each person uses their own device.
           </p>
           {location.error ? <p className="mt-2 text-xs text-danger">{location.error}</p> : null}
         </div>
@@ -42,31 +42,27 @@ export function LocationSettings() {
 
       <details className="mt-3 rounded-control border border-border-subtle bg-canvas/40 px-3 py-2">
         <summary className="cursor-pointer text-xs font-medium text-ink-muted">
-          Home Assistant setup for this device (one-time)
+          One-time setup
         </summary>
         <div className="mt-2 space-y-2 text-xs text-ink-muted">
           <p>
-            Every Casa user pastes <span className="text-ink">their</span> snippet below into Home
-            Assistant, then assigns{' '}
-            <code className="text-ink">{location.entityId ?? 'device_tracker.…'}</code> to their
-            Person. Webhook: <code className="text-ink">{location.webhookId || '…'}</code>
+            Paste the block below into Home Assistant, then assign this device to the right person.
           </p>
           {location.templateYaml ? (
             <pre className="overflow-x-auto rounded-control border border-border-subtle bg-canvas p-2 text-[0.7rem] leading-relaxed text-ink">
               {location.templateYaml}
             </pre>
           ) : (
-            <p>Connect this device first to generate its Template YAML.</p>
+            <p>Connect this device first to generate its setup block.</p>
           )}
           <p>
-            Docs:{' '}
             <a
               className="text-accent underline-offset-2 hover:underline"
               href="https://www.home-assistant.io/integrations/template/#device-tracker"
               target="_blank"
               rel="noreferrer"
             >
-              Template device tracker
+              How to add a person tracker
             </a>
           </p>
         </div>

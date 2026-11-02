@@ -43,14 +43,14 @@ function mapGeoError(error: GeolocationPositionError): {
     case error.PERMISSION_DENIED:
       return {
         code: 'denied',
-        message: 'Location permission denied in the browser',
+        message: 'Allow location for this device, then try again.',
       }
     case error.POSITION_UNAVAILABLE:
-      return { code: 'unavailable', message: 'Position unavailable' }
+      return { code: 'unavailable', message: 'Couldn’t find this device’s location' }
     case error.TIMEOUT:
-      return { code: 'timeout', message: 'Location request timed out' }
+      return { code: 'timeout', message: 'Finding this device took too long. Try again.' }
     default:
-      return { code: 'unknown', message: error.message || 'Location error' }
+      return { code: 'unknown', message: 'Couldn’t use this device’s location' }
   }
 }
 
@@ -318,7 +318,7 @@ export function useDeviceLocation() {
         }
         return {
           ok: false,
-          message: e instanceof Error ? e.message : 'Location error',
+          message: 'Couldn’t turn on home and away for this device',
         }
       }
     },

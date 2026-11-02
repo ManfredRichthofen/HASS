@@ -7,7 +7,6 @@ import { LocationSettings } from '#/components/location/LocationSettings'
 import { ThemePicker } from '#/components/settings/ThemePicker'
 import { Button } from '#/components/ui/button'
 import { UpdateSettings } from '#/components/update/UpdateSettings'
-import { haUrl } from '#/config/ha'
 import { cn } from '#/lib/cn'
 import { isTauri } from '#/lib/deviceLocation'
 import { m, staggerContainer } from '#/lib/motion'
@@ -56,13 +55,14 @@ function SettingsPage() {
                   <span
                     className={cn('size-2 rounded-pill', connected ? 'bg-success' : 'bg-danger')}
                   />
-                  {connected ? 'Connected' : 'Disconnected'}
+                  {connected ? 'Signed in' : 'Not signed in'}
                 </span>
               </div>
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-label shrink-0 pt-0.5">Home Assistant</span>
-                <span className="min-w-0 text-right text-sm break-all text-ink">{haUrl}</span>
-              </div>
+              <p className="text-xs text-ink-muted">
+                {connected
+                  ? 'This device is connected to the house.'
+                  : 'This device isn’t connected to the house.'}
+              </p>
               <Button variant="danger" className="w-full" onClick={() => logout()}>
                 Log out
               </Button>

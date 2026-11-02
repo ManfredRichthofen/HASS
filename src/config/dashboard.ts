@@ -77,7 +77,7 @@ export const areas: AreaConfig[] = [
         humidityId: 'sensor.mts300_humidity',
       },
     ],
-    media: ['media_player.living_room'],
+    media: ['media_player.living_room', 'media_player.living_room_tv'],
     sensors: [],
     occupancy: 'binary_sensor.inovelli_vzm32_sn_occupancy',
   },
@@ -109,8 +109,7 @@ export const areas: AreaConfig[] = [
         fanId: 'fan.bedroom_ceiling_fan',
       },
     ],
-    // HA area is Living Room; friendly name is Bedroom TV — keep it with Bedroom.
-    media: ['media_player.living_room_tv'],
+    media: [],
     sensors: [],
     climateReadings: [
       {
@@ -266,6 +265,8 @@ export const entities = {
   vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
   vacuumCleanGenius: 'select.x40_ultra_cleangenius',
   mediaAll: 'media_player.all',
+  /** Android TV: media player + its remote.* entity (d-pad / back / home). */
+  tv: { id: 'media_player.living_room_tv', remoteId: 'remote.living_room_tv', label: 'Bedroom TV' },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
   mediaPlayers: [
     { id: 'media_player.all', label: 'Everywhere' },

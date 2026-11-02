@@ -70,6 +70,8 @@ export function DoorbellPopup() {
   const motion = useBinarySensor(motionId)
   const cameraMeta = useCamera(cameraId)
   const [open, setOpen] = useState(false)
+  // Once the visitor starts browsing history, stop the ring auto-close timer.
+  const [browsing, setBrowsing] = useState(false)
 
   const frigateAttrs = frigateMetaFromCameraAttributes(
     cameraMeta.attributes as Record<string, unknown>,
@@ -87,10 +89,14 @@ export function DoorbellPopup() {
   useRisingEdgeOpen(motion, ring.isUnavailable && !motion.isUnavailable, () => setOpen(true))
 
   useEffect(() => {
-    if (!open) return
+    if (!open) setBrowsing(false)
+  }, [open])
+
+  useEffect(() => {
+    if (!open || browsing) return
     const timer = window.setTimeout(() => setOpen(false), AUTO_CLOSE_MS)
     return () => window.clearTimeout(timer)
-  }, [open])
+  }, [open, browsing])
 
   useEffect(() => {
     if (!open || cameraMeta.isUnavailable) return
@@ -112,8 +118,7 @@ export function DoorbellPopup() {
             <Bell className="size-4 text-accent" />
             Live view
           </span>
-          <code className="truncate text-[0.65rem] text-ink-faint">{cameraId}</code>
-          {cameraMeta.isUnavailable ? <span className="text-danger">unavailable</span> : null}
+          {cameraMeta.isUnavailable ? <span className="text-danger">Camera offline</span> : null}
         </div>
 
         {open ? (
@@ -128,16 +133,12 @@ export function DoorbellPopup() {
           </Suspense>
         ) : null}
 
-        <DoorbellEventViewer camera={frigateCamera} instanceId={frigateInstanceId} active={open} />
-
-        {open ? (
-          <p className="mt-2 text-[0.65rem] text-ink-faint">
-            Ring <code className="text-ink-muted">{ringId}</code>
-            {ring.isUnavailable ? ' (unavailable)' : ring.isOn ? ' (on)' : ' (off)'}
-            {' · '}
-            Events camera <code className="text-ink-muted">{frigateCamera}</code>
-          </p>
-        ) : null}
+        <DoorbellEventViewer
+          camera={frigateCamera}
+          instanceId={frigateInstanceId}
+          active={open}
+          onInteract={() => setBrowsing(true)}
+        />
       </DialogContent>
     </Dialog>
   )

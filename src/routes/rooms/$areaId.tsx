@@ -8,6 +8,7 @@ import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
+import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
 import { MediaCard } from '#/components/entities/MediaCard'
 import { Readings, SensorReading } from '#/components/entities/Readings'
 import { SensorChip } from '#/components/entities/SensorChip'
@@ -212,7 +213,7 @@ function RoomDetailPage() {
               <Section title="Music & TV">
                 <CardGrid>
                   {area.media.map((id) => (
-                    <MediaCard key={id} entityId={id} />
+                    id.endsWith('_tv') ? <TvRemoteCard key={id} entityId={id} remoteId={id.replace('media_player.', 'remote.')} /> : <MediaCard key={id} entityId={id} />
                   ))}
                 </CardGrid>
               </Section>

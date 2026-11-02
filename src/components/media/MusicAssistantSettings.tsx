@@ -105,11 +105,11 @@ export function MusicAssistantSettings() {
   async function signInWithHomeAssistant() {
     const nextUrl = url.trim().replace(/\/+$/, '')
     if (!nextUrl) {
-      notify('Missing URL', 'Enter your Music Assistant server URL first')
+      notify('Missing address', 'Enter your music server address first')
       return
     }
     if (!haConnected) {
-      notify('Home Assistant offline', 'Connect to Home Assistant before signing in')
+      notify('Not connected', 'Connect to the house before signing in')
       return
     }
 
@@ -142,7 +142,7 @@ export function MusicAssistantSettings() {
     const nextUrl = url.trim().replace(/\/+$/, '')
     const nextToken = token.trim()
     if (!nextUrl || !nextToken) {
-      notify('Missing details', 'URL and access token are required')
+      notify('Missing details', 'A server address and sign-in key are required')
       return
     }
     setSaving(true)
@@ -153,9 +153,9 @@ export function MusicAssistantSettings() {
       setAuthMethod('token')
       setEnsureHint(null)
       await queryClient.invalidateQueries({ queryKey: ['music-queue'] })
-      notify('Connected', 'Music Assistant API token saved')
+      notify('Connected', 'Music Assistant sign-in saved')
     } catch (e) {
-      notify('Connection failed', e instanceof Error ? e.message : 'Check URL and token')
+      notify('Connection failed', e instanceof Error ? e.message : 'Check the address and sign-in key')
     } finally {
       setSaving(false)
     }
@@ -167,23 +167,22 @@ export function MusicAssistantSettings() {
     setConnected(false)
     setAuthMethod(null)
     void queryClient.invalidateQueries({ queryKey: ['music-queue'] })
-    notify('Disconnected', 'Music Assistant credentials cleared')
+    notify('Disconnected', 'Signed out of Music Assistant')
   }
 
   const statusLabel =
     ensuring || discovering
-      ? 'Connecting via Home Assistant…'
+      ? 'Connecting…'
       : connected
         ? massAuthLabel(authMethod)
-        : 'Using Home Assistant get_queue only'
+        : 'Basic playback'
 
   return (
     <div className="space-y-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4">
       <div>
         <p className="text-sm font-semibold text-ink">Music Assistant</p>
         <p className="mt-1 text-xs text-ink-muted">
-          Queue list and reorder use the Music Assistant Queue Actions integration when installed.
-          Direct Music Assistant API sign-in is only a fallback.
+          Sign in so you can see and reorder the queue. Casa tries this automatically.
         </p>
       </div>
 
@@ -206,14 +205,14 @@ export function MusicAssistantSettings() {
       {ensureHint && !connected ? <p className="text-xs text-ink-muted">{ensureHint}</p> : null}
 
       <div className="block space-y-1.5">
-        <p className="text-xs font-medium text-ink-muted">Server URL</p>
+        <p className="text-xs font-medium text-ink-muted">Server address</p>
         <Input
           value={url}
           onValueChange={setUrl}
-          placeholder="http://192.168.1.10:8095"
+          placeholder="Address of your music server"
           autoComplete="off"
           spellCheck={false}
-          aria-label="Music Assistant server URL"
+          aria-label="Music Assistant server address"
         />
       </div>
 
@@ -240,8 +239,7 @@ export function MusicAssistantSettings() {
 
       {!haProviderAvailable ? (
         <p className="text-xs text-ink-muted">
-          This Music Assistant server does not expose Home Assistant login. Use a long-lived token
-          below, or enable the Home Assistant provider in MA.
+          This music server can’t use your house sign-in. Use the sign-in key below instead.
         </p>
       ) : null}
 
@@ -251,21 +249,21 @@ export function MusicAssistantSettings() {
         onClick={() => setShowAdvanced((open) => !open)}
       >
         <ChevronDown className={showAdvanced ? 'size-3.5 rotate-180' : 'size-3.5'} />
-        Advanced: paste access token
+        Advanced: paste a sign-in key
       </button>
 
       {showAdvanced ? (
         <div className="space-y-3 border-t border-border-subtle pt-3">
           <div className="block space-y-1.5">
-            <p className="text-xs font-medium text-ink-muted">Access token</p>
+            <p className="text-xs font-medium text-ink-muted">Sign-in key</p>
             <Input
               type="password"
               value={token}
               onValueChange={setToken}
-              placeholder="Paste long-lived token"
+              placeholder="Paste the key from Music Assistant"
               autoComplete="off"
               spellCheck={false}
-              aria-label="Music Assistant access token"
+              aria-label="Music Assistant sign-in key"
             />
           </div>
           <Button
@@ -275,7 +273,7 @@ export function MusicAssistantSettings() {
             onClick={() => void saveManualToken()}
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-            Save token
+            Save key
           </Button>
         </div>
       ) : null}

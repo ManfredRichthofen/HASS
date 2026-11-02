@@ -108,7 +108,7 @@ export function CameraStream({
             entity_id: entityId,
           }),
           8_000,
-          'HLS start timed out',
+          'Live video didn’t start',
         )
         const path = response?.url
         if (!path || cancelled) return
@@ -173,7 +173,7 @@ export function CameraStream({
     void loadHls().then((Hls) => {
       if (cancelled) return
       if (!Hls.isSupported()) {
-        fallBack('HLS not supported in this browser')
+        fallBack('Live video isn’t available in this browser')
         return
       }
 
@@ -220,8 +220,7 @@ export function CameraStream({
         )}
       >
         <VideoOff className="size-7 opacity-40" />
-        <p className="text-xs">Camera unavailable</p>
-        <p className="max-w-[16rem] truncate px-3 text-[0.65rem] opacity-70">{entityId}</p>
+        <p className="text-xs">Camera offline</p>
       </div>
     )
   }
@@ -236,7 +235,6 @@ export function CameraStream({
       >
         <VideoOff className="size-7 opacity-40" />
         <p className="text-xs">{error}</p>
-        <p className="max-w-[16rem] truncate text-[0.65rem] opacity-70">{entityId}</p>
       </div>
     )
   }
@@ -267,7 +265,7 @@ export function CameraStream({
 
       {error && (mode === 'still' || mode === 'mjpeg') ? (
         <p className="absolute inset-x-0 bottom-0 bg-canvas/80 px-3 py-1.5 text-center text-[0.65rem] text-ink-muted">
-          {error} — showing {mode === 'still' ? 'still' : 'MJPEG'}
+          {error}. Showing the latest photo.
         </p>
       ) : null}
     </div>

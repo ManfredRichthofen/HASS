@@ -60,7 +60,7 @@ const fetchLatestRelease = async (): Promise<GithubRelease | null> => {
   // /releases/latest 404s until a non-draft release is published.
   if (res.status === 404) return null
   if (!res.ok) {
-    throw new Error(`GitHub release check failed (${res.status})`)
+    throw new Error('Couldn’t check for updates')
   }
   return (await res.json()) as GithubRelease
 }
@@ -141,7 +141,7 @@ const checkAndroidGithubRelease = async (): Promise<UpdateCheckResult> => {
   if (!apkUrl) {
     return {
       status: 'error',
-      message: `Version ${remote} is on GitHub but the APK asset is not ready yet. Try again in a minute.`,
+      message: 'The new version isn’t ready to install yet. Try again in a minute.',
     }
   }
 

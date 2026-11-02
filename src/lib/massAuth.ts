@@ -105,14 +105,14 @@ export async function ensureMassFromHomeAssistant(
   } catch {
     return {
       status: 'unavailable',
-      reason: 'Could not read the Music Assistant integration from Home Assistant',
+      reason: 'Couldn’t check whether Music Assistant is set up',
     }
   }
 
   if (!entries?.length) {
     return {
       status: 'unavailable',
-      reason: 'Music Assistant is not set up in Home Assistant',
+      reason: 'Music Assistant isn’t set up yet',
     }
   }
 
@@ -125,7 +125,7 @@ export async function ensureMassFromHomeAssistant(
   if (!token) {
     return {
       status: 'unavailable',
-      reason: 'Home Assistant has Music Assistant but did not expose an API token to this app',
+      reason: 'Music Assistant is installed, but this app can’t sign in on its own',
     }
   }
 
@@ -164,20 +164,17 @@ export async function ensureMassFromHomeAssistant(
 
   return {
     status: 'unavailable',
-    reason: 'Found Music Assistant in Home Assistant, but could not reach its API from this device',
+    reason: 'Music Assistant is installed, but this device can’t reach it',
   }
 }
 
 export function massAuthLabel(method?: MassConfig['authMethod'] | null) {
   switch (method) {
     case 'ha_integration':
-      return 'Using Home Assistant integration'
     case 'ha_oauth':
-      return 'Signed in with Home Assistant'
     case 'env':
-      return 'Configured via environment'
     case 'token':
-      return 'Connected with access token'
+      return 'Connected'
     default:
       return isMassConfigured() ? 'Connected' : 'Not connected'
   }

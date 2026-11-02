@@ -1,8 +1,12 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Music2, Pause, Play } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMediaPlayer } from 'hass-react'
+import { Music2, Pause, Play, Tv } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
 import { MediaArt } from '#/components/media/MediaArt'
+import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
+import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
 import { useActiveMedia } from '#/hooks/useActiveMedia'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
@@ -17,18 +21,26 @@ import { playerArtSources } from '#/lib/musicAssistant'
 export function NowPlayingBar() {
   const media = useActiveMedia()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const { value: isPlaying, commit } = useOptimisticValue(media.isPlaying)
 
-  const visible = media.isActive && !pathname.startsWith('/media')
+  const tv = useMediaPlayer(entities.tv.id)
+  const [remoteOpen, setRemoteOpen] = useState(false)
+  // TV wins the bar unless music is actively playing; tapping it opens the remote.
+  const tvMode = (tv.isPlaying || tv.isPaused) && !media.isPlaying
+  const shown = tvMode ? tv : media.player
+  const { value: shownPlaying, commit: commitShown } = useOptimisticValue(
+    tvMode ? tv.isPlaying : media.isPlaying,
+  )
+
+  const visible = tvMode || (media.isActive && !pathname.startsWith('/media'))
 
   const toggle = () => {
-    const next = !isPlaying
-    commit(next, async () => {
+    const next = !shownPlaying
+    commitShown(next, async () => {
       try {
-        if (isPlaying) await media.player.pause()
-        else await media.player.play()
+        if (shownPlaying) await shown.pause()
+        else await shown.play()
       } catch (e) {
-        notify('Music failed', e instanceof Error ? e.message : 'Error')
+        notify(tvMode ? 'TV failed' : 'Music failed', e instanceof Error ? e.message : 'Error')
         throw e
       }
     })
@@ -38,14 +50,18 @@ export function NowPlayingBar() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: artKey is the by-value key
   const artSources = useMemo(() => (artKey ? artKey.split('|') : []), [artKey])
 
-  const title = media.mediaTitle ?? 'Playing'
-  const subtitle =
-    [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
+  const title = tvMode
+    ? (tv.mediaTitle ?? tv.appName ?? 'Playing')
+    : (media.mediaTitle ?? 'Playing')
+  const subtitle = tvMode
+    ? [entities.tv.label, tv.mediaTitle ? tv.appName : null].filter(Boolean).join(' · ')
+    : [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
   const duration = media.player.attributes.media_duration as number | undefined
   const position = media.player.attributes.media_position as number | undefined
   const progress = duration && position != null ? Math.min(100, (position / duration) * 100) : 0
 
   return (
+    <>
     <AnimatePresence initial={false}>
       {visible ? (
         <m.div
@@ -68,7 +84,25 @@ export function NowPlayingBar() {
                 'glass:rounded-pill',
               )}
             >
-              <Link to="/media" className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
+{tvMode ? (
+              <button
+                type="button"
+                onClick={() => setRemoteOpen(true)}
+                aria-label="Open TV remote"
+                className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span className="grid size-12 shrink-0 place-items-center rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink modern:rounded-pill glass:rounded-pill">
+                  <Tv className="size-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
+                  <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">
+                    {subtitle}
+                  </span>
+                </span>
+              </button>
+              ) : (
+                            <Link to="/media" className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
                 <MediaArt
                   sources={artSources}
                   label=""
@@ -86,15 +120,16 @@ export function NowPlayingBar() {
                   </span>
                 </span>
               </Link>
+              )}
               <m.button
                 type="button"
                 whileTap={tap.hard}
                 transition={snappy}
                 onClick={toggle}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
+                aria-label={shownPlaying ? 'Pause' : 'Play'}
                 className="grid size-12 shrink-0 place-items-center rounded-pill bg-accent text-on-accent modern:bg-on-accent modern:text-accent"
               >
-                {isPlaying ? (
+                {shownPlaying ? (
                   <Pause className="size-5" fill="currentColor" />
                 ) : (
                   <Play className="size-5" fill="currentColor" />
@@ -109,5 +144,11 @@ export function NowPlayingBar() {
         </m.div>
       ) : null}
     </AnimatePresence>
+      <Drawer open={remoteOpen && tvMode} onOpenChange={setRemoteOpen}>
+        <DrawerContent title={entities.tv.label}>
+          <TvRemoteCard bare entityId={entities.tv.id} remoteId={entities.tv.remoteId} />
+        </DrawerContent>
+      </Drawer>
+    </>
   )
 }

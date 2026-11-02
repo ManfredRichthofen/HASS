@@ -89,7 +89,7 @@ function ReconnectBanner({
           onClick={handleRetry}
           onKeyDown={handleKeyDown}
           tabIndex={0}
-          aria-label="Retry Home Assistant connection"
+          aria-label="Try connecting again"
           className="press touch-target shrink-0 rounded-pill bg-accent px-3 text-xs font-semibold text-on-accent"
         >
           Retry
@@ -115,11 +115,12 @@ function ConnectedShell({ children }: { children: ReactNode }) {
 
   const hasBeenConnected = Boolean(lastConnectedAt)
   const retrySeconds = typeof nextRetryIn === 'number' ? Math.ceil(nextRetryIn / 1000) : null
-  const reconnectDetail = error
-    ? error.message
-    : retrySeconds != null
-      ? `Retrying in ${retrySeconds}s…`
-      : undefined
+  const reconnectDetail =
+    retrySeconds != null
+      ? `Trying again in ${retrySeconds}s…`
+      : error
+        ? 'Check that you’re on the home network, then try again.'
+        : undefined
 
   // After a successful session, keep the shell mounted and reconnect quietly
   // in the background (phone wake / network blip) instead of a full-screen splash.
@@ -178,7 +179,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6 text-center">
         <p className="text-danger">
-          Set <code className="text-ink">VITE_HA_URL</code> in <code>.env</code>
+          This app isn’t connected to the house yet.
         </p>
       </div>
     )

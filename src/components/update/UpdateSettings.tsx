@@ -23,7 +23,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
         else if (next.status === 'available') {
           notify('Update available', `Version ${next.version}`)
         } else if (next.status === 'error') {
-          notify('Update check failed', next.message)
+          notify('Couldn’t check for updates', 'Try again in a minute.')
         }
       }
     } finally {
@@ -40,23 +40,23 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
 
   const statusLabel =
     result == null
-      ? '—'
+      ? 'Not checked yet'
       : result.status === 'upToDate'
         ? `Up to date (${result.version})`
         : result.status === 'available'
           ? `Update ${result.version} available`
           : result.status === 'error'
-            ? result.message
-            : 'Not supported'
+            ? 'Couldn’t check for updates'
+            : 'Updates aren’t available on this device'
 
   return (
     <div className="space-y-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-4">
       <div className="flex items-start gap-2">
         <RefreshCw className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">App updates</p>
+          <p className="text-sm font-semibold text-ink">Updates</p>
           <p className="mt-1 text-xs text-ink-muted">
-            Downloads and installs inside Casa. On Android you confirm the system install prompt.
+            Casa downloads the update. On Android, confirm the install when your phone asks.
           </p>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function UpdateSettings({ autoCheck = true }: { autoCheck?: boolean }) {
               void result
                 .install(setProgress)
                 .then(() => notify('Installing update…'))
-                .catch((e) => notify('Update failed', e instanceof Error ? e.message : String(e)))
+                .catch(() => notify('Update failed', 'Try again in a minute.'))
                 .finally(() => {
                   setBusy(false)
                   setDownloading(false)

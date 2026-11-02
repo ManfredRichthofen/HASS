@@ -160,3 +160,39 @@ export function formatEventRelative(unixSeconds: number, now = Date.now()) {
   if (diffSec < 86400) return `${Math.max(1, Math.round(diffSec / 3600))}h ago`
   return formatEventTime(unixSeconds)
 }
+
+/** Local calendar day for grouping / filtering, e.g. `2026-11-02`. */
+export function eventDayKey(unixSeconds: number) {
+  const d = new Date(unixSeconds * 1000)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+/** "Today", "Yesterday", else weekday (short) or full date. */
+export function dayLabel(key: string, style: 'short' | 'long' = 'short') {
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((today.getTime() - date.getTime()) / 86_400_000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return style === 'short'
+    ? date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })
+    : date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+export function formatEventClock(unixSeconds: number) {
+  return new Date(unixSeconds * 1000).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+/** Seconds the object was in view, or null while still tracking / unknown. */
+export function eventDuration(event: FrigateEvent) {
+  if (!event.end_time) return null
+  const secs = Math.round(event.end_time - event.start_time)
+  return secs > 0 ? secs : null
+}

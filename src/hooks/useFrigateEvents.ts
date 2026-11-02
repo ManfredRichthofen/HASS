@@ -131,7 +131,7 @@ export function useFrigateEvents({
       }
 
       if (emptyOk) return emptyOk
-      throw lastError ?? new Error('Frigate events unavailable')
+      throw lastError ?? new Error('Doorbell history isn’t available right now')
     },
   })
 
