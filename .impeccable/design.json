@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T00:00:00.000Z",
+  "title": "Design System: Casa",
+  "extensions": {
+    "colorMeta": {
+      "glass-ink": {
+        "role": "primary",
+        "displayName": "Midnight Ink",
+        "canonical": "#141a2e",
+        "tonalRamp": [
+          "#05060d",
+          "#0b0f1c",
+          "#141a2e",
+          "#2c3350",
+          "#4a526f",
+          "#7d84a0",
+          "#b3b8cb",
+          "#e4e6ef"
+        ]
+      },
+      "glass-on-light": {
+        "role": "secondary",
+        "displayName": "Window Amber (light)",
+        "canonical": "#8a5a10",
+        "tonalRamp": [
+          "#2a1a04",
+          "#4d3008",
+          "#6e4510",
+          "#8a5a10",
+          "#b07a28",
+          "#d4a053",
+          "#ebc98f",
+          "#f8e6c4"
+        ]
+      },
+      "night-on-light": {
+        "role": "secondary",
+        "displayName": "Window Amber (dark)",
+        "canonical": "#ffd59a",
+        "tonalRamp": [
+          "#4a2e08",
+          "#7a4f14",
+          "#b07a28",
+          "#e0a24a",
+          "#ffc879",
+          "#ffd59a",
+          "#ffe4bd",
+          "#fff3dc"
+        ]
+      },
+      "glass-base": {
+        "role": "neutral",
+        "displayName": "Glass Base",
+        "canonical": "#e4e5ec",
+        "tonalRamp": [
+          "#5d5f6b",
+          "#787a88",
+          "#9395a3",
+          "#adafbb",
+          "#c4c6d0",
+          "#d3d5de",
+          "#e4e5ec",
+          "#f3f3f7"
+        ]
+      },
+      "night-base": {
+        "role": "neutral",
+        "displayName": "Night Base",
+        "canonical": "#0c0f22",
+        "tonalRamp": [
+          "#04050e",
+          "#080a18",
+          "#0c0f22",
+          "#161a3a",
+          "#242a55",
+          "#3a417a",
+          "#5c64a3",
+          "#9aa0cc"
+        ]
+      },
+      "forest-base-dark": {
+        "role": "neutral",
+        "displayName": "Pine Night",
+        "canonical": "#0b1914",
+        "tonalRamp": [
+          "#040a08",
+          "#08130f",
+          "#0b1914",
+          "#12281f",
+          "#1d4033",
+          "#32644f",
+          "#5f927b",
+          "#a9cbb9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Sheet and page titles, room names."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, device and now-playing names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions, captions, status lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips, nav labels, segmented options, counts."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Glanceable readings: house counts, temperatures, large-screen page titles."
+      }
+    },
+    "shadows": [
+      {
+        "name": "pane-light",
+        "value": "inset 0 1px 0 #fff, 0 12px 32px -20px #1d224059",
+        "purpose": "Cards, tiles and rows on light glass."
+      },
+      {
+        "name": "pane-dark",
+        "value": "inset 0 1px 0 #ffffff40, 0 24px 48px -24px #04061a99",
+        "purpose": "Cards, tiles and rows on dark glass."
+      },
+      {
+        "name": "lit",
+        "value": "0 0 0 1px #ffffff66, 0 18px 48px -12px #ffc879a6",
+        "purpose": "Active tile glow; the only colored shadow."
+      },
+      {
+        "name": "sheet",
+        "value": "inset 0 1px 0 #ffffff33, 0 -24px 60px -24px #04061acc",
+        "purpose": "Bottom sheets, floating nav and now-playing bar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default easing for state transitions."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Press feedback."
+      },
+      {
+        "name": "duration-normal",
+        "value": "220ms",
+        "purpose": "Hover and color changes."
+      },
+      {
+        "name": "duration-slow",
+        "value": "300ms",
+        "purpose": "Sheets and theme changes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      },
+      {
+        "name": "2xl",
+        "value": "1536px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled pill for the main action; ink fill with inverse text.",
+      "html": "<button class=\"ds-btn-primary\">Turn on</button>",
+      "css": ".ds-btn-primary { height: 3rem; padding: 0 1.25rem; border: 0; border-radius: 9999px; background: #141a2e; color: #fff; font: 600 0.9375rem 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; transition: transform 150ms cubic-bezier(0.22,1,0.36,1), background-color 220ms; } .ds-btn-primary:hover { background: #000; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #141a2e; outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined pill for secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { height: 3rem; padding: 0 1.25rem; border: 1px solid #ffffffcc; border-radius: 9999px; background: transparent; color: #141a2e; font: 600 0.9375rem 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; transition: transform 150ms cubic-bezier(0.22,1,0.36,1), background-color 220ms; } .ds-btn-secondary:hover { background: #ffffffd9; } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #141a2e; outline-offset: 3px; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill filter with a count; selected inverts to the primary fill.",
+      "html": "<button class=\"ds-chip\">Person <span>12</span></button><button class=\"ds-chip ds-chip-on\">Car <span>3</span></button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 2.75rem; padding: 0 0.875rem; margin-right: 6px; border: 1px solid #ffffffcc; border-radius: 9999px; background: transparent; color: #454956; font: 600 0.9375rem 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; transition: background-color 220ms; } .ds-chip span { font-size: 0.75rem; font-variant-numeric: tabular-nums; color: #4a4e5c; } .ds-chip:hover { background: #ffffffd9; color: #141a2e; } .ds-chip-on { background: #141a2e; border-color: transparent; color: #fff; } .ds-chip-on span { color: #fff; opacity: 0.7; } .ds-chip:focus-visible { outline: 2px solid #141a2e; outline-offset: 3px; }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A frosted pane: translucent fill, hairline edge, soft shadow.",
+      "html": "<div class=\"ds-card\"><h3>Living Room</h3><p>3 lights on</p></div>",
+      "css": ".ds-card { padding: 1rem; border: 1px solid #ffffff99; border-radius: 1.5rem; background: #ffffff73; backdrop-filter: blur(14px); box-shadow: inset 0 1px 0 #fff, 0 12px 32px -20px #1d224059; color: #141a2e; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-card h3 { margin: 0; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.025em; } .ds-card p { margin: 4px 0 0; font-size: 0.9375rem; color: #454956; }"
+    },
+    {
+      "name": "Lit Tile",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Signature device tile: quiet pane when off, amber glow when on.",
+      "html": "<div class=\"ds-tile ds-tile-on\"><strong>Floor lamp</strong><span>On</span></div>",
+      "css": ".ds-tile { display: flex; flex-direction: column; gap: 2px; padding: 1rem; border-radius: 1.5rem; background: #ffffff73; color: #141a2e; box-shadow: inset 0 1px 0 #fff, 0 12px 32px -20px #1d224059; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-tile strong { font-weight: 600; } .ds-tile span { font-size: 0.8125rem; color: #454956; } .ds-tile-on { background: linear-gradient(135deg, #ffffff, #f8e6c4); box-shadow: inset 0 1px 0 #fff, 0 0 0 1px #fff, 0 18px 48px -10px #ffc770b3; } .ds-tile-on span { color: #8a5a10; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lit Window",
+    "overview": "Casa is a window onto the house. Panes of frosted glass float over a soft, slowly drifting field of light, and the home's controls sit on those panes. Anything that is on, playing or open carries the warm amber of a lit window; everything else stays cool, quiet and translucent. The screen is read at arm's length and across a room, so state is communicated by type size, one warm color and contrast, not by dense decoration.",
+    "keyCharacteristics": [
+      "Frosted translucent panes (blur 14px) over a fixed, living background; never opaque slabs.",
+      "One warm accent, the amber \"light\", marks active state; the ink color is the interactive fill.",
+      "Pills for actions and selection, large rounded rectangles for containers.",
+      "Large touch targets (44px minimum) and room-readable type.",
+      "One motion language of short springs and exponential ease-out; a reduced-motion preference silences it."
+    ],
+    "rules": [
+      {
+        "name": "The One Warm Voice Rule",
+        "body": "Amber means \"on\". It is never used for decoration, hover, or branding. If everything glows, nothing is on.",
+        "section": "colors"
+      },
+      {
+        "name": "The Alpha Surface Rule",
+        "body": "Surfaces are translucent colors over a background layer, never opaque fills. Read contrast against the worst point of the background, not the average.",
+        "section": "colors"
+      },
+      {
+        "name": "The Arm's Length Rule",
+        "body": "Anything a person acts on (names, times, state) is at least body size. Nothing is set below 0.8125rem (the Label size); dense secondary text uses Label, never a smaller literal size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Light-Not-Weight Rule",
+        "body": "Never stack hard or zero-blur shadows. Elevation is an inner highlight plus a soft downward spread, and an active glow is the only colored shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do let translucency do the work: panes over the background layer with a 14px blur.",
+      "Do use Window Amber only to indicate that something is on, playing or active.",
+      "Do keep every touch target at least 2.75rem, and primary actions pill-shaped.",
+      "Do use tabular numerals for times, counts and scores.",
+      "Do treat light and dark as peers: check contrast against the worst point of the background in both.",
+      "Do take timing, easing and springs from src/lib/motion.ts and the CSS motion tokens.",
+      "Do give reduced motion a quieter equivalent: a busy spinner becomes a slow fade, not a frozen icon.",
+      "Do keep the visible control and the hit area separate when an icon button must look small: the target stays 2.75rem."
+    ],
+    "donts": [
+      "Don't extend or reference Walnut or Modern in new work; they are legacy themes.",
+      "Don't put amber on decoration, hover states or branding.",
+      "Don't use opaque slabs, hard offset shadows, or zero-blur block shadows.",
+      "Don't hide state in color alone; pair it with a label, icon or text.",
+      "Don't let a horizontal scroller widen the page; contain it in a bounded row.",
+      "Don't nest cards inside cards; separate groups with spacing and headings instead.",
+      "Don't set text below 0.8125rem, or use a bounce or overshoot curve."
+    ]
+  }
+}

@@ -322,7 +322,7 @@ const QueueRow = memo(function QueueRow({
       )}
     >
       <div className="flex min-h-16 items-center gap-2 py-2">
-        <span className="w-5 shrink-0 text-center text-[11px] font-medium tabular-nums text-ink-faint">
+        <span className="w-6 shrink-0 text-center text-[0.8125rem] font-medium tabular-nums text-ink-faint">
           {position}
         </span>
         <button
@@ -349,7 +349,7 @@ const QueueRow = memo(function QueueRow({
           <Button
             size="icon"
             variant="ghost"
-            className="size-9 shrink-0"
+            className="size-11 shrink-0"
             disabled={disabled || rowBusy}
             aria-label="Queue item actions"
             aria-expanded={expanded}

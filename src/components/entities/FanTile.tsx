@@ -260,7 +260,7 @@ export function FanTile({
                 </div>
 
                 <div className="min-w-0 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-on-ink-muted">
+                  <div className="flex items-center justify-between text-[0.8125rem] text-on-ink-muted">
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
                     </span>

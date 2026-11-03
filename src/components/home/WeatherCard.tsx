@@ -66,14 +66,14 @@ export function WeatherCard() {
                   key={day.datetime}
                   className="flex flex-col items-center gap-0.5 rounded-control px-0.5 py-1 sm:gap-1 sm:px-1 sm:py-1.5"
                 >
-                  <span className="text-[10px] font-medium text-ink-muted">
+                  <span className="text-[0.8125rem] font-medium text-ink-muted">
                     {weekday(day.datetime)}
                   </span>
                   <DayIcon className="size-3.5 text-ink-muted sm:size-4" />
-                  <span className="text-[11px] font-semibold tabular-nums text-ink">
+                  <span className="text-[0.8125rem] font-semibold tabular-nums text-ink">
                     {Math.round(day.temperature)}°
                   </span>
-                  <span className="text-[10px] tabular-nums text-ink-faint">
+                  <span className="text-[0.8125rem] tabular-nums text-ink-faint">
                     {Math.round(day.templow ?? day.temperature)}°
                   </span>
                 </div>

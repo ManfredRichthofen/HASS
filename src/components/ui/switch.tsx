@@ -24,7 +24,7 @@ export function Switch({ className, ...props }: ComponentProps<typeof BaseSwitch
       <BaseSwitch.Thumb
         className={cn(
           'absolute top-1/2 left-1/2 -mt-[11px] -ml-[21px] size-[22px] rounded-pill bg-border-strong',
-          'transition-[transform,background-color] duration-[260ms] ease-spring',
+          'transition-[transform,background-color] duration-normal ease-out',
           'data-checked:translate-x-5 data-checked:bg-on-accent',
           'glass:bg-white glass:data-checked:bg-[#141a2e] forest:data-checked:bg-[#10241d]',
         )}

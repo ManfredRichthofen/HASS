@@ -45,6 +45,7 @@ export function VacuumMap({
         <img
           src={src}
           alt="Vacuum map"
+          loading="lazy"
           decoding="async"
           className="aspect-[4/3] w-full object-contain"
         />

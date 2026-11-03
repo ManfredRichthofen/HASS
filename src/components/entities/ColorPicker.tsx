@@ -42,7 +42,7 @@ export function ColorPicker({
         <span className="text-sm text-ink-muted">Color</span>
         <label
           className={cn(
-            'relative size-9 overflow-hidden rounded-pill border border-border shadow-inner',
+            'relative size-11 overflow-hidden rounded-pill border border-border shadow-inner',
             disabled && 'opacity-40',
           )}
           style={{ backgroundColor: toHex(current) }}

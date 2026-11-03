@@ -48,12 +48,15 @@ export function CameraStream({
   autoPlay = true,
   muted = true,
   controls = false,
+  pauseWhenHidden = true,
 }: {
   entityId: string
   className?: string
   autoPlay?: boolean
   muted?: boolean
   controls?: boolean
+  /** Close the stream while the player is scrolled out of view (saves battery and bandwidth). */
+  pauseWhenHidden?: boolean
 }) {
   const camera = useCamera(entityId)
   const { connection, config } = useHAConnection()
@@ -66,6 +69,23 @@ export function CameraStream({
 
   const base = httpBase(config?.url ?? haUrl)
   const stillUrl = camera.imageUrl
+  // The still's URL changes on every refreshImage() (cache-buster). Read it through a ref so
+  // a refresh doesn't tear down and restart a stream that is already negotiating.
+  const stillRef = useRef(stillUrl)
+  stillRef.current = stillUrl
+  const hasStill = Boolean(stillUrl)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [suspended, setSuspended] = useState(false)
+
+  useEffect(() => {
+    const node = rootRef.current
+    if (!pauseWhenHidden || !node || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setSuspended(!entry?.isIntersecting), {
+      threshold: 0.05,
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [pauseWhenHidden])
 
   useEffect(() => {
     if (camera.isUnavailable) {
@@ -92,9 +112,9 @@ export function CameraStream({
       setMode('mjpeg')
       setStreamUrl(mjpeg)
       setBooting(false)
-    } else if (stillUrl) {
+    } else if (stillRef.current) {
       setMode('still')
-      setStreamUrl(stillUrl)
+      setStreamUrl(stillRef.current)
       setBooting(false)
     }
 
@@ -120,7 +140,7 @@ export function CameraStream({
         setBooting(false)
       } catch {
         // Keep MJPEG/still — do not blank the view.
-        if (!cancelled && !mjpegRef.current && !stillUrl) {
+        if (!cancelled && !mjpegRef.current && !stillRef.current) {
           setError('Stream unavailable')
           setBooting(false)
         }
@@ -132,11 +152,11 @@ export function CameraStream({
     return () => {
       cancelled = true
     }
-  }, [base, camera.accessToken, camera.isUnavailable, connection, entityId, stillUrl])
+  }, [base, camera.accessToken, camera.isUnavailable, connection, entityId, hasStill])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || mode !== 'hls' || !streamUrl) return
+    if (!video || mode !== 'hls' || !streamUrl || suspended) return
 
     let cancelled = false
     let hls: { destroy: () => void } | null = null
@@ -150,9 +170,9 @@ export function CameraStream({
         setError(null)
         return
       }
-      if (stillUrl) {
+      if (stillRef.current) {
         setMode('still')
-        setStreamUrl(stillUrl)
+        setStreamUrl(stillRef.current)
         setError(message)
         return
       }
@@ -209,7 +229,7 @@ export function CameraStream({
       video.removeAttribute('src')
       video.load()
     }
-  }, [autoPlay, mode, stillUrl, streamUrl])
+  }, [autoPlay, mode, streamUrl, suspended])
 
   if (camera.isUnavailable) {
     return (
@@ -220,7 +240,7 @@ export function CameraStream({
         )}
       >
         <VideoOff className="size-7 opacity-40" />
-        <p className="text-xs">Camera offline</p>
+        <p className="text-[0.8125rem]">Camera offline</p>
       </div>
     )
   }
@@ -234,21 +254,24 @@ export function CameraStream({
         )}
       >
         <VideoOff className="size-7 opacity-40" />
-        <p className="text-xs">{error}</p>
+        <p className="text-[0.8125rem]">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className={cn('relative overflow-hidden rounded-card bg-canvas', className)}>
+    <div ref={rootRef} className={cn('relative overflow-hidden rounded-card bg-canvas', className)}>
       {booting && !streamUrl ? (
         <div className="absolute inset-0 z-10 grid place-items-center bg-canvas/80">
-          <Loader2 className="size-6 animate-spin text-ink-muted" />
+          <Loader2 role="status" aria-label="Loading live view" className="size-6 animate-spin text-ink-muted" />
         </div>
       ) : null}
 
       {mode === 'mjpeg' && streamUrl ? (
-        <img src={streamUrl} alt="Live camera" className="aspect-video w-full object-contain" />
+        <img
+          src={suspended ? undefined : streamUrl}
+          alt="Live camera"
+          className="aspect-video w-full object-contain" />
       ) : mode === 'still' && streamUrl ? (
         <img src={streamUrl} alt="Camera still" className="aspect-video w-full object-contain" />
       ) : (
@@ -264,8 +287,8 @@ export function CameraStream({
       )}
 
       {error && (mode === 'still' || mode === 'mjpeg') ? (
-        <p className="absolute inset-x-0 bottom-0 bg-canvas/80 px-3 py-1.5 text-center text-[0.65rem] text-ink-muted">
-          {error}. Showing the latest photo.
+        <p className="absolute inset-x-0 bottom-0 bg-canvas/80 px-3 py-1.5 text-center text-[0.8125rem] text-ink-muted">
+          {mode === 'still' ? `${error}. Showing the latest photo.` : error}
         </p>
       ) : null}
     </div>

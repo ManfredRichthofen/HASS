@@ -49,7 +49,7 @@ export function LocationSettings() {
             Paste the block below into Home Assistant, then assign this device to the right person.
           </p>
           {location.templateYaml ? (
-            <pre className="overflow-x-auto rounded-control border border-border-subtle bg-canvas p-2 text-[0.7rem] leading-relaxed text-ink">
+            <pre className="overflow-x-auto rounded-control border border-border-subtle bg-canvas p-2 text-[0.8125rem] leading-relaxed text-ink">
               {location.templateYaml}
             </pre>
           ) : (

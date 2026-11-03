@@ -142,7 +142,10 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
     setSelectedId(id)
     const next = filtered.find((e) => e.id === id)
     if (next && !next.has_clip) setMode('snapshot')
-    if (scroll) detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (scroll) {
+      const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      detailRef.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' })
+    }
   }
 
   const step = (dir: -1 | 1) => {
@@ -167,8 +170,14 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
     <div className="@container mt-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink">Activity</h3>
-        <span className="flex items-center gap-2 text-xs text-ink-muted tabular-nums">
-          {loading ? <Loader2 className="size-3.5 animate-spin text-ink-faint" /> : null}
+        <span className="flex items-center gap-2 text-[0.8125rem] text-ink-muted tabular-nums">
+          {loading ? (
+            <Loader2
+              role="status"
+              aria-label="Loading activity"
+              className="size-3.5 animate-spin text-ink-faint"
+            />
+          ) : null}
           {events.length > 0
             ? `${filtered.length} ${filtered.length === 1 ? 'event' : 'events'}${hasFilters ? ` of ${events.length}` : ''}`
             : null}
@@ -176,13 +185,13 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
       </div>
 
       {error ? (
-        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-xs text-danger">
+        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-[0.8125rem] text-danger">
           Couldn’t load doorbell activity. Try again in a moment.
         </p>
       ) : null}
 
       {!error && !loading && events.length === 0 ? (
-        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-xs text-ink-muted">
+        <p className="rounded-control border border-border-subtle bg-canvas px-3 py-2 text-[0.8125rem] text-ink-muted">
           No doorbell activity in the last 7 days.
         </p>
       ) : null}
@@ -258,7 +267,7 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
               {groups.map((group) => (
                 <section key={group.key} aria-label={dayLabel(group.key, 'long')}>
                   {day ? null : (
-                    <h4 className="mb-2 flex items-baseline justify-between text-xs font-semibold text-ink-muted">
+                    <h4 className="mb-2 flex items-baseline justify-between text-[0.8125rem] font-semibold text-ink-muted">
                       <span>{dayLabel(group.key, 'long')}</span>
                     </h4>
                   )}
@@ -296,7 +305,7 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
 function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
-      role="toolbar"
+      role="group"
       aria-label={label}
       className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]"
     >
@@ -333,7 +342,7 @@ function Chip({
       {Icon ? <Icon className="size-4" /> : null}
       {children}
       {count != null ? (
-        <span className={cn('text-xs tabular-nums', active ? 'opacity-70' : 'text-ink-faint')}>
+        <span className={cn('text-[0.8125rem] tabular-nums', active ? 'opacity-70' : 'text-ink-faint')}>
           {count}
         </span>
       ) : null}
@@ -381,7 +390,7 @@ function EventThumb({
       </div>
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <Icon className="size-3.5 shrink-0 text-ink-muted" />
-        <span className="truncate text-xs font-semibold text-ink tabular-nums">
+        <span className="truncate text-[0.8125rem] font-semibold text-ink tabular-nums">
           {formatEventClock(event.start_time)}
         </span>
       </div>
@@ -421,10 +430,13 @@ function EventDetail({
 
   return (
     <div className="overflow-hidden rounded-card border border-border-subtle bg-canvas">
+      <p className="sr-only" aria-live="polite">
+        {`${eventLabel(event)}, ${meta}, ${position} of ${total}`}
+      </p>
       <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold capitalize text-ink">{eventLabel(event)}</p>
-          <p className="truncate text-xs text-ink-muted tabular-nums">{meta}</p>
+          <p className="truncate text-[0.8125rem] text-ink-muted tabular-nums">{meta}</p>
         </div>
         <div className="flex shrink-0 gap-1 rounded-control border-ui border-border-subtle bg-surface p-0.5 shadow-card modern:border-transparent">
           <ModeChip
@@ -477,7 +489,7 @@ function EventDetail({
         <StepButton label="Newer event" disabled={!onPrev} onClick={onPrev}>
           <ChevronLeft className="size-5" />
         </StepButton>
-        <span className="text-xs text-ink-muted tabular-nums">
+        <span className="text-[0.8125rem] text-ink-muted tabular-nums">
           {position} of {total}
         </span>
         <StepButton label="Older event" disabled={!onNext} onClick={onNext}>
@@ -531,12 +543,12 @@ function ModeChip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex h-8 items-center gap-1 rounded-control px-2.5 text-xs font-medium transition-ui',
+        'inline-flex min-h-11 items-center gap-1.5 rounded-control px-3.5 text-[0.8125rem] font-semibold transition-ui',
         active ? 'bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
         disabled && 'pointer-events-none opacity-35',
       )}
     >
-      <Icon className="size-3.5" />
+      <Icon className="size-4" />
       {label}
     </button>
   )

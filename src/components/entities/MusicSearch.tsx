@@ -397,7 +397,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
               type="button"
               aria-label="Clear search"
               onClick={handleClear}
-              className="absolute top-1/2 right-1.5 grid size-9 -translate-y-1/2 place-items-center rounded-pill text-ink-faint transition-ui hover:bg-surface-hover hover:text-ink"
+              className="absolute top-1/2 right-0.5 grid size-11 -translate-y-1/2 place-items-center rounded-pill text-ink-faint transition-ui hover:bg-surface-hover hover:text-ink"
             >
               <X className="size-4" />
             </button>

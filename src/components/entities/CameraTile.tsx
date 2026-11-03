@@ -24,11 +24,23 @@ export function CameraTile({
 }) {
   const camera = useCamera(entityId)
   const [open, setOpen] = useState(false)
+  const [broken, setBroken] = useState(false)
   const name = label ?? entityName(entityId, camera.attributes.friendly_name)
   const unavailable = camera.isUnavailable
   const src = camera.imageUrl
   const refreshImage = camera.refreshImage
   const useCustomOpen = Boolean(onOpen)
+
+  // A tile image can die when its access token rotates. Show the placeholder, then retry
+  // with a fresh cache-buster instead of leaving a broken image on a security camera.
+  useEffect(() => {
+    if (!broken) return
+    const timer = window.setTimeout(() => {
+      void refreshImage().catch(() => undefined)
+      setBroken(false)
+    }, 15_000)
+    return () => window.clearTimeout(timer)
+  }, [broken, refreshImage])
 
   useEffect(() => {
     if (!open || useCustomOpen) return
@@ -56,12 +68,13 @@ export function CameraTile({
         )}
       >
         <div className="relative min-h-0 flex-1 overflow-hidden bg-canvas">
-          {src && !unavailable ? (
+          {src && !unavailable && !broken ? (
             <img
               src={src}
               alt={name}
               loading="lazy"
               decoding="async"
+              onError={() => setBroken(true)}
               className="absolute inset-0 size-full object-cover transition-ui group-hover:scale-[1.02]"
             />
           ) : (
