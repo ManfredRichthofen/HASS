@@ -22,6 +22,7 @@ import { notify } from '#/components/ui/toast'
 import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
+import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 import { m, staggerContainer } from '#/lib/motion'
 
@@ -122,7 +123,14 @@ function RoomDetailPage() {
           subtitle={<RoomSubtitle ids={roomLights} />}
           backTo="/rooms"
           backLabel="Rooms"
-          backClassName="xl:hidden"
+          backClassName="min-[1200px]:hidden"
+          action={
+            roomLights.length > 0 ? (
+              <div className="hidden @xl:block">
+                <RoomLightsButton ids={roomLights} name={area.name} />
+              </div>
+            ) : null
+          }
         >
           {firstReading || area.sensors.length > 0 ? (
             <Readings className="mt-2">
@@ -138,7 +146,7 @@ function RoomDetailPage() {
             </Readings>
           ) : null}
           {roomLights.length > 0 ? (
-            <div className="mt-1 flex flex-wrap gap-2.5">
+            <div className="mt-1 flex flex-wrap gap-2.5 @xl:hidden">
               <RoomLightsButton ids={roomLights} name={area.name} />
             </div>
           ) : null}
@@ -150,9 +158,16 @@ function RoomDetailPage() {
           </p>
         ) : null}
 
-        <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-8">
-          <div className="grid min-w-0 gap-section">
-            {standaloneLights.length > 0 ? (
+        {/* Lights lead on the left, everything else beside them. With no standalone lights
+            (a ceiling fan-light only) the rest uses the full width. */}
+        <div
+          className={cn(
+            'grid items-start gap-section',
+            standaloneLights.length > 0 && '@xl:grid-cols-2 @xl:gap-8',
+          )}
+        >
+          {standaloneLights.length > 0 ? (
+            <div className="grid min-w-0 gap-section">
               <Section title="Lights">
                 <EntityGrid>
                   {standaloneLights.map((id) => (
@@ -160,8 +175,9 @@ function RoomDetailPage() {
                   ))}
                 </EntityGrid>
               </Section>
-            ) : null}
-
+            </div>
+          ) : null}
+          <div className="grid min-w-0 gap-section">
             {hasFans ? (
               <Section
                 title={
@@ -195,8 +211,6 @@ function RoomDetailPage() {
                 </div>
               </Section>
             ) : null}
-          </div>
-          <div className="grid min-w-0 gap-section">
             {extraReadings.length > 0 ? (
               <Section title="Climate">
                 <div className="@container">

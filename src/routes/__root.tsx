@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { AppProviders } from '#/components/AppProviders'
 import { AppShell } from '#/components/layout/AppShell'
 import { PwaRegister } from '#/components/PwaRegister'
+import { perfBootScript } from '#/lib/perf'
 import { defaultTheme, themeBootScript, themes } from '#/lib/theme'
 
 import appCss from '../styles.css?url'
@@ -52,7 +53,7 @@ export const Route = createRootRoute({
       },
       { rel: 'stylesheet', href: fontCss },
     ],
-    scripts: [{ children: themeBootScript }],
+    scripts: [{ children: themeBootScript }, { children: perfBootScript }],
   }),
   component: AppShell,
   shellComponent: RootDocument,

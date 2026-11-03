@@ -44,7 +44,8 @@ import {
   playerArtSources,
 } from '#/lib/musicAssistant'
 
-const ROW_PAGE = 50
+/** Matches QUEUE_PAGE_SIZE in useMusicQueue: each "show more" reveals one fetched page. */
+const ROW_PAGE = 30
 
 type Player = ReturnType<typeof useMusicQueue>['player']
 

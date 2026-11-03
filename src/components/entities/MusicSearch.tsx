@@ -37,6 +37,38 @@ const MIN_TYPED_LENGTH = 2
 const RECENT_KEY = 'music-recent-searches'
 const RECENT_LIMIT = 8
 
+const RESULTS_KEY = 'music-search-results'
+const RESULTS_KEPT = 6
+const RESULTS_STALE_MS = 5 * 60_000
+
+type StoredResults = Record<string, { at: number; items: MediaSearchItem[] }>
+
+const resultsKey = (target: string, query: string) => `${target}|${query.toLowerCase()}`
+
+const readStoredResults = (): StoredResults => {
+  if (typeof localStorage === 'undefined') return {}
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RESULTS_KEY) ?? '{}') as unknown
+    return parsed && typeof parsed === 'object' ? (parsed as StoredResults) : {}
+  } catch {
+    return {}
+  }
+}
+
+/** Keep the last few searches' results so a repeat search paints instantly, even after a restart. */
+const writeStoredResults = (key: string, items: MediaSearchItem[]) => {
+  if (typeof localStorage === 'undefined') return
+  try {
+    const next = { ...readStoredResults(), [key]: { at: Date.now(), items } }
+    const kept = Object.entries(next)
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, RESULTS_KEPT)
+    localStorage.setItem(RESULTS_KEY, JSON.stringify(Object.fromEntries(kept)))
+  } catch {
+    /* storage full or unavailable */
+  }
+}
+
 /** Last query, so reopening the Search sheet shows the same (cached) results. */
 let lastQuery = ''
 
@@ -232,9 +264,12 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   const searchQuery = useQuery({
     queryKey: ['music-search', target, activeQuery],
     enabled: activeQuery.length > 0,
-    staleTime: 5 * 60_000,
+    staleTime: RESULTS_STALE_MS,
     gcTime: 10 * 60_000,
     retry: false,
+    // A saved copy shows at once; once older than staleTime it refreshes in the background.
+    initialData: () => readStoredResults()[resultsKey(target, activeQuery)]?.items,
+    initialDataUpdatedAt: () => readStoredResults()[resultsKey(target, activeQuery)]?.at,
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<MediaSearchItem[]> => {
       // Music Assistant's own search returns artists and albums for each result.
@@ -245,10 +280,10 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
             name: activeQuery,
             limit: 20,
           })
-          const items = parseMassSearchResults(response)
-          if (items.length > 0) return items
+          // A successful answer is final, even when empty. Only a failure falls back.
+          return parseMassSearchResults(response)
         } catch {
-          /* fall back to the media player search */
+          /* Music Assistant search failed: fall back to the media player search */
         }
       }
       const response = await callServiceWithResponse('media_player', 'search_media', {
@@ -270,6 +305,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   // Remember queries that found something.
   useEffect(() => {
     if (!activeQuery || searchQuery.isPlaceholderData || !searchQuery.data?.length) return
+    writeStoredResults(resultsKey(target, activeQuery), searchQuery.data)
     setRecentSearches((prev) => {
       const next = [
         activeQuery,
@@ -278,7 +314,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       writeRecentSearches(next)
       return next
     })
-  }, [activeQuery, searchQuery.data, searchQuery.isPlaceholderData])
+  }, [activeQuery, searchQuery.data, searchQuery.isPlaceholderData, target])
 
   const groups = useMemo(() => {
     const visible = filter === 'all' ? results : results.filter((i) => i.media_class === filter)

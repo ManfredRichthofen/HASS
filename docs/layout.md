@@ -21,9 +21,9 @@ Tailwind v4 defaults, no overrides.
 | `sm` | ≥640px | Wider page padding; scene strip stops edge-bleed |
 | `md` | ≥768px | **Phone → tablet nav switch**: rail appears, bottom nav hides |
 | `lg` | ≥1024px | Rail becomes the labelled sidebar |
-| `xl` | ≥1280px | **Rooms list-detail only** (viewport + `matchMedia`) |
+| `min-[1200px]` | ≥1200px | **Rooms list-detail only** (viewport + `matchMedia`, `ROOMS_SPLIT_QUERY` in `src/lib/layout.ts`). 1200 rather than 1280 leaves margin for 1280px tablets |
 
-Rule of thumb: shell chrome uses viewport prefixes; page grids use container prefixes. The Rooms master list is the one exception and uses viewport `xl:`.
+Rule of thumb: shell chrome uses viewport prefixes; page grids use container prefixes. The Rooms master list is the one exception and uses the viewport `min-[1200px]:` tier.
 
 ## Shell
 
@@ -51,14 +51,14 @@ Content max width is `80rem`. Page horizontal padding steps `px-page` → `sm:px
 | `--spacing-page` | `1rem` |
 | `--spacing-section` | `1.75rem` (`2.25rem` from `md`) |
 | `--spacing-touch` | `2.75rem` (minimum target) |
-| Rooms aside | `18rem` |
+| Rooms aside | `16rem` |
 
 ## Routes
 
 | Route | Phone / narrow | Wide content |
 |-------|----------------|--------------|
 | **Home** `/` | Stacked: summary, scenes (edge-bleed strip), favourites, around the house | `@xl` two columns `1.35fr \| 1fr`; scenes become a 2×2 grid |
-| **Rooms** `/rooms`, `/rooms/$areaId` | Room card grid `2 → @lg:3 → @3xl:4`; a room opens as a full page with a back control | Viewport `xl+`: sticky `18rem` room list beside the detail; the index redirects to the first room. Room detail is two columns at `@xl` (lights and fans, then climate, media and TV, appliances, irrigation) |
+| **Rooms** `/rooms`, `/rooms/$areaId` | Room card grid `2 → @lg:3 → @3xl:4`; a room opens as a full page with a back control | Viewport `1200px+`: sticky `16rem` room list beside the detail; the index redirects to the first room. Room detail is two columns at `@xl` (lights and fans, then climate, media and TV, appliances, irrigation) |
 | **Climate** `/climate` | Stacked: thermostat, outside, room readings (2 columns), fans | `@xl`: thermostat beside outside; readings 3 columns |
 | **Security** `/security` | Stacked: cameras, front door, house mode, water and presence | `@xl` 2×2 mosaic; cameras capped at 2 columns |
 | **Music** `/media` | Fixed-height column: compact player and speaker chips, then Up next / Search fills the rest | `@xl` side by side `1fr \| 1.1fr`; left rail scrolls when short |
@@ -76,7 +76,7 @@ Content max width is `80rem`. Page horizontal padding steps `px-page` → `sm:px
 
 ## Don't
 
-- Drive general content columns with viewport `xl:`; use `@xl:` so they work beside the sidebar. The Rooms list-detail is the only exception, and it must pair viewport `xl` with `useMediaQuery('(min-width: 1280px)')` so the list and auto-navigation stay in sync.
+- Drive general content columns with viewport `xl:`; use `@xl:` so they work beside the sidebar. The Rooms list-detail is the only exception, and it must pair the viewport `min-[1200px]:` classes with `useMediaQuery(ROOMS_SPLIT_QUERY)` so the list and auto-navigation stay in sync.
 - Add secondary destinations to the bottom nav without a deliberate nav redesign.
 - Invent a third desktop shell; extend the tablet tiers instead.
 - Let fixed widths, negative margins or wide children push the viewport sideways.

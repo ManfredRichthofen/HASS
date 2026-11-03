@@ -201,7 +201,14 @@ export function TvRemoteCard({
         </Button>
       </div>
 
-      <div className={cn('mt-6 transition-ui', dead && 'pointer-events-none opacity-40')}>
+      {/* In a room the remote appears once the TV is on; the sheet (bare) always shows it. */}
+      <div
+        className={cn(
+          'mt-6 transition-ui',
+          dead && 'pointer-events-none opacity-40',
+          !bare && dead && 'hidden',
+        )}
+      >
         {/* D-pad */}
         {remoteId ? (
           <div className="mx-auto grid w-fit grid-cols-3 place-items-center gap-1.5 rounded-[2.25rem] bg-canvas p-2">

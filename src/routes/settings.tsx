@@ -4,6 +4,7 @@ import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { LocationSettings } from '#/components/location/LocationSettings'
+import { PerformancePicker } from '#/components/settings/PerformancePicker'
 import { ThemePicker } from '#/components/settings/ThemePicker'
 import { Button } from '#/components/ui/button'
 import { UpdateSettings } from '#/components/update/UpdateSettings'
@@ -29,6 +30,10 @@ function SettingsPage() {
 
         <Section title="Theme">
           <ThemePicker />
+        </Section>
+
+        <Section title="Performance">
+          <PerformancePicker />
         </Section>
 
         <div className="grid items-start gap-section @2xl:grid-cols-2 @2xl:gap-8">

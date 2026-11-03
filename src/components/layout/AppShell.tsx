@@ -11,6 +11,7 @@ import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
 import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
 import { LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+import { usePerf } from '#/lib/perf'
 
 const loadMotionFeatures = () => import('#/lib/motionFeatures').then((mod) => mod.default)
 
@@ -209,14 +210,15 @@ function AnimatedOutlet() {
 }
 
 export function AppShell() {
+  const { smooth } = usePerf()
   return (
     <ToastProvider>
-      <MotionConfig reducedMotion="user">
+      <MotionConfig reducedMotion={smooth ? 'always' : 'user'}>
         <LazyMotion features={loadMotionFeatures} strict>
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
-              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1rem+var(--now-playing-space))] pt-3 transition-[padding-bottom] duration-slow ease-out sm:px-5 md:px-6 md:pb-[calc(2rem+var(--now-playing-space))] md:pt-6 lg:px-8">
+              <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1rem+var(--now-playing-space))] pt-3 transition-[padding-bottom] duration-slow ease-out sm:px-5 md:px-6 md:pb-[calc(2rem+var(--now-playing-space))] md:pt-4 lg:px-8">
                 <AnimatedOutlet />
               </main>
               <NowPlayingBar />

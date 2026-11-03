@@ -7,15 +7,16 @@ import { RoomCard } from '#/components/rooms/RoomCard'
 import { primaryAreas } from '#/config/dashboard'
 import { useMediaQuery } from '#/hooks/useMediaQuery'
 import { m, staggerContainer } from '#/lib/motion'
+import { ROOMS_SPLIT_QUERY } from '#/lib/layout'
 
 export const Route = createFileRoute('/rooms/')({ component: RoomsPage })
 
 function RoomsPage() {
   const navigate = useNavigate()
-  const wide = useMediaQuery('(min-width: 1280px)')
+  const wide = useMediaQuery(ROOMS_SPLIT_QUERY)
   const lightsOn = useLightsOnCount()
 
-  // Desktop (xl) shows the room list in the layout route, so open a room by default.
+  // The landscape-tablet split shows the room list in the layout route, so open a room by default.
   useEffect(() => {
     if (wide && primaryAreas[0]) {
       void navigate({ to: '/rooms/$areaId', params: { areaId: primaryAreas[0].id }, replace: true })

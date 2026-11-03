@@ -677,7 +677,14 @@ svg.lucide {
 
 /* ── Fluid Glass extras ── */
 
-/* Frosted glass behind every translucent surface (Glass and Forest). */
+/* Frosted glass behind translucent surfaces (Glass and Forest).
+   Cost is one extra GPU pass per blurred element, scaling with radius and area, so:
+   - a pane inside another pane is not blurred again (its backdrop is already frosted), and
+   - the radius stays small; at 10px the frost reads the same over a busy background. */
+:root {
+  --glass-blur: 10px;
+}
+
 :is([data-theme="glass"], [data-theme="forest"])
 :is(
   .bg-surface,
@@ -687,8 +694,29 @@ svg.lucide {
   .card,
   .bg-canvas-elevated\/92
 ) {
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+:is([data-theme="glass"], [data-theme="forest"])
+:is(
+  .bg-surface,
+  .bg-surface-hover,
+  .bg-canvas-elevated,
+  .bg-canvas,
+  .card,
+  .bg-canvas-elevated\/92
+)
+:is(
+  .bg-surface,
+  .bg-surface-hover,
+  .bg-canvas-elevated,
+  .bg-canvas,
+  .card,
+  .bg-canvas-elevated\/92
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 [data-theme="glass"] body {
@@ -757,4 +785,35 @@ svg.lucide {
   [data-theme="glass"] body::before {
     animation: none;
   }
+}
+
+/* ── Smooth performance profile (Settings → Performance, or Auto on weaker devices) ──
+   Drops what a low-powered GPU pays for: backdrop blur, the drifting background and large
+   soft shadows. Surfaces that were translucent glass become mostly opaque so text stays legible. */
+html[data-perf="smooth"] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-perf="smooth"][data-theme="glass"] body::before {
+  animation: none;
+  will-change: auto;
+}
+
+html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"]) {
+  --c-canvas: color-mix(in srgb, var(--c-base) 88%, transparent);
+  --c-canvas-elevated: color-mix(in srgb, var(--c-base) 95%, transparent);
+  --s-card: 0 6px 14px -10px #00000052;
+  --s-on: 0 0 0 1px #ffffff55, 0 6px 18px -6px #ffc879a6;
+  --s-sheet: 0 -8px 20px -12px #00000066;
+}
+
+html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"])[data-mode="light"] {
+  --c-surface: color-mix(in srgb, white 62%, var(--c-base));
+  --c-surface-hover: color-mix(in srgb, white 88%, var(--c-base));
+}
+
+html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"])[data-mode="dark"] {
+  --c-surface: color-mix(in srgb, white 9%, var(--c-base));
+  --c-surface-hover: color-mix(in srgb, white 16%, var(--c-base));
 }

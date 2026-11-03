@@ -1,7 +1,7 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHAConnection, useMediaPlayer, useServiceCall } from 'hass-react'
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { discoverMassUrl, ensureMassFromHomeAssistant } from '#/lib/massAuth'
+import { ensureMassFromHomeAssistant } from '#/lib/massAuth'
 import {
   clearQueue,
   deleteQueueItem,
@@ -74,7 +74,53 @@ export type MusicQueueState = {
   repeatMode: string
 }
 
-const QUEUE_PAGE_SIZE = 200
+/** First page is small: the server cost grows with every item (artwork + metadata each). */
+const QUEUE_PAGE_SIZE = 30
+const QUEUE_SNAPSHOT_PREFIX = 'music-queue-snapshot:'
+const QUEUE_SNAPSHOT_ITEMS = 12
+const QUEUE_SNAPSHOT_MAX_CHARS = 150_000
+// Fields that bloat a queue item and are never drawn from a snapshot.
+const SNAPSHOT_DROP_KEYS = new Set([
+  'local_image_encoded',
+  'provider_mappings',
+  'external_ids',
+  'description',
+  'lyrics',
+  'review',
+])
+
+type QueueData = {
+  queueId: string | null
+  queue: MusicQueue | null
+  items: QueueItem[]
+  haQueueAvailable: boolean
+  viaMassQueue: boolean
+}
+
+/** Last queue for this player, so the page paints before Home Assistant answers. */
+const readQueueSnapshot = (entityId: string): QueueData | undefined => {
+  if (typeof localStorage === 'undefined') return undefined
+  try {
+    const raw = localStorage.getItem(QUEUE_SNAPSHOT_PREFIX + entityId)
+    return raw ? (JSON.parse(raw) as QueueData) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const writeQueueSnapshot = (entityId: string, data: QueueData) => {
+  if (typeof localStorage === 'undefined') return
+  try {
+    const slim = { ...data, items: data.items.slice(0, QUEUE_SNAPSHOT_ITEMS) }
+    const json = JSON.stringify(slim, (key, value) =>
+      SNAPSHOT_DROP_KEYS.has(key) ? undefined : value,
+    )
+    if (json.length > QUEUE_SNAPSHOT_MAX_CHARS) return
+    localStorage.setItem(QUEUE_SNAPSHOT_PREFIX + entityId, json)
+  } catch {
+    /* storage full or unavailable: the snapshot is only a head start */
+  }
+}
 const MASS_QUEUE_FLAG_KEY = 'mass-queue-available'
 
 /** Cache entity_id → unique_id so we don't hit the registry every poll. */
@@ -278,21 +324,6 @@ export function useMusicQueue(
   const massQueueAvailable = massQueueQuery.data ?? null
   const configured = Boolean(massQueueAvailable) || massApiConfigured
 
-  // Resolve a MA base URL for artwork (imageproxy) even when mass_queue handles mutations.
-  // Runs once per session; the result is persisted and broadcast via `mass-config-changed`.
-  useQuery({
-    queryKey: ['mass-url'],
-    enabled: haReady && !massApiConfigured,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: Number.POSITIVE_INFINITY,
-    retry: false,
-    queryFn: async () => {
-      const url = await discoverMassUrl(connection)
-      if (url) setDiscoveredMassUrl(url)
-      return url ?? ''
-    },
-  })
-
   // Optional fallback: reuse HA music_assistant integration token for direct MA API.
   const ensureQuery = useQuery({
     queryKey: ['mass-ensure'],
@@ -334,7 +365,9 @@ export function useMusicQueue(
     queryKey: ['music-queue', entityId, itemLimit],
     enabled: Boolean(entityId) && connected && massQueueAvailable !== null,
     staleTime: 8_000,
-    placeholderData: keepPreviousData,
+    // Previous page while paging; on a cold start, last session's queue.
+    placeholderData: (previous) =>
+      previous ?? (itemLimit === QUEUE_PAGE_SIZE ? readQueueSnapshot(entityId) : undefined),
     // HA-driven invalidation above; poll as a backstop.
     refetchInterval: active ? 15_000 : 30_000,
     refetchOnWindowFocus: false,
@@ -428,6 +461,13 @@ export function useMusicQueue(
       }
     },
   })
+
+  const freshQueue = query.isPlaceholderData ? undefined : query.data
+  useEffect(() => {
+    if (primary && freshQueue && itemLimit === QUEUE_PAGE_SIZE) {
+      writeQueueSnapshot(entityId, freshQueue)
+    }
+  }, [primary, freshQueue, itemLimit, entityId])
 
   const queueId = query.data?.queueId ?? null
   const viaMassQueue = Boolean(query.data?.viaMassQueue ?? massQueueAvailable)

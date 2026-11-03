@@ -432,7 +432,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
         onKeyDown={onKeyDown}
         style={{ '--lvl': `${lit ? level : 100}%` } as React.CSSProperties}
         className={cn(
-          'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
+          'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 md:aspect-auto md:h-36 md:min-h-0 min-w-0 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
           'transition-[background-color,box-shadow,transform] duration-slow ease-out',
           phase === 'idle' && 'active:scale-[0.97]',
           phase !== 'idle' && 'scale-[1.03] shadow-press',
