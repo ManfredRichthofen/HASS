@@ -40,7 +40,7 @@ export const entityLabels: Record<string, string> = {
   'media_player.all': 'Everywhere',
   'media_player.living_room': 'Living Room',
   'media_player.kitchen': 'Kitchen',
-  'media_player.living_room_tv': 'Bedroom TV',
+  'media_player.living_room_tv': 'Living Room TV',
 
   // Security / appliances / yard
   'lock.level_lock_pro': 'Front door',

@@ -266,13 +266,17 @@ export const entities = {
   vacuumCleanGenius: 'select.x40_ultra_cleangenius',
   mediaAll: 'media_player.all',
   /** Android TV: media player + its remote.* entity (d-pad / back / home). */
-  tv: { id: 'media_player.living_room_tv', remoteId: 'remote.living_room_tv', label: 'Bedroom TV' },
+  tv: {
+    id: 'media_player.living_room_tv',
+    remoteId: 'remote.living_room_tv',
+    label: 'Living Room TV',
+  },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
   mediaPlayers: [
     { id: 'media_player.all', label: 'Everywhere' },
     { id: 'media_player.living_room', label: 'Living Room' },
     { id: 'media_player.kitchen', label: 'Kitchen' },
-    { id: 'media_player.living_room_tv', label: 'Bedroom TV' },
+    { id: 'media_player.living_room_tv', label: 'Living Room TV' },
   ],
 
   /** Common-area favorite lights only — bedroom stays in Rooms. AC fan stays off Home. */
@@ -300,9 +304,7 @@ export const entities = {
      * Live cameras for the Security page.
      * Stills use camera_proxy; live view uses HLS via hls.js (MJPEG fallback).
      */
-    cameras: [
-      { id: 'camera.doorbell', label: 'Doorbell' },
-    ] as const,
+    cameras: [{ id: 'camera.doorbell', label: 'Doorbell' }] as const,
   },
 
   /**

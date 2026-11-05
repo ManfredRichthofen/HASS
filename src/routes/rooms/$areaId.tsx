@@ -8,18 +8,18 @@ import { EntityGrid } from '#/components/entities/EntityGrid'
 import { FanLightTile } from '#/components/entities/FanLightTile'
 import { FanTile } from '#/components/entities/FanTile'
 import { LightTile } from '#/components/entities/LightTile'
-import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
 import { MediaCard } from '#/components/entities/MediaCard'
 import { Readings, SensorReading } from '#/components/entities/Readings'
 import { SensorChip } from '#/components/entities/SensorChip'
 import { SwitchRow } from '#/components/entities/SwitchRow'
+import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
 import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/components/ui/toast'
-import { areaLightIds, getArea, isRoomLight } from '#/config/dashboard'
+import { areaLightIds, entities, getArea, isRoomLight } from '#/config/dashboard'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
@@ -226,9 +226,13 @@ function RoomDetailPage() {
             {area.media.length > 0 ? (
               <Section title="Music & TV">
                 <CardGrid>
-                  {area.media.map((id) => (
-                    id.endsWith('_tv') ? <TvRemoteCard key={id} entityId={id} remoteId={id.replace('media_player.', 'remote.')} /> : <MediaCard key={id} entityId={id} />
-                  ))}
+                  {area.media.map((id) =>
+                    id === entities.tv.id ? (
+                      <TvRemoteCard key={id} entityId={id} remoteId={entities.tv.remoteId} />
+                    ) : (
+                      <MediaCard key={id} entityId={id} />
+                    ),
+                  )}
                 </CardGrid>
               </Section>
             ) : null}

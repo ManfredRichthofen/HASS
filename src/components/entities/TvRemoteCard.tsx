@@ -5,12 +5,15 @@ import {
   ChevronRight,
   ChevronUp,
   CornerUpLeft,
+  FastForward,
   Home,
+  Menu,
   Minus,
   Pause,
   Play,
   Plus,
   Power,
+  Rewind,
   Tv,
   Volume2,
   VolumeX,
@@ -268,6 +271,21 @@ export function TvRemoteCard({
             </Key>
             <Key label="Home" onClick={() => send('HOME')} className="w-24">
               <Home className="size-5" />
+            </Key>
+            <Key label="Menu" onClick={() => send('MENU')} className="w-24">
+              <Menu className="size-5" />
+            </Key>
+          </div>
+        ) : null}
+
+        {/* Seek */}
+        {remoteId ? (
+          <div className="mt-4 flex justify-center gap-3">
+            <Key label="Rewind" onClick={() => send('MEDIA_REWIND')} className="w-24">
+              <Rewind className="size-5" />
+            </Key>
+            <Key label="Fast forward" onClick={() => send('MEDIA_FAST_FORWARD')} className="w-24">
+              <FastForward className="size-5" />
             </Key>
           </div>
         ) : null}

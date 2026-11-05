@@ -217,7 +217,7 @@ export function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-black/5 hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink"
           >
             <SlidersHorizontal className="size-4" />
           </button>

@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useMediaPlayer } from 'hass-react'
-import { Music2, Pause, Play, Tv } from 'lucide-react'
+import { useMediaPlayer, useServiceCall } from 'hass-react'
+import { Minus, Music2, Pause, Play, Plus, Tv } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
 import { MediaArt } from '#/components/media/MediaArt'
@@ -24,6 +24,7 @@ export function NowPlayingBar() {
 
   const tv = useMediaPlayer(entities.tv.id)
   const [remoteOpen, setRemoteOpen] = useState(false)
+  const { callService } = useServiceCall()
   // TV wins the bar unless music is actively playing; tapping it opens the remote.
   const tvMode = (tv.isPlaying || tv.isPaused) && !media.isPlaying
   const shown = tvMode ? tv : media.player
@@ -46,6 +47,22 @@ export function NowPlayingBar() {
     })
   }
 
+  const nudgeVolume = async (dir: 1 | -1) => {
+    try {
+      if (tvMode) {
+        await callService('remote', 'send_command', {
+          entity_id: entities.tv.remoteId,
+          command: dir > 0 ? 'VOLUME_UP' : 'VOLUME_DOWN',
+        })
+      } else {
+        const next = Math.min(1, Math.max(0, (media.player.volumeLevel ?? 0) + dir * 0.05))
+        await media.player.setVolume(next)
+      }
+    } catch (e) {
+      notify('Volume failed', e instanceof Error ? e.message : 'Error')
+    }
+  }
+
   const artKey = playerArtSources(shown.attributes, haUrl).join('|')
   // biome-ignore lint/correctness/useExhaustiveDependencies: artKey is the by-value key
   const artSources = useMemo(() => (artKey ? artKey.split('|') : []), [artKey])
@@ -54,7 +71,9 @@ export function NowPlayingBar() {
     ? (tv.mediaTitle ?? tv.appName ?? tv.currentSource ?? 'Playing')
     : (media.mediaTitle ?? 'Playing')
   const subtitle = tvMode
-    ? [entities.tv.label, tv.mediaTitle ? (tv.appName ?? tv.currentSource) : null].filter(Boolean).join(' · ')
+    ? [entities.tv.label, tv.mediaTitle ? (tv.appName ?? tv.currentSource) : null]
+        .filter(Boolean)
+        .join(' · ')
     : [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
   const duration = shown.attributes.media_duration as number | undefined
   const position = shown.attributes.media_position as number | undefined
@@ -62,21 +81,21 @@ export function NowPlayingBar() {
 
   return (
     <>
-    <AnimatePresence initial={false}>
-      {visible ? (
-        <m.div
-          key="now-playing"
-          data-now-playing
-          initial={slideUp.initial}
-          animate={slideUp.animate}
-          exit={slideUp.exit}
-          transition={slideUp.transition}
-          className={cn(
-            // Use left/right (not inset-x): inset-inline fights md:left-* and spilled under the rail.
-            'fixed right-0 bottom-[calc(var(--nav-clearance)+var(--nav-gap))] left-0 z-30 px-3 sm:px-5',
-            'md:right-0 md:bottom-4 md:left-[5.5rem] md:px-8 lg:left-60 lg:px-10',
-          )}
-        >
+      <AnimatePresence initial={false}>
+        {visible ? (
+          <m.div
+            key="now-playing"
+            data-now-playing
+            initial={slideUp.initial}
+            animate={slideUp.animate}
+            exit={slideUp.exit}
+            transition={slideUp.transition}
+            className={cn(
+              // Use left/right (not inset-x): inset-inline fights md:left-* and spilled under the rail.
+              'fixed right-0 bottom-[calc(var(--nav-clearance)+var(--nav-gap))] left-0 z-30 px-3 sm:px-5',
+              'md:right-0 md:bottom-4 md:left-[5.5rem] md:px-8 lg:left-60 lg:px-10',
+            )}
+          >
             <div
               className={cn(
                 'relative mx-auto flex w-full max-w-[80rem] items-center gap-3 overflow-hidden rounded-card border-ui border-border bg-canvas-elevated/92 p-2 shadow-sheet backdrop-blur-xl',
@@ -84,43 +103,54 @@ export function NowPlayingBar() {
                 'glass:rounded-pill',
               )}
             >
-{tvMode ? (
-              <button
-                type="button"
-                onClick={() => setRemoteOpen(true)}
-                aria-label="Open TV remote"
-                className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left"
-              >
-                <span className="grid size-12 shrink-0 place-items-center rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink modern:rounded-pill glass:rounded-pill">
-                  <Tv className="size-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
-                  <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">
-                    {subtitle}
+              {tvMode ? (
+                <button
+                  type="button"
+                  onClick={() => setRemoteOpen(true)}
+                  aria-label="Open TV remote"
+                  className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <span className="grid size-12 shrink-0 place-items-center rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink modern:rounded-pill glass:rounded-pill">
+                    <Tv className="size-5" />
                   </span>
-                </span>
-              </button>
-              ) : (
-                            <Link to="/media" className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
-                <MediaArt
-                  sources={artSources}
-                  label=""
-                  className="size-12 rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink shadow-none! modern:rounded-pill glass:rounded-pill"
-                  fallback={
-                    <span className="grid size-full place-items-center">
-                      <Music2 className="size-5" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
+                    <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">
+                      {subtitle}
                     </span>
-                  }
-                />
-                <span className="min-w-0">
-                  <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
-                  <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">
-                    {subtitle}
                   </span>
-                </span>
-              </Link>
+                </button>
+              ) : (
+                <Link to="/media" className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
+                  <MediaArt
+                    sources={artSources}
+                    label=""
+                    className="size-12 rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink shadow-none! modern:rounded-pill glass:rounded-pill"
+                    fallback={
+                      <span className="grid size-full place-items-center">
+                        <Music2 className="size-5" />
+                      </span>
+                    }
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
+                    <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">
+                      {subtitle}
+                    </span>
+                  </span>
+                </Link>
               )}
+              {[-1, 1].map((dir) => (
+                <button
+                  key={dir}
+                  type="button"
+                  onClick={() => void nudgeVolume(dir as 1 | -1)}
+                  aria-label={dir > 0 ? 'Volume up' : 'Volume down'}
+                  className="touch-target hidden shrink-0 place-items-center rounded-pill text-ink-muted transition-ui hover:bg-surface-hover sm:grid modern:text-on-accent"
+                >
+                  {dir > 0 ? <Plus className="size-4" /> : <Minus className="size-4" />}
+                </button>
+              ))}
               <m.button
                 type="button"
                 whileTap={tap.hard}
@@ -141,9 +171,9 @@ export function NowPlayingBar() {
                 style={{ width: `${progress}%` }}
               />
             </div>
-        </m.div>
-      ) : null}
-    </AnimatePresence>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
       <Drawer open={remoteOpen && tvMode} onOpenChange={setRemoteOpen}>
         <DrawerContent title={entities.tv.label}>
           <TvRemoteCard bare entityId={entities.tv.id} remoteId={entities.tv.remoteId} />
