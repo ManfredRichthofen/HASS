@@ -46,18 +46,18 @@ export function NowPlayingBar() {
     })
   }
 
-  const artKey = playerArtSources(media.player.attributes, haUrl).join('|')
+  const artKey = playerArtSources(shown.attributes, haUrl).join('|')
   // biome-ignore lint/correctness/useExhaustiveDependencies: artKey is the by-value key
   const artSources = useMemo(() => (artKey ? artKey.split('|') : []), [artKey])
 
   const title = tvMode
-    ? (tv.mediaTitle ?? tv.appName ?? 'Playing')
+    ? (tv.mediaTitle ?? tv.appName ?? tv.currentSource ?? 'Playing')
     : (media.mediaTitle ?? 'Playing')
   const subtitle = tvMode
-    ? [entities.tv.label, tv.mediaTitle ? tv.appName : null].filter(Boolean).join(' · ')
+    ? [entities.tv.label, tv.mediaTitle ? (tv.appName ?? tv.currentSource) : null].filter(Boolean).join(' · ')
     : [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
-  const duration = media.player.attributes.media_duration as number | undefined
-  const position = media.player.attributes.media_position as number | undefined
+  const duration = shown.attributes.media_duration as number | undefined
+  const position = shown.attributes.media_position as number | undefined
   const progress = duration && position != null ? Math.min(100, (position / duration) * 100) : 0
 
   return (

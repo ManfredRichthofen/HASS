@@ -140,15 +140,16 @@ export function TvRemoteCard({
   const toggleMute = () =>
     commitMuted(!muted, async () => {
       try {
-        await tv.toggleMute()
+        if (remoteId) {
+          await callService('remote', 'send_command', { entity_id: remoteId, command: 'MUTE' })
+        } else {
+          await tv.toggleMute()
+        }
       } catch (e) {
         notify('Mute failed', e instanceof Error ? e.message : 'Error')
         throw e
       }
     })
-
-  const volume = (service: 'volume_up' | 'volume_down') =>
-    void run(() => callService('media_player', service, { entity_id: entityId }), 'Volume failed')
 
   const send = (command: string) =>
     remoteId
@@ -157,6 +158,26 @@ export function TvRemoteCard({
           'Remote failed',
         )
       : undefined
+
+  // Android TV media_player rarely advertises volume/transport features, so when a
+  // remote.* entity exists send the real key presses; otherwise use media_player.
+  const volume = (service: 'volume_up' | 'volume_down') =>
+    remoteId
+      ? send(service === 'volume_up' ? 'VOLUME_UP' : 'VOLUME_DOWN')
+      : void run(
+          () => callService('media_player', service, { entity_id: entityId }),
+          'Volume failed',
+        )
+
+  const channel = (dir: 'up' | 'down') =>
+    remoteId
+      ? send(dir === 'up' ? 'CHANNEL_UP' : 'CHANNEL_DOWN')
+      : void run(() => (dir === 'up' ? tv.nextTrack() : tv.previousTrack()), 'Channel failed')
+
+  const playPause = () =>
+    remoteId
+      ? send('MEDIA_PLAY_PAUSE')
+      : void run(() => (tv.isPlaying ? tv.pause() : tv.play()), 'Playback failed')
 
   const status = unavailable
     ? 'Unavailable'
@@ -266,7 +287,7 @@ export function TvRemoteCard({
               variant="accent"
               className="size-16"
               aria-label={playing ? 'Pause' : 'Play'}
-              onClick={() => void run(() => (playing ? tv.pause() : tv.play()), 'Playback failed')}
+              onClick={playPause}
             >
               {playing ? <Pause className="size-6" /> : <Play className="size-6" />}
             </Button>
@@ -277,8 +298,8 @@ export function TvRemoteCard({
           <Rocker
             label="Channel"
             icon={<span className="text-xs font-semibold">CH</span>}
-            onUp={() => void run(() => tv.nextTrack(), 'Channel failed')}
-            onDown={() => void run(() => tv.previousTrack(), 'Channel failed')}
+            onUp={() => channel('up')}
+            onDown={() => channel('down')}
             disabled={dead}
           />
         </div>
