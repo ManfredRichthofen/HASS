@@ -387,7 +387,8 @@ export function useMusicQueue(
         const [haSettled, itemsSettled, maSettled] = await Promise.allSettled([
           callServiceWithResponse('music_assistant', 'get_queue', { entity_id: entityId }),
           callServiceWithResponse('mass_queue', 'get_queue_items', {
-            ...massQueueEntityData(entityId),
+            // This service rejects `entity_id` ("did you mean 'entity'"); send `entity` only.
+            entity: entityId,
             limit: itemLimit + 2,
             limit_before: 1,
             limit_after: itemLimit,

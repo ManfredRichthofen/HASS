@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useMediaPlayer, useServiceCall } from 'hass-react'
+import { useServiceCall } from 'hass-react'
 import { Minus, Music2, Pause, Play, Plus, Tv } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TvRemoteCard } from '#/components/entities/TvRemoteCard'
@@ -10,6 +10,7 @@ import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
 import { useActiveMedia } from '#/hooks/useActiveMedia'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
+import { useTvNowPlaying } from '#/hooks/useTvNowPlaying'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, slideUp, snappy, tap } from '#/lib/motion'
 import { playerArtSources } from '#/lib/musicAssistant'
@@ -22,14 +23,14 @@ export function NowPlayingBar() {
   const media = useActiveMedia()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  const tv = useMediaPlayer(entities.tv.id)
+  const tvNow = useTvNowPlaying()
   const [remoteOpen, setRemoteOpen] = useState(false)
   const { callService } = useServiceCall()
   // TV wins the bar unless music is actively playing; tapping it opens the remote.
-  const tvMode = (tv.isPlaying || tv.isPaused) && !media.isPlaying
-  const shown = tvMode ? tv : media.player
+  const tvMode = tvNow.active && !media.isPlaying
+  const shown = tvMode ? tvNow.source : media.player
   const { value: shownPlaying, commit: commitShown } = useOptimisticValue(
-    tvMode ? tv.isPlaying : media.isPlaying,
+    tvMode ? tvNow.playing : media.isPlaying,
   )
 
   const visible = tvMode || (media.isActive && !pathname.startsWith('/media'))
@@ -38,7 +39,12 @@ export function NowPlayingBar() {
     const next = !shownPlaying
     commitShown(next, async () => {
       try {
-        if (shownPlaying) await shown.pause()
+        if (tvMode && entities.tv.remoteId) {
+          await callService('remote', 'send_command', {
+            entity_id: entities.tv.remoteId,
+            command: 'MEDIA_PLAY_PAUSE',
+          })
+        } else if (shownPlaying) await shown.pause()
         else await shown.play()
       } catch (e) {
         notify(tvMode ? 'TV failed' : 'Music failed', e instanceof Error ? e.message : 'Error')
@@ -64,16 +70,11 @@ export function NowPlayingBar() {
   }
 
   const artKey = playerArtSources(shown.attributes, haUrl).join('|')
-  // biome-ignore lint/correctness/useExhaustiveDependencies: artKey is the by-value key
   const artSources = useMemo(() => (artKey ? artKey.split('|') : []), [artKey])
 
-  const title = tvMode
-    ? (tv.mediaTitle ?? tv.appName ?? tv.currentSource ?? 'Playing')
-    : (media.mediaTitle ?? 'Playing')
+  const title = tvMode ? (tvNow.title ?? tvNow.app ?? 'TV on') : (media.mediaTitle ?? 'Playing')
   const subtitle = tvMode
-    ? [entities.tv.label, tv.mediaTitle ? (tv.appName ?? tv.currentSource) : null]
-        .filter(Boolean)
-        .join(' · ')
+    ? [entities.tv.label, tvNow.title ? tvNow.app : null].filter(Boolean).join(' · ')
     : [media.mediaArtist, media.room].filter(Boolean).join(' · ') || media.room || 'Music'
   const duration = shown.attributes.media_duration as number | undefined
   const position = shown.attributes.media_position as number | undefined

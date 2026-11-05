@@ -243,7 +243,7 @@ export const houseClimateReadings: ClimateReading[] = [
 
 /**
  * Fans shown on the Climate page — HVAC / thermostat circulation only.
- * Room comfort fans (bedroom ceiling, garage cooler) stay under Rooms.
+ * Room comfort fans (bedroom ceiling, attic fan) stay under Rooms.
  */
 export const climateFans: FanDevice[] = [
   {
@@ -252,6 +252,7 @@ export const climateFans: FanDevice[] = [
     tempId: 'sensor.mts300_temperature',
     humidityId: 'sensor.mts300_humidity',
   },
+  { label: 'Air purifier', fanId: 'fan.living_room_living_room_air_purifier' },
 ]
 
 export const entities = {
@@ -269,6 +270,8 @@ export const entities = {
   tv: {
     id: 'media_player.living_room_tv',
     remoteId: 'remote.living_room_tv',
+    /** Google Cast player for the same TV: reports playing/paused, title and artwork. */
+    playbackId: 'media_player.living_room_tv_cast',
     label: 'Living Room TV',
   },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
@@ -293,6 +296,16 @@ export const entities = {
   /** Security page: door contact, leaks, and cameras (hidden automatically if unavailable). */
   security: {
     doorContact: 'binary_sensor.level_lock_pro_door',
+    alarm: 'alarm_control_panel.alarmo',
+    oven: {
+      stateId: 'sensor.kitchen_ge_profile_oven_snad067566q_current_state',
+      onId: 'binary_sensor.casa_oven_on',
+      leftOnId: 'binary_sensor.casa_attn_oven_left_on',
+    },
+    people: [
+      { id: 'person.jacob', label: 'Jacob' },
+      { id: 'person.andrew', label: 'Andrew' },
+    ] as const,
     leaks: [
       {
         id: 'binary_sensor.kitchen_dishwasher_leak_sensor',

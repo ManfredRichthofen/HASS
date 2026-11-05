@@ -12,7 +12,7 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Toggle } from '#/components/ui/toggle'
@@ -32,14 +32,46 @@ import {
   resolveMediaThumbnail,
 } from '#/lib/musicAssistant'
 
-const SEARCH_DEBOUNCE_MS = 350
-const MIN_TYPED_LENGTH = 2
+// Each search waits on every provider (Spotify is the slow one) and can't be cancelled,
+// so wait for a real pause in typing. Enter searches immediately.
+const SEARCH_DEBOUNCE_MS = 650
+const MIN_TYPED_LENGTH = 3
 const RECENT_KEY = 'music-recent-searches'
 const RECENT_LIMIT = 8
 
-const RESULTS_KEY = 'music-search-results'
+// v2: earlier saved results still contain the per-provider duplicates.
+const RESULTS_KEY = 'music-search-results-v2'
 const RESULTS_KEPT = 6
 const RESULTS_STALE_MS = 5 * 60_000
+
+/**
+ * A search waits on every connected provider, and Home Assistant cannot cancel it. Give up
+ * waiting (not searching) after this long so the page never sits on a skeleton forever.
+ */
+const SEARCH_TIMEOUT_MS = 20_000
+
+class SearchTimeoutError extends Error {
+  constructor() {
+    super('Search is taking longer than usual. A music service may be slow.')
+    this.name = 'SearchTimeoutError'
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = window.setTimeout(() => reject(new SearchTimeoutError()), ms)
+    promise.then(
+      (value) => {
+        window.clearTimeout(id)
+        resolve(value)
+      },
+      (error) => {
+        window.clearTimeout(id)
+        reject(error)
+      },
+    )
+  })
+}
 
 type StoredResults = Record<string, { at: number; items: MediaSearchItem[] }>
 
@@ -275,21 +307,32 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       // Music Assistant's own search returns artists and albums for each result.
       if (entities.musicAssistantEntryId) {
         try {
-          const response = await callServiceWithResponse('music_assistant', 'search', {
-            config_entry_id: entities.musicAssistantEntryId,
-            name: activeQuery,
-            limit: 20,
-          })
+          const response = await withTimeout(
+            callServiceWithResponse('music_assistant', 'search', {
+              config_entry_id: entities.musicAssistantEntryId,
+              name: activeQuery,
+              // Only ask for what the page shows. Audiobooks and podcasts were searched on
+              // every provider and thrown away, which roughly doubled the response.
+              media_type: ['track', 'album', 'artist', 'playlist', 'radio'],
+              limit: 12,
+            }),
+            SEARCH_TIMEOUT_MS,
+          )
           // A successful answer is final, even when empty. Only a failure falls back.
           return parseMassSearchResults(response)
-        } catch {
+        } catch (error) {
+          // A slow search is not a broken one: a fallback would just wait a second time.
+          if (error instanceof SearchTimeoutError) throw error
           /* Music Assistant search failed: fall back to the media player search */
         }
       }
-      const response = await callServiceWithResponse('media_player', 'search_media', {
-        entity_id: target,
-        search_query: activeQuery,
-      })
+      const response = await withTimeout(
+        callServiceWithResponse('media_player', 'search_media', {
+          entity_id: target,
+          search_query: activeQuery,
+        }),
+        SEARCH_TIMEOUT_MS,
+      )
       return parseSearchResults(response, target)
     },
   })
@@ -301,6 +344,15 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   )
   const searching = searched && searchQuery.isLoading
   const refreshing = searched && searchQuery.isFetching
+  // The previous query's results stay up while a new one loads. Say so, and don't let a tap
+  // play something that no longer matches what was typed.
+  const stale = searched && searchQuery.isPlaceholderData
+  const shownQuery = useRef('')
+  useEffect(() => {
+    if (activeQuery && !searchQuery.isPlaceholderData && searchQuery.data) {
+      shownQuery.current = activeQuery
+    }
+  }, [activeQuery, searchQuery.data, searchQuery.isPlaceholderData])
 
   // Remember queries that found something.
   useEffect(() => {
@@ -360,6 +412,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   }
 
   async function playItem(item: MediaSearchItem, mode: EnqueueMode = enqueue) {
+    if (stale) return
     if (!item.can_play && !item.media_content_id) return
     setPlayingId(item.media_content_id)
     try {
@@ -413,7 +466,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
   return (
     <div className="space-y-4">
-      <h3 className="text-display text-lg text-ink">Add music</h3>
+      <h3 className="sr-only">Add music</h3>
 
       <form onSubmit={handleSubmit} className="flex gap-2" role="search">
         <div className="relative min-w-0 flex-1">
@@ -440,7 +493,8 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
           ) : null}
         </div>
         <Button type="submit" variant="accent" disabled={!query.trim()}>
-          {refreshing ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
+          {refreshing ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          Search
         </Button>
       </form>
 
@@ -474,12 +528,13 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
       <div className="space-y-1.5">
         <p className="text-label">Tapping a result will</p>
-        <div className="grid grid-cols-3 gap-1 rounded-card bg-canvas p-1">
+        <div role="group" aria-label="Tapping a result will" className="grid grid-cols-3 gap-1 rounded-card bg-canvas p-1">
           {enqueueModes.map((mode) => (
             <button
               key={mode.id}
               type="button"
               title={mode.hint}
+              aria-pressed={enqueue === mode.id}
               onClick={() => setEnqueue(mode.id)}
               className={cn(
                 'touch-target flex items-center justify-center gap-1.5 rounded-control px-2 text-xs font-medium transition-ui',
@@ -503,11 +558,16 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       </div>
 
       {results.length > 0 ? (
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          role="group"
+          aria-label="Filter results"
+          className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {mediaClassFilters.map((item) => (
             <button
               key={item.id}
               type="button"
+              aria-pressed={filter === item.id}
               onClick={() => setFilter(item.id)}
               className={cn(
                 'touch-target shrink-0 rounded-pill border px-3.5 text-xs font-medium transition-ui',
@@ -530,8 +590,21 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
             : ''}
       </p>
 
-      <div className={cn('space-y-5 transition-opacity', refreshing && !searching && 'opacity-60')}>
+      <div
+        className={cn(
+          'space-y-5 transition-opacity',
+          refreshing && !searching && 'opacity-60',
+          stale && 'pointer-events-none',
+        )}
+        aria-busy={stale || undefined}
+      >
         {searching ? <SearchResultsSkeleton /> : null}
+
+        {stale && !searching && shownQuery.current ? (
+          <p className="text-xs text-ink-muted">
+            Showing results for “{shownQuery.current}” while “{activeQuery}” loads
+          </p>
+        ) : null}
 
         {searched && searchQuery.isError && !searching ? (
           <div className="rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">

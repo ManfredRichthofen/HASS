@@ -18,7 +18,8 @@ export const entityLabels: Record<string, string> = {
   // Fans
   'fan.mts300': 'Living room fan',
   'fan.bedroom_ceiling_fan': 'Ceiling fan',
-  'fan.afg_smt_pro_2_0': 'Garage cooler',
+  'fan.afg_smt_pro_2_0': 'Attic fan',
+  'fan.living_room_living_room_air_purifier': 'Air purifier',
 
   // Climate / weather
   'climate.mts300': 'Thermostat',
@@ -30,8 +31,8 @@ export const entityLabels: Record<string, string> = {
   'sensor.presence_multi_sensor_fp300_humidity': 'Bedroom humidity',
   'sensor.office_climate_sensor_temperature': 'Office',
   'sensor.office_climate_sensor_humidity': 'Office humidity',
-  'sensor.afg_smt_pro_2_0_temperature': 'Garage',
-  'sensor.afg_smt_pro_2_0_humidity': 'Garage humidity',
+  'sensor.afg_smt_pro_2_0_temperature': 'Attic',
+  'sensor.afg_smt_pro_2_0_humidity': 'Attic humidity',
   'sensor.washer_current_status': 'Washer',
   'sensor.washtower_current_status': 'Dryer',
   'sensor.dishwasher_operation_state': 'Dishwasher',
@@ -78,7 +79,7 @@ function cleanFriendlyName(name: string) {
   cleaned = cleaned.replace(/\bLiving Room\s+Living Room\b/gi, 'Living Room')
   cleaned = cleaned.replace(/\bX40 Ultra\s+X40 Ultra\b/gi, 'Robot vacuum')
   cleaned = cleaned.replace(/\bLevel Lock Pro\b/gi, 'Front door')
-  cleaned = cleaned.replace(/\bAFG SMT PRO-2\.0\b/gi, 'Garage fan')
+  cleaned = cleaned.replace(/\bAFG SMT PRO-2\.0\b/gi, 'Attic fan')
   cleaned = cleaned.replace(/\bMTS300\b/gi, 'Living room')
   cleaned = cleaned.replace(/\bSprinkler Controller\s+/gi, '')
   cleaned = cleaned.replace(/\bPresence Multi-Sensor FP300\s+/gi, '')

@@ -181,14 +181,17 @@ export function parseMassSearchResults(response: unknown): MediaSearchItem[] {
     unknown
   >
 
-  const results: MediaSearchItem[] = []
+  // The same song, album or artist usually comes back once per connected provider
+  // (Spotify, Deezer, …) under different URIs. Keep the first and borrow its artwork
+  // from a later copy when it has none.
+  const seen = new Map<string, MediaSearchItem>()
   for (const { key, mediaClass } of massSearchBuckets) {
     const bucket = data[key]
     if (!Array.isArray(bucket)) continue
     for (const raw of bucket as MassSearchItem[]) {
       if (!raw?.uri || !raw.name) continue
       const title = raw.version ? `${raw.name} (${raw.version})` : raw.name
-      results.push({
+      const item: MediaSearchItem = {
         title,
         media_class: mediaClass,
         media_content_type: raw.media_type ?? mediaClass,
@@ -196,11 +199,17 @@ export function parseMassSearchResults(response: unknown): MediaSearchItem[] {
         can_play: true,
         thumbnail: massSearchImage(raw.image),
         subtitle: massSearchSubtitle(raw, mediaClass),
-      })
+      }
+      const dedupeKey = `${mediaClass}|${normalizeForDedupe(title)}|${normalizeForDedupe(item.subtitle ?? '')}`
+      const existing = seen.get(dedupeKey)
+      if (!existing) seen.set(dedupeKey, item)
+      else if (!existing.thumbnail && item.thumbnail) existing.thumbnail = item.thumbnail
     }
   }
-  return results
+  return [...seen.values()]
 }
+
+const normalizeForDedupe = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
 
 export function parseQueueResponse(response: unknown, entityId: string): MusicQueue | null {
   const data = response as QueueServiceResponse | QueueResponseMap | MusicQueue
