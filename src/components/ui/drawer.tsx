@@ -63,7 +63,7 @@ export function DrawerContent({
               ) : null}
             </div>
           )}
-          <BaseDrawer.Content className="overflow-y-auto px-6 pt-3 pb-2">
+          <BaseDrawer.Content className="min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pt-3 pb-2">
             {children}
           </BaseDrawer.Content>
         </BaseDrawer.Popup>

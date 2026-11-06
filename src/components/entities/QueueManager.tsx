@@ -146,7 +146,7 @@ function PlaybackProgress({
   )
 }
 
-function ActionChip({
+function ActionTile({
   icon,
   label,
   onClick,
@@ -162,12 +162,12 @@ function ActionChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex min-h-10 items-center gap-1.5 rounded-pill border-ui border-border px-3.5 text-xs font-semibold transition-ui hover:bg-surface-hover',
+        'press flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 text-xs font-semibold transition-ui hover:bg-surface-hover',
         danger ? 'text-danger' : 'text-ink',
       )}
     >
       {icon}
-      {label}
+      <span className="max-w-full truncate">{label}</span>
     </button>
   )
 }
@@ -368,41 +368,36 @@ const QueueRow = memo(function QueueRow({
       </div>
 
       {expanded ? (
-        <div className="flex flex-wrap gap-1.5 border-t border-border-subtle px-2 py-2">
-          <ActionChip
-            icon={<Play className="size-3.5" />}
-            label="Play now"
-            onClick={() => act('play')}
-          />
-          <ActionChip
-            icon={<ListStart className="size-3.5" />}
+        <div className="mb-2 grid auto-cols-fr grid-flow-col gap-1 rounded-control bg-canvas p-1">
+          <ActionTile
+            icon={<ListStart className="size-[18px]" />}
             label="Play next"
             onClick={() => act('next')}
           />
           {!isFirstMovable ? (
-            <ActionChip
-              icon={<ArrowUp className="size-3.5" />}
-              label="Up"
+            <ActionTile
+              icon={<ArrowUp className="size-[18px]" />}
+              label="Move up"
               onClick={() => act('up')}
             />
           ) : null}
           {!isLast ? (
-            <ActionChip
-              icon={<ArrowDown className="size-3.5" />}
-              label="Down"
+            <ActionTile
+              icon={<ArrowDown className="size-[18px]" />}
+              label="Move down"
               onClick={() => act('down')}
             />
           ) : null}
           {supportMoveToEnd && !isLast ? (
-            <ActionChip
-              icon={<ListEnd className="size-3.5" />}
+            <ActionTile
+              icon={<ListEnd className="size-[18px]" />}
               label="To end"
               onClick={() => act('end')}
             />
           ) : null}
-          <ActionChip
+          <ActionTile
             danger
-            icon={<X className="size-3.5" />}
+            icon={<X className="size-[18px]" />}
             label="Remove"
             onClick={() => act('remove')}
           />
@@ -667,7 +662,7 @@ export function QueueManager({
       await queueApi.setEndlessMix(next)
       notify(
         next ? 'Endless Mix on' : 'Endless Mix off',
-        next ? 'Similar tracks will keep playing' : 'Queue will stop when it ends',
+        next ? 'Similar songs will play when the queue ends' : 'Music will stop when the queue ends',
       )
     }, 'Endless Mix failed')
   }
@@ -675,7 +670,7 @@ export function QueueManager({
   return (
     <div
       className={cn(
-        view === 'all' ? 'space-y-5' : 'grid gap-5',
+        view === 'all' ? 'space-y-5' : 'grid grid-cols-[minmax(0,1fr)] gap-5',
         view === 'player' && 'flex h-full min-h-0 flex-col',
       )}
     >
@@ -686,7 +681,9 @@ export function QueueManager({
             <div className="min-w-0">
               <p className="text-[0.9375rem] font-semibold text-ink">Endless Mix</p>
               <p className="truncate text-[0.8125rem] text-ink-muted">
-                Keep playing similar tracks
+                {!hasNowPlaying && !endlessMixEnabled
+                  ? 'Play something to turn this on'
+                  : 'Adds similar songs when the queue ends'}
               </p>
             </div>
           </div>
@@ -931,28 +928,11 @@ export function QueueManager({
               <Volume2 className="mx-3 size-5 shrink-0 text-ink-faint" aria-hidden />
             </div>
           ) : null}
-
-          <div className={cn('flex justify-center', view === 'player' && 'hidden')}>
-            <button
-              type="button"
-              className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-pill border-ui border-border-subtle px-3 text-xs font-semibold text-ink-muted transition-ui hover:text-ink @xl:h-11 @xl:gap-2 @xl:px-4 @xl:text-sm',
-                endlessMixEnabled && 'border-transparent bg-accent-soft text-ink',
-              )}
-              disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
-              aria-label={endlessMixEnabled ? 'Turn off Endless Mix' : 'Turn on Endless Mix'}
-              aria-pressed={endlessMixEnabled}
-              onClick={() => toggleEndless()}
-            >
-              <Radio className="size-3.5 @xl:size-4" />
-              Endless Mix
-            </button>
-          </div>
         </section>
       ) : null}
 
       {showQueue && upNext.length > 0 ? (
-        <div className="space-y-2.5">
+        <div className="min-w-0 space-y-2.5">
           <div className="flex items-end justify-between gap-2">
             <div>
               <h3
@@ -967,7 +947,7 @@ export function QueueManager({
                 <span>
                   {totalUpNext} {totalUpNext === 1 ? 'track' : 'tracks'}
                   {fullyLoaded && upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
-                  {endlessMixEnabled ? ' · Endless Mix' : ''}
+                  {endlessMixEnabled ? ' · Endless Mix on' : ''}
                 </span>
                 {fetching && !loading ? (
                   <Loader2 className="size-3 animate-spin text-ink-faint" aria-label="Refreshing" />

@@ -275,6 +275,8 @@ export const entities = {
     label: 'Living Room TV',
   },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
+  /** Music Assistant Queue Items (mass_queue) config entry — used to reach MA's queue settings through HA. */
+  massQueueEntryId: '01M5CW0N3QY21NP8VYPS7HXG1A',
   mediaPlayers: [
     { id: 'media_player.all', label: 'Everywhere' },
     { id: 'media_player.living_room', label: 'Living Room' },

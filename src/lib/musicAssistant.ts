@@ -243,7 +243,11 @@ export function normalizeQueue(raw: MusicQueue): MusicQueue {
     repeat_mode: typeof raw.repeat_mode === 'string' ? raw.repeat_mode : 'off',
     crossfade_enabled: Boolean(raw.crossfade_enabled),
     autoplay_enabled: Boolean(raw.autoplay_enabled),
-    dont_stop_the_music_enabled: Boolean(raw.dont_stop_the_music_enabled),
+    // Undefined when the source (HA's get_queue) does not report it.
+    dont_stop_the_music_enabled:
+      typeof raw.dont_stop_the_music_enabled === 'boolean'
+        ? raw.dont_stop_the_music_enabled
+        : undefined,
     is_dynamic: Boolean(raw.is_dynamic),
     current_index: typeof raw.current_index === 'number' ? raw.current_index : null,
     elapsed_time: typeof raw.elapsed_time === 'number' ? raw.elapsed_time : 0,

@@ -276,7 +276,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
   const [query, setQuery] = useState(lastQuery)
   const [activeQuery, setActiveQuery] = useState(lastQuery)
   const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
-  const [endlessMix, setEndlessMix] = useState(false)
+  const [radio, setRadio] = useState(false)
   const [filter, setFilter] = useState<string>('all')
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [recentSearches, setRecentSearches] = useState<string[]>(readRecentSearches)
@@ -421,10 +421,10 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
         media_id: item.media_content_id,
         media_type: item.media_content_type || item.media_class || 'track',
         enqueue: mode,
-        ...(endlessMix ? { radio_mode: true } : {}),
+        ...(radio ? { radio_mode: true } : {}),
       })
-      const label = endlessMix
-        ? 'Endless Mix'
+      const label = radio
+        ? 'Playing song radio'
         : mode === 'add'
           ? 'Queued'
           : mode === 'next'
@@ -433,9 +433,9 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       notify(label, item.title)
       onQueued?.()
     } catch (e) {
-      if (endlessMix) {
+      if (radio) {
         notify(
-          'Endless Mix failed',
+          'Song radio failed',
           e instanceof Error ? e.message : 'Provider may not support similar tracks',
         )
         return
@@ -547,13 +547,13 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
           ))}
         </div>
         <Toggle
-          pressed={endlessMix}
-          onPressedChange={setEndlessMix}
-          aria-label="Endless Mix — keep playing similar tracks"
+          pressed={radio}
+          onPressedChange={setRadio}
+          aria-label="Song radio: after the song you pick, keep playing similar songs"
           className="w-full gap-2"
         >
           <Radio className="size-4" />
-          Endless Mix
+          Song radio
         </Toggle>
       </div>
 

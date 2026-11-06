@@ -17,7 +17,12 @@ import {
   setQueueShuffle,
 } from '#/lib/massClient'
 import { getMassBaseUrl, isMassConfigured, setDiscoveredMassUrl } from '#/lib/massConfig'
-import { massQueueEntityData, parseMassQueueItemsResponse } from '#/lib/massQueue'
+import { entities } from '#/config/dashboard'
+import {
+  massQueueEntityData,
+  parseMassCommandResponse,
+  parseMassQueueItemsResponse,
+} from '#/lib/massQueue'
 import {
   type MusicQueue,
   normalizeQueue,
@@ -66,7 +71,7 @@ export type MusicQueueState = {
   playIndex: (index: number | string) => Promise<void>
   setShuffle: (enabled: boolean) => Promise<void>
   setRepeat: (mode: string) => Promise<void>
-  /** Endless Mix / Don’t stop the music — similar tracks when the queue runs low. */
+  /** Endless Mix (Music Assistant’s “Don’t stop the music”): similar songs when the queue ends. */
   setEndlessMix: (enabled: boolean) => Promise<void>
   /** Display values — optimistic until HA/MA catches up. */
   endlessMixEnabled: boolean
@@ -345,6 +350,16 @@ export function useMusicQueue(
 
   const activeQueueId = (player.attributes as { active_queue?: string }).active_queue
 
+  /** Queue settings (Endless Mix, shuffle…) straight from Music Assistant, through HA. */
+  const fetchMassQueueViaHa = async (queueId: string) => {
+    const res = await callServiceWithResponse('mass_queue', 'send_command', {
+      config_entry_id: entities.massQueueEntryId,
+      command: 'player_queues/get',
+      data: { queue_id: queueId },
+    })
+    return parseMassCommandResponse<MusicQueue>(res)
+  }
+
   // Drive freshness from HA media_player state without thrashing the query key.
   useEffect(() => {
     if (!primary || !entityId || !connected || massQueueAvailable === null) return
@@ -394,7 +409,11 @@ export function useMusicQueue(
             limit_after: itemLimit,
           }),
           // HA get_queue often omits dont_stop_the_music / autoplay — pull flags from MA.
-          massApiConfigured && attrQueueId ? fetchMaQueue(attrQueueId) : Promise.resolve(null),
+          massApiConfigured && attrQueueId
+            ? fetchMaQueue(attrQueueId)
+            : attrQueueId
+              ? fetchMassQueueViaHa(attrQueueId)
+              : Promise.resolve(null),
         ])
 
         if (itemsSettled.status === 'fulfilled') {
@@ -482,7 +501,7 @@ export function useMusicQueue(
   const [optimistic, setOptimistic] = useState<OptimisticToggles>({})
 
   const serverEndless = Boolean(
-    queue?.autoplay_enabled || queue?.dont_stop_the_music_enabled || queue?.is_dynamic,
+    queue?.dont_stop_the_music_enabled ?? (queue?.autoplay_enabled || queue?.is_dynamic),
   )
   const serverShuffle = Boolean(player.shuffle ?? queue?.shuffle_enabled ?? false)
   const serverRepeat = String(player.repeat ?? queue?.repeat_mode ?? 'off').toLowerCase()
@@ -631,6 +650,17 @@ export function useMusicQueue(
           return
         }
 
+        // Through Home Assistant: flips the queue's setting without touching playback.
+        if (massQueueAvailable && queueId) {
+          await callService('mass_queue', 'send_command', {
+            config_entry_id: entities.massQueueEntryId,
+            command: 'player_queues/dont_stop_the_music',
+            data: { queue_id: queueId, dont_stop_the_music_enabled: enabled },
+          })
+          afterMutation()
+          return
+        }
+
         if (!enabled) {
           throw new Error(
             'Turn off Endless Mix in Music Assistant, or sign in from Settings',
@@ -653,7 +683,8 @@ export function useMusicQueue(
           entity_id: entityId,
           media_id: mediaId,
           media_type: mediaType,
-          enqueue: 'replace',
+          // Adds the mix after the current track instead of cutting it off.
+          enqueue: 'replace_next',
           radio_mode: true,
         })
         afterMutation()
@@ -667,6 +698,7 @@ export function useMusicQueue(
       callService,
       entityId,
       massApiConfigured,
+      massQueueAvailable,
       player.attributes,
       queue?.current_item?.media_item?.media_type,
       queue?.current_item?.media_item?.uri,

@@ -73,7 +73,18 @@ export function parseMassQueueItemsResponse(response: unknown, entityId: string)
   return []
 }
 
-export const massQueueEntityData = (entityId: string) => ({
-  entity: entityId,
-  entity_id: entityId,
-})
+/** mass_queue services take `entity` only; HA rejects an extra `entity_id`. */
+export const massQueueEntityData = (entityId: string) => ({ entity: entityId })
+
+/** Unwrap `mass_queue.send_command`'s response (it nests the result under `response`). */
+export function parseMassCommandResponse<T>(response: unknown): T | null {
+  let value: unknown = response
+  for (let depth = 0; depth < 3; depth++) {
+    if (value && typeof value === 'object' && 'response' in value) {
+      value = (value as { response: unknown }).response
+    } else if (value && typeof value === 'object' && 'service_response' in value) {
+      value = (value as { service_response: unknown }).service_response
+    } else break
+  }
+  return value && typeof value === 'object' ? (value as T) : null
+}
