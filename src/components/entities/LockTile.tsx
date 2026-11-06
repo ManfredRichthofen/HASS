@@ -1,6 +1,8 @@
 import { useLock } from 'hass-react'
 import { Lock, LockOpen } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '#/components/ui/button'
+import { Dialog, DialogClose, DialogContent } from '#/components/ui/dialog'
 import { notify } from '#/components/ui/toast'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
@@ -33,6 +35,7 @@ export function LockTile({
   const { value: locked, commit } = useOptimisticValue(!unavailable && lock.isLocked)
   const open = !unavailable && !locked
   const changed = since((lock as { lastChanged?: Date }).lastChanged)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const toggle = () => {
     const nextLocked = !locked
@@ -48,9 +51,11 @@ export function LockTile({
     })
   }
 
-  const press = useScrollSafePress(toggle)
+  // Locking is safe and reversible: do it at once. Unlocking asks first.
+  const press = useScrollSafePress(() => (locked ? setConfirmOpen(true) : toggle()))
 
   return (
+    <>
     <div
       className={cn(
         'flex items-center gap-4 rounded-card border-ui border-border-subtle bg-surface py-4.5 pr-4.5 pl-5 shadow-card transition-state',
@@ -82,6 +87,30 @@ export function LockTile({
         {open ? 'Lock' : 'Unlock'}
       </Button>
     </div>
+    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <DialogContent
+        title={`Unlock ${name.toLowerCase()}?`}
+        description="Anyone at the door will be able to open it."
+        actions={
+          <>
+            <DialogClose className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink">
+              Cancel
+            </DialogClose>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                setConfirmOpen(false)
+                toggle()
+              }}
+            >
+              Unlock
+            </Button>
+          </>
+        }
+      />
+    </Dialog>
+    </>
   )
 }
 

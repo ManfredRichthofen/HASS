@@ -15,6 +15,7 @@ export function VacuumMap({
 }) {
   const camera = useCamera(cameraId)
   const refreshImage = camera.refreshImage
+  const hasImage = Boolean(camera.imageUrl)
 
   useEffect(() => {
     const refresh = () => {
@@ -22,7 +23,8 @@ export function VacuumMap({
       void refreshImage().catch(() => undefined)
     }
 
-    refresh()
+    // The map is usually already cached on open: only fetch straight away when there is none.
+    if (!hasImage) refresh()
     const intervalMs = active ? 15_000 : 60_000
     const id = window.setInterval(refresh, intervalMs)
 
@@ -35,6 +37,7 @@ export function VacuumMap({
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', onVisibility)
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: hasImage only decides the first fetch
   }, [active, refreshImage])
 
   const src = camera.imageUrl
@@ -45,8 +48,8 @@ export function VacuumMap({
         <img
           src={src}
           alt="Vacuum map"
-          loading="lazy"
           decoding="async"
+          fetchPriority="high"
           className="aspect-[4/3] w-full object-contain"
         />
       ) : (

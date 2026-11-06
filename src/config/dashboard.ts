@@ -31,6 +31,8 @@ export type FanDevice = {
   fanId: string
   tempId?: string
   humidityId?: string
+  /** Extra sensors from the same device (air quality, filter life) shown on the tile. */
+  readings?: { id: string; label: string; suffix?: string }[]
 }
 
 export interface AreaConfig {
@@ -68,15 +70,8 @@ export const areas: AreaConfig[] = [
       'light.living_room_led',
     ],
     fans: [],
-    // Thermostat fan + its temp/humidity on one card.
-    fanDevices: [
-      {
-        label: 'Living room fan',
-        fanId: 'fan.mts300',
-        tempId: 'sensor.mts300_temperature',
-        humidityId: 'sensor.mts300_humidity',
-      },
-    ],
+    // The AC fan (fan.mts300) lives on the thermostat card on the Climate page.
+    fanDevices: [],
     media: ['media_player.living_room', 'media_player.living_room_tv'],
     sensors: [],
     occupancy: 'binary_sensor.inovelli_vzm32_sn_occupancy',
@@ -238,7 +233,6 @@ export const houseClimateReadings: ClimateReading[] = [
     tempId: 'sensor.afg_smt_pro_2_0_temperature',
     humidityId: 'sensor.afg_smt_pro_2_0_humidity',
   },
-  { label: 'Outside', tempId: 'sensor.outdoor_temperature' },
 ]
 
 /**
@@ -247,12 +241,17 @@ export const houseClimateReadings: ClimateReading[] = [
  */
 export const climateFans: FanDevice[] = [
   {
-    label: 'Living room fan',
-    fanId: 'fan.mts300',
-    tempId: 'sensor.mts300_temperature',
-    humidityId: 'sensor.mts300_humidity',
+    label: 'Air purifier',
+    fanId: 'fan.living_room_living_room_air_purifier',
+    readings: [
+      { id: 'sensor.living_room_living_room_air_purifier_pm2_5', label: 'PM2.5' },
+      {
+        id: 'sensor.living_room_living_room_air_purifier_filter_life',
+        label: 'Filter',
+        suffix: '%',
+      },
+    ],
   },
-  { label: 'Air purifier', fanId: 'fan.living_room_living_room_air_purifier' },
 ]
 
 export const entities = {
@@ -261,10 +260,13 @@ export const entities = {
   outdoorTemp: 'sensor.outdoor_temperature',
   lock: 'lock.level_lock_pro',
   vacuum: 'vacuum.x40_ultra',
-  /** Dreame map cameras — first available wins at runtime via discovery. */
-  vacuumMapCameras: ['camera.x40_ultra_map', 'camera.x40_ultra_map_1'] as const,
-  vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
+  /** Dreame live map. (camera.x40_ultra_map_1 is the older saved map.) */
+  vacuumMapCamera: 'camera.x40_ultra_map',
+  /** CleanGenius is the vacuum's working mode: off / routine / deep, and how it mops. */
   vacuumCleanGenius: 'select.x40_ultra_cleangenius',
+  vacuumCleanGeniusMode: 'select.x40_ultra_cleangenius_mode',
+  /** Classic mode select: only online when CleanGenius is off. */
+  vacuumCleaningMode: 'select.x40_ultra_cleaning_mode',
   mediaAll: 'media_player.all',
   /** Android TV: media player + its remote.* entity (d-pad / back / home). */
   tv: {

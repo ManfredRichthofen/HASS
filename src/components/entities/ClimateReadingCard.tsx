@@ -6,7 +6,7 @@ function ReadingValue({ entityId, suffix }: { entityId: string; suffix?: string 
   if (sensor.isUnavailable) return <span>—</span>
   const value =
     sensor.numericValue != null
-      ? Math.round(sensor.numericValue * 10) / 10
+      ? Math.round(sensor.numericValue)
       : (sensor.value ?? sensor.state)
   const unit = suffix ?? sensor.unitOfMeasurement ?? ''
   return (
@@ -58,16 +58,20 @@ export function ClimateReadingCard({
         <p className="truncate text-sm font-semibold text-ink">{label}</p>
         {occupancyId ? <OccupancyBadge entityId={occupancyId} /> : null}
       </div>
+      {unavailable ? (
+        <p className="mt-1.5 text-[0.8125rem] text-ink-muted @md:mt-2">Sensor offline</p>
+      ) : (
       <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 @md:mt-2 @md:gap-x-4">
         <p className="text-display text-xl text-ink @md:text-2xl">
           <ReadingValue entityId={tempId} suffix="°" />
         </p>
         {humidityId ? (
-          <p className="truncate text-xs text-ink-muted @md:text-sm">
+          <p className="truncate text-[0.8125rem] text-ink-muted @md:text-sm">
             <ReadingValue entityId={humidityId} suffix="%" /> humidity
           </p>
         ) : null}
       </div>
+      )}
     </div>
   )
 }

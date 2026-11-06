@@ -19,10 +19,12 @@ type LightScene = (typeof entities.lightScenes)[number]
 function SceneCard({
   scene,
   selected,
+  pending,
   onRun,
 }: {
   scene: LightScene
   selected: boolean
+  pending: boolean
   onRun: (scene: LightScene) => void
 }) {
   const Icon = icons[scene.id] ?? Sunrise
@@ -32,6 +34,8 @@ function SceneCard({
     <m.button
       type="button"
       aria-pressed={selected}
+      aria-busy={pending}
+      disabled={pending}
       aria-label={scene.label}
       {...press}
       whileTap={tap.medium}
@@ -41,6 +45,7 @@ function SceneCard({
         'modern:min-h-13 modern:rounded-pill modern:border-transparent modern:py-2',
         'glass:rounded-[1.25rem]',
         selected && 'border-transparent bg-accent text-on-accent',
+        pending && 'opacity-60',
       )}
     >
       <Icon
@@ -65,10 +70,12 @@ function SceneCard({
 export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonly LightScene[] }) {
   const { callService } = useServiceCall()
   const [lastId, setLastId] = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<string | null>(null)
 
   const runScene = (scene: LightScene) => {
     const previous = lastId
     setLastId(scene.id)
+    setPendingId(scene.id)
     void (async () => {
       try {
         if (scene.kind === 'lights_off') {
@@ -83,6 +90,8 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
       } catch (e) {
         setLastId(previous)
         notify('Scene failed', e instanceof Error ? e.message : 'Error')
+      } finally {
+        setPendingId(null)
       }
     })()
   }
@@ -96,7 +105,9 @@ export function SceneStrip({ scenes = entities.lightScenes }: { scenes?: readonl
       )}
     >
       {scenes.map((scene) => (
-        <SceneCard key={scene.id} scene={scene} selected={lastId === scene.id} onRun={runScene} />
+        <SceneCard key={scene.id} scene={scene} selected={lastId === scene.id}
+          pending={pendingId === scene.id}
+          onRun={runScene} />
       ))}
     </div>
   )

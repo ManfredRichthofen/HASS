@@ -12,16 +12,29 @@ import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
 import { AnimatePresence, expandCollapse, m, snappy, tap } from '#/lib/motion'
 
-const speedPresets = [
-  { label: 'Low', value: 33 },
-  { label: 'Med', value: 66 },
-  { label: 'High', value: 100 },
-] as const
+type SpeedPreset = { label: string; value: number }
 
-function nearestPreset(pct: number) {
-  return speedPresets.reduce((best, preset) =>
-    Math.abs(preset.value - pct) < Math.abs(best.value - pct) ? preset : best,
-  )
+/** Low / Med / High that land on speeds the fan can actually run at (its percentage step). */
+function presetsFor(step: number): SpeedPreset[] {
+  if (step < 10) {
+    return [
+      { label: 'Low', value: 33 },
+      { label: 'Med', value: 66 },
+      { label: 'High', value: 100 },
+    ]
+  }
+  const mid = Math.round(50 / step) * step || step
+  return [
+    { label: 'Low', value: step },
+    { label: 'Med', value: mid },
+    { label: 'High', value: 100 },
+  ]
+}
+
+/** The preset a speed matches, or null: 50% is not "Med" just because Med is closest. */
+function matchingPreset(presets: SpeedPreset[], pct: number, step: number) {
+  const tolerance = Math.max(5, step / 2 - 1)
+  return presets.find((preset) => Math.abs(preset.value - pct) <= tolerance) ?? null
 }
 
 function spinDuration(pct: number) {
@@ -39,16 +52,31 @@ function SensorReading({ entityId, kind }: { entityId: string; kind: 'temp' | 'h
   return <span>{value}</span>
 }
 
+type Reading = { id: string; label: string; suffix?: string }
+
+function LabelledReading({ reading }: { reading: Reading }) {
+  const sensor = useSensor(reading.id)
+  if (sensor.isUnavailable || sensor.numericValue == null) return null
+  return (
+    <span>
+      {reading.label} {Math.round(sensor.numericValue)}
+      {reading.suffix ?? ''}
+    </span>
+  )
+}
+
 function SensorHint({
   tempId,
   humidityId,
+  readings,
   onCard,
 }: {
   tempId?: string
   humidityId?: string
+  readings?: Reading[]
   onCard?: boolean
 }) {
-  if (!tempId && !humidityId) return null
+  if (!tempId && !humidityId && !readings?.length) return null
 
   return (
     <span
@@ -60,6 +88,12 @@ function SensorHint({
       {tempId ? <SensorReading entityId={tempId} kind="temp" /> : null}
       {tempId && humidityId ? <span aria-hidden>·</span> : null}
       {humidityId ? <SensorReading entityId={humidityId} kind="humidity" /> : null}
+      {readings?.map((reading, i) => (
+        <span key={reading.id} className="inline-flex gap-x-1.5">
+          {i > 0 || tempId || humidityId ? <span aria-hidden>·</span> : null}
+          <LabelledReading reading={reading} />
+        </span>
+      ))}
     </span>
   )
 }
@@ -69,13 +103,14 @@ export function FanTile({
   label,
   tempId,
   humidityId,
+  readings,
 }: {
   entityId: string
   label?: string
   /** Same-device climate sensors shown on this card. */
   tempId?: string
   humidityId?: string
-  compact?: boolean
+  readings?: Reading[]
 }) {
   const fan = useFan(entityId)
   const [open, setOpen] = useState(false)
@@ -86,8 +121,19 @@ export function FanTile({
   const canSpeed = fan.supportsSetSpeed
   const presets = fan.availablePresetModes.filter(Boolean)
   const showInline = canSpeed && isOn && !unavailable
-  const hasSensors = Boolean(tempId || humidityId)
-  const activePreset = useMemo(() => (canSpeed ? nearestPreset(speed) : null), [canSpeed, speed])
+  const hasSensors = Boolean(tempId || humidityId || readings?.length)
+  const step = fan.attributes.percentage_step ?? 1
+  const speedPresets = useMemo(() => presetsFor(step), [step])
+  const activePreset = useMemo(
+    () => (canSpeed ? matchingPreset(speedPresets, speed, step) : null),
+    [canSpeed, speed, speedPresets, step],
+  )
+  // Auto / Sleep modes run the fan themselves and report no percentage at all.
+  const autoMode =
+    isOn &&
+    !unavailable &&
+    Boolean(fan.presetMode) &&
+    (fan.attributes as { percentage?: number | null }).percentage == null
 
   useEffect(() => {
     setSpeed(Math.max(0, Math.round(fan.percentage) || 0))
@@ -133,7 +179,16 @@ export function FanTile({
       })
       return
     }
-    void fan.setPercentage(pct).catch(failSpeed)
+    // Auto and Sleep own the speed: switch to Manual first so the new speed sticks.
+    const manual = autoMode ? presets.find((mode) => /^manual$/i.test(mode)) : undefined
+    void (async () => {
+      try {
+        if (manual) await fan.setPresetMode(manual)
+        await fan.setPercentage(pct)
+      } catch (e) {
+        failSpeed(e)
+      }
+    })()
   }
 
   async function setPresetMode(preset: string) {
@@ -152,9 +207,13 @@ export function FanTile({
   const status = unavailable
     ? 'Unavailable'
     : isOn
-      ? canSpeed
-        ? `${speed || activePreset?.value || 0}% · ${activePreset?.label ?? 'Custom'}`
-        : fan.presetMode || 'On'
+      ? autoMode
+        ? String(fan.presetMode)
+        : canSpeed
+          ? activePreset
+            ? `${speed}% · ${activePreset.label}`
+            : `${speed}%`
+          : fan.presetMode || 'On'
       : 'Off'
 
   return (
@@ -185,7 +244,7 @@ export function FanTile({
               )}
             >
               <Fan
-                className={cn('size-5', isOn && 'animate-spin')}
+                className={cn('size-5', isOn && 'animate-spin motion-reduce:animate-none')}
                 style={isOn ? { animationDuration: spinDuration(speed || 40) } : undefined}
               />
             </span>
@@ -207,7 +266,12 @@ export function FanTile({
                 {status}
               </span>
               {hasSensors ? (
-                <SensorHint tempId={tempId} humidityId={humidityId} onCard={isOn} />
+                <SensorHint
+                  tempId={tempId}
+                  humidityId={humidityId}
+                  readings={readings}
+                  onCard={isOn}
+                />
               ) : null}
             </span>
           </m.button>
@@ -264,14 +328,21 @@ export function FanTile({
                     <span className="inline-flex items-center gap-1">
                       <Wind className="size-3.5" /> Speed
                     </span>
-                    <span className="tabular-nums text-on-ink">{speed}%</span>
+                    <span className="tabular-nums text-on-ink">
+                      {autoMode ? 'Automatic' : `${speed}%`}
+                    </span>
                   </div>
+                  {autoMode ? (
+                    <p className="text-xs text-on-ink-muted">
+                      {String(fan.presetMode)} sets the speed. Pick one above to take over.
+                    </p>
+                  ) : (
                   <Slider
                     onCard
                     aria-label={`${name} speed`}
                     min={0}
                     max={100}
-                    step={fan.attributes.percentage_step ?? 1}
+                    step={step}
                     value={speed}
                     onValueChange={(value) => {
                       setSpeed(Array.isArray(value) ? value[0] : value)
@@ -282,6 +353,7 @@ export function FanTile({
                       void commitSpeed(next)
                     }}
                   />
+                  )}
                 </div>
               </div>
             </m.div>
@@ -323,14 +395,21 @@ export function FanTile({
           <div className="space-y-6 py-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-ink-muted">Power</span>
-              <Switch checked={isOn} disabled={unavailable} onCheckedChange={handleToggle} />
+              <Switch
+                aria-label={`${name} power`}
+                checked={isOn}
+                disabled={unavailable}
+                onCheckedChange={handleToggle}
+              />
             </div>
 
             {canSpeed ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-ink-muted">Speed</span>
-                  <span className="tabular-nums text-ink">{speed}%</span>
+                  <span className="tabular-nums text-ink">
+                    {autoMode ? `Automatic (${String(fan.presetMode)})` : `${speed}%`}
+                  </span>
                 </div>
                 <div className="flex gap-1.5">
                   {speedPresets.map((preset) => (
@@ -348,11 +427,12 @@ export function FanTile({
                     </Toggle>
                   ))}
                 </div>
+                {autoMode ? null : (
                 <Slider
                   aria-label="Fan speed"
                   min={0}
                   max={100}
-                  step={fan.attributes.percentage_step ?? 1}
+                  step={step}
                   disabled={unavailable}
                   value={speed}
                   onValueChange={(value) => {
@@ -364,6 +444,7 @@ export function FanTile({
                     void commitSpeed(next)
                   }}
                 />
+                )}
               </div>
             ) : null}
 
@@ -392,6 +473,7 @@ export function FanTile({
                   <div className="flex items-center justify-between rounded-card border border-border-subtle bg-canvas/40 px-3 py-2.5">
                     <span className="text-sm text-ink">Oscillate</span>
                     <Switch
+                      aria-label="Oscillate"
                       checked={Boolean(fan.isOscillating)}
                       disabled={unavailable || !isOn}
                       onCheckedChange={(checked) => {

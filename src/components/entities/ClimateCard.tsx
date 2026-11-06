@@ -1,5 +1,5 @@
 import { useClimate } from 'hass-react'
-import { Minus, Plus, Thermometer } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
 import { type PointerEvent, useEffect, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Segmented } from '#/components/ui/segmented'
@@ -42,18 +42,61 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v))
 }
 
+/** One setpoint of a heat/cool range: a big number with − and + beside it. */
+function RangeStepper({
+  label,
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  disabled?: boolean
+  onChange: (next: number) => void
+}) {
+  return (
+    <div className="grid min-w-0 justify-items-center gap-2 rounded-control bg-canvas px-3 py-4">
+      <span className="text-label">{label}</span>
+      <span className="text-[3rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em]">
+        {Math.round(value)}°
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label={`Lower ${label.toLowerCase()}`}
+          disabled={disabled || value <= min}
+          onClick={() => onChange(value - 1)}
+        >
+          <Minus className="size-5" aria-hidden />
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label={`Raise ${label.toLowerCase()}`}
+          disabled={disabled || value >= max}
+          onClick={() => onChange(value + 1)}
+        >
+          <Plus className="size-5" aria-hidden />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Keep the two setpoints at least this far apart so heat and cool never fight. */
+const RANGE_GAP = 2
+
 /**
  * The thermostat as a dial you can read across the room: a 270° arc filled to
  * the target, the target huge in the middle, a tick where the room actually is.
- * Drag the arc, or use − / +. `compact` renders a single row for lists.
+ * Drag the arc, or use − / +. In heat/cool it shows the two setpoints instead.
  */
-export function ClimateCard({
-  entityId,
-  compact = false,
-}: {
-  entityId: string
-  compact?: boolean
-}) {
+export function ClimateCard({ entityId }: { entityId: string }) {
   const climate = useClimate(entityId)
   const name = entityName(entityId, climate.attributes.friendly_name)
   const unavailable = climate.isUnavailable
@@ -70,14 +113,44 @@ export function ClimateCard({
     if (!dragging.current) setTarget(haTarget)
   }, [haTarget])
 
-  async function commit(next: number) {
+  // Heat/cool reports a low and a high setpoint instead of one target.
+  const rangeLow = climate.targetTempLow
+  const rangeHigh = climate.targetTempHigh
+  const dual = climate.targetTemperature == null && rangeLow != null && rangeHigh != null
+  const [range, setRange] = useState({ low: rangeLow ?? lo, high: rangeHigh ?? hi })
+  useEffect(() => {
+    if (rangeLow != null && rangeHigh != null) setRange({ low: rangeLow, high: rangeHigh })
+  }, [rangeLow, rangeHigh])
+
+  // Show every tap at once, but send one command once the taps stop.
+  const sendTimer = useRef<number | undefined>(undefined)
+  const rangeTimer = useRef<number | undefined>(undefined)
+
+  function commit(next: number, delay = 450) {
     const value = clamp(Math.round(next), lo, hi)
     setTarget(value)
-    try {
-      await climate.setTemperature(value)
-    } catch (e) {
-      notify('Temperature failed', e instanceof Error ? e.message : 'Error')
-    }
+    window.clearTimeout(sendTimer.current)
+    sendTimer.current = window.setTimeout(async () => {
+      try {
+        await climate.setTemperature(value)
+      } catch (e) {
+        setTarget(haTarget)
+        notify('Temperature didn’t change', e instanceof Error ? e.message : 'Error')
+      }
+    }, delay)
+  }
+
+  function commitRange(next: { low: number; high: number }) {
+    setRange(next)
+    window.clearTimeout(rangeTimer.current)
+    rangeTimer.current = window.setTimeout(async () => {
+      try {
+        await climate.setTemperatureRange(next.low, next.high)
+      } catch (e) {
+        setRange({ low: rangeLow ?? lo, high: rangeHigh ?? hi })
+        notify('Temperature range didn’t change', e instanceof Error ? e.message : 'Error')
+      }
+    }, 450)
   }
 
   const setMode = (next: string) => {
@@ -106,33 +179,6 @@ export function ClimateCard({
       ]
         .filter(Boolean)
         .join(' · ')
-
-  if (compact) {
-    return (
-      <div
-        className={cn(
-          'flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface p-4.5 shadow-card modern:border-transparent',
-          unavailable && 'opacity-45',
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-4">
-          <span className="text-light">
-            <Thermometer className="size-6" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[0.9375rem] font-semibold text-ink">{name}</p>
-            <p className="truncate text-[0.8125rem] text-ink-muted">{statusLine}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-display text-3xl leading-none text-ink tabular-nums">
-            {Math.round(target)}°
-          </p>
-          <p className="text-label mt-1">Target</p>
-        </div>
-      </div>
-    )
-  }
 
   const span = hi - lo || 1
   const angleFor = (v: number) => A0 + ((clamp(v, lo, hi) - lo) / span) * (A1 - A0)
@@ -166,6 +212,27 @@ export function ClimateCard({
         <span className="shrink-0 text-[0.8125rem] text-ink-muted">{statusLine}</span>
       </div>
 
+      {dual ? (
+        <div className="grid w-full grid-cols-2 gap-3">
+          <RangeStepper
+            label="Heat to"
+            value={range.low}
+            min={lo}
+            max={range.high - RANGE_GAP}
+            disabled={unavailable}
+            onChange={(low) => commitRange({ low, high: range.high })}
+          />
+          <RangeStepper
+            label="Cool to"
+            value={range.high}
+            min={range.low + RANGE_GAP}
+            max={hi}
+            disabled={unavailable}
+            onChange={(high) => commitRange({ low: range.low, high })}
+          />
+        </div>
+      ) : (
+        <>
       <div className="relative h-[220px] w-[248px]">
         <svg
           viewBox="0 0 248 220"
@@ -179,19 +246,26 @@ export function ClimateCard({
           aria-valuemin={lo}
           aria-valuemax={hi}
           aria-valuenow={Math.round(target)}
+          aria-valuetext={`${Math.round(target)}° target${current != null ? `, ${Math.round(current)}° inside` : ''}`}
           tabIndex={unavailable ? -1 : 0}
           onKeyDown={(e) => {
             if (unavailable) return
             if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
               e.preventDefault()
-              void commit(target + 1)
+              commit(target + 1)
             } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
               e.preventDefault()
-              void commit(target - 1)
+              commit(target - 1)
             }
           }}
           onPointerDown={(e) => {
             if (unavailable) return
+            // Only the ring is a handle, not the empty box around it or the number inside.
+            const box = e.currentTarget.getBoundingClientRect()
+            const dx = ((e.clientX - box.left) / box.width) * 248 - CX
+            const dy = ((e.clientY - box.top) / box.height) * 220 - CY
+            const dist = Math.hypot(dx, dy)
+            if (dist < R - 26 || dist > R + 26) return
             dragging.current = true
             e.currentTarget.setPointerCapture(e.pointerId)
             setTarget(Math.round(valueFromPointer(e)))
@@ -203,7 +277,13 @@ export function ClimateCard({
           onPointerUp={() => {
             if (!dragging.current) return
             dragging.current = false
-            void commit(target)
+            commit(target, 0)
+          }}
+          // An interrupted gesture (scroll takeover, alert) must not leave the dial stuck.
+          onPointerCancel={() => {
+            if (!dragging.current) return
+            dragging.current = false
+            setTarget(haTarget)
           }}
         >
           <path
@@ -253,7 +333,7 @@ export function ClimateCard({
           variant="secondary"
           aria-label="Cooler"
           disabled={unavailable || target <= lo}
-          onClick={() => void commit(target - 1)}
+          onClick={() => commit(target - 1)}
         >
           <Minus className="size-5" aria-hidden />
         </Button>
@@ -265,11 +345,13 @@ export function ClimateCard({
           variant="secondary"
           aria-label="Warmer"
           disabled={unavailable || target >= hi}
-          onClick={() => void commit(target + 1)}
+          onClick={() => commit(target + 1)}
         >
           <Plus className="size-5" aria-hidden />
         </Button>
       </div>
+        </>
+      )}
 
       <Segmented
         className="w-full"

@@ -16,7 +16,7 @@ export const entityLabels: Record<string, string> = {
   'light.bedroom_ceiling_light': 'Ceiling',
 
   // Fans
-  'fan.mts300': 'Living room fan',
+  'fan.mts300': 'AC fan',
   'fan.bedroom_ceiling_fan': 'Ceiling fan',
   'fan.afg_smt_pro_2_0': 'Attic fan',
   'fan.living_room_living_room_air_purifier': 'Air purifier',

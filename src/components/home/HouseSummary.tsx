@@ -20,7 +20,7 @@ import {
   Settings,
   Sun,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HouseModeGrid } from '#/components/home/HouseModeGrid'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogClose, DialogContent } from '#/components/ui/dialog'
@@ -41,6 +41,18 @@ function weatherIcon(condition: string) {
   if (c.includes('partly') || c.includes('cloud')) return CloudSun
   return Cloud
 }
+
+/** Re-renders once a minute so the greeting and date follow the clock. */
+function useMinuteClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+  return now
+}
+
+const isGone = (state: unknown) => state === 'unavailable' || state === 'unknown'
 
 function greetingFor(hour: number) {
   return hour < 5
@@ -74,9 +86,11 @@ export function HouseSummary() {
   const [modeOpen, setModeOpen] = useState(false)
   const [confirmLockOpen, setConfirmLockOpen] = useState(false)
 
-  const now = new Date()
+  const now = useMinuteClock()
   const firstName = user?.name?.split(' ')[0]
-  const lightsOn = lights.filter((l) => l.state === 'on').length
+  const reporting = lights.filter((l) => !isGone(l.state))
+  const lightsOn = reporting.filter((l) => l.state === 'on').length
+  const lightsOffline = lights.length - reporting.length
   const someoneHome = !occupancy.isUnavailable && occupancy.isOn
   const temp =
     outdoor.numericValue ??
@@ -87,9 +101,8 @@ export function HouseSummary() {
   const { value: locked, commit: commitLocked } = useOptimisticValue(
     !lock.isUnavailable && lock.isLocked,
   )
-  const unlocking = locked
 
-  const handleConfirmLock = () => {
+  const changeLock = () => {
     if (lock.isUnavailable) return
     setConfirmLockOpen(false)
     const nextLocked = !locked
@@ -105,7 +118,28 @@ export function HouseSummary() {
     })
   }
 
-  const people = occupancy.isUnavailable ? null : someoneHome ? "Someone's home" : 'Nobody is home'
+  const people = occupancy.isUnavailable ? null : someoneHome ? "someone's home" : 'nobody is home'
+  const modeName = String(mode.state ?? '').toLowerCase()
+  // Away with someone in the house, or Home with nobody in it: say so plainly.
+  const modeNote =
+    occupancy.isUnavailable || mode.isUnavailable
+      ? null
+      : someoneHome && modeName === 'away'
+        ? 'House mode is Away, but someone’s home.'
+        : !someoneHome && modeName === 'home'
+          ? 'House mode is Home, but nobody’s home.'
+          : null
+
+  const lightsText =
+    reporting.length === 0
+      ? 'no lights are reporting'
+      : lightsOn > 0
+        ? `${lightsOn} light${lightsOn === 1 ? ' is' : 's are'} on`
+        : lightsOffline > 0
+          ? 'every light that’s reporting is off'
+          : 'every light is off'
+  // After "Good morning." the next clause starts a sentence if nothing precedes it.
+  const lightsLabel = people ? lightsText : lightsText.charAt(0).toUpperCase() + lightsText.slice(1)
 
   return (
     <>
@@ -118,7 +152,7 @@ export function HouseSummary() {
             {!weather.isUnavailable ? (
               <Link
                 to="/climate"
-                className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] text-ink-muted capitalize @xl:min-h-9"
+                className="inline-flex min-h-11 items-center gap-1.5 text-[0.8125rem] text-ink-muted capitalize @xl:min-h-11"
               >
                 <WeatherIcon className="size-[18px]" />
                 {temp != null && !Number.isNaN(temp) ? `${Math.round(temp)}° ` : ''}
@@ -136,6 +170,7 @@ export function HouseSummary() {
         </div>
 
         <p
+          aria-live="polite"
           className={cn(
             'text-display text-[2.125rem] leading-[1.1] text-balance text-ink',
             'walnut:text-[2.25rem] walnut:font-light',
@@ -144,7 +179,8 @@ export function HouseSummary() {
           )}
         >
           {greetingFor(now.getHours())}
-          {firstName ? `, ${firstName}` : ''}. {people ? `${people}, ` : ''}
+          {firstName ? `, ${firstName}` : ''}.{' '}
+          {people ? `${people.charAt(0).toUpperCase()}${people.slice(1)}, ` : ''}
           <Link
             to="/rooms"
             className={cn(
@@ -152,9 +188,7 @@ export function HouseSummary() {
               lightsOn > 0 && 'text-light decoration-current modern:bg-light-soft modern:text-ink',
             )}
           >
-            {lightsOn === 0
-              ? 'every light is off'
-              : `${lightsOn} light${lightsOn === 1 ? ' is' : 's are'} on`}
+            {lightsLabel}
           </Link>
           {lock.isUnavailable ? (
             '.'
@@ -167,6 +201,7 @@ export function HouseSummary() {
             </>
           )}
         </p>
+        {modeNote ? <p className="-mt-1 text-sm text-ink-muted">{modeNote}</p> : null}
 
         <div className="flex items-center justify-between gap-3">
           <button
@@ -195,7 +230,7 @@ export function HouseSummary() {
               type="button"
               aria-haspopup="dialog"
               aria-label={locked ? 'Unlock front door' : 'Lock front door'}
-              onClick={() => setConfirmLockOpen(true)}
+              onClick={() => (locked ? setConfirmLockOpen(true) : changeLock())}
               className={cn(
                 'press grid size-11 shrink-0 place-items-center rounded-pill border-ui border-border outline-none',
                 'focus-visible:ring-2 focus-visible:ring-accent',
@@ -220,23 +255,15 @@ export function HouseSummary() {
 
       <Dialog open={confirmLockOpen} onOpenChange={setConfirmLockOpen}>
         <DialogContent
-          title={unlocking ? 'Unlock front door?' : 'Lock front door?'}
-          description={
-            unlocking
-              ? 'Anyone at the door will be able to open it.'
-              : 'The front door will lock until you unlock it again.'
-          }
+          title="Unlock front door?"
+          description="Anyone at the door will be able to open it."
           actions={
             <>
               <DialogClose className="press inline-flex h-11 items-center rounded-pill px-4 text-sm font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink">
                 Cancel
               </DialogClose>
-              <Button
-                size="sm"
-                variant={unlocking ? 'danger' : 'primary'}
-                onClick={handleConfirmLock}
-              >
-                {unlocking ? 'Unlock' : 'Lock'}
+              <Button size="sm" variant="danger" onClick={changeLock}>
+                Unlock
               </Button>
             </>
           }

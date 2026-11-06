@@ -131,7 +131,7 @@ export function QuickDeviceRow({ className }: { className?: string }) {
           caption={
             inside.numericValue != null
               ? `${Math.round(inside.numericValue)}° in the living room`
-              : '—'
+              : 'No reading'
           }
           trailing={chevron}
         />

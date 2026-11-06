@@ -16,6 +16,7 @@ export const Route = createFileRoute('/')({ component: HomePage })
  * the lights you touch most → everything else.
  */
 function HomePage() {
+  const favouriteLights = entities.favorites.lights.filter(isRoomLight)
   return (
     <m.div initial="initial" animate="animate" variants={staggerContainer}>
       <Page>
@@ -28,13 +29,15 @@ function HomePage() {
             <SceneStrip />
           </Section>
 
-          <Section title="Favourites" action={<Link to="/rooms">All rooms</Link>}>
-            <EntityGrid>
-              {entities.favorites.lights.filter(isRoomLight).map((id) => (
-                <LightTile key={id} entityId={id} />
-              ))}
-            </EntityGrid>
-          </Section>
+          {favouriteLights.length > 0 ? (
+            <Section title="Favourites" action={<Link to="/rooms">All rooms</Link>}>
+              <EntityGrid>
+                {favouriteLights.map((id) => (
+                  <LightTile key={id} entityId={id} />
+                ))}
+              </EntityGrid>
+            </Section>
+          ) : null}
 
           <Section title="Around the house">
             <QuickDeviceRow />
