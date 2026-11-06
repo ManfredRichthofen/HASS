@@ -24,6 +24,7 @@ import { notify } from '#/components/ui/toast'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
 import { cn } from '#/lib/cn'
 import { entityName } from '#/lib/entityName'
+import { friendlyAppName } from '#/lib/tvApps'
 
 /** Round-ish tactile remote key. */
 function Key({
@@ -186,7 +187,7 @@ export function TvRemoteCard({
     ? 'Unavailable'
     : isOff
       ? 'Off'
-      : [tv.appName ?? tv.currentSource, tv.mediaTitle].filter(Boolean).join(' · ') || 'On'
+      : [friendlyAppName(tv.appName ?? tv.currentSource), tv.mediaTitle].filter(Boolean).join(' · ') || 'On'
   const playing = tv.isPlaying
   const sources = tv.sourceList.slice(0, 8)
 
@@ -339,7 +340,7 @@ export function TvRemoteCard({
                       : 'border-ui border-border bg-transparent text-ink-muted hover:bg-surface-hover hover:text-ink',
                   )}
                 >
-                  {source}
+                  {friendlyAppName(source)}
                 </button>
               )
             })}

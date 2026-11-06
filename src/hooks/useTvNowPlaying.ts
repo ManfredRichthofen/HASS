@@ -1,5 +1,6 @@
 import { useMediaPlayer } from 'hass-react'
 import { entities } from '#/config/dashboard'
+import { friendlyAppName } from '#/lib/tvApps'
 
 /** Launcher / system screens: the TV is on but nothing is "playing". */
 const HOME_APP = /launcher|home|settings|^android tv$|^google tv$|^tv$|screensaver|ambient/i
@@ -19,7 +20,9 @@ export function useTvNowPlaying() {
   const playing = info.isPlaying || tv.isPlaying
   const paused = !playing && (info.isPaused || tv.isPaused)
   const title = info.mediaTitle ?? tv.mediaTitle
-  const app = tv.appName ?? tv.currentSource ?? info.appName ?? info.currentSource
+  const app = friendlyAppName(
+    tv.appName ?? tv.currentSource ?? info.appName ?? info.currentSource,
+  )
   const onHomeScreen = !app || HOME_APP.test(app)
   const isOn = tv.isOn || playing || paused
 
