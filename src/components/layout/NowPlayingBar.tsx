@@ -111,9 +111,16 @@ export function NowPlayingBar() {
                   aria-label="Open TV remote"
                   className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <span className="grid size-12 shrink-0 place-items-center rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink modern:rounded-pill glass:rounded-pill">
-                    <Tv className="size-5" />
-                  </span>
+                  <MediaArt
+                    sources={artSources}
+                    label=""
+                    className="size-12 rounded-[calc(var(--r-card)-0.5rem)] bg-on text-on-ink shadow-none! modern:rounded-pill glass:rounded-pill"
+                    fallback={
+                      <span className="grid size-full place-items-center">
+                        <Tv className="size-5" />
+                      </span>
+                    }
+                  />
                   <span className="min-w-0">
                     <span className="block truncate text-[0.9375rem] font-semibold">{title}</span>
                     <span className="block truncate text-[0.8125rem] text-ink-muted modern:text-on-accent/70">

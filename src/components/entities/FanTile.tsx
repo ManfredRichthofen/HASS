@@ -42,6 +42,18 @@ function spinDuration(pct: number) {
   return `${3.6 - (clamped / 100) * 2.8}s`
 }
 
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
+/** Slider callbacks hand back a number or a one-item range. */
+const sliderValue = (value: number | readonly number[]) =>
+  typeof value === 'number' ? value : (value[0] ?? 0)
+
+const percentText = (value: number) => `${value}%`
+
+/** The failure's own message when it has one; otherwise the usual cause and a next step. */
+const failureDetail = (e: unknown) =>
+  e instanceof Error && e.message ? e.message : 'Check that it is online, then try again.'
+
 function SensorReading({ entityId, kind }: { entityId: string; kind: 'temp' | 'humidity' }) {
   const sensor = useSensor(entityId)
   if (sensor.isUnavailable || sensor.numericValue == null) return null
@@ -81,7 +93,7 @@ function SensorHint({
   return (
     <span
       className={cn(
-        'mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs',
+        'mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] tabular-nums',
         onCard ? 'text-on-ink/70' : 'text-ink-muted',
       )}
     >
@@ -114,7 +126,11 @@ export function FanTile({
 }) {
   const fan = useFan(entityId)
   const [open, setOpen] = useState(false)
-  const [speed, setSpeed] = useState(Math.max(0, Math.round(fan.percentage) || 0))
+  // What the fan itself last reported. The local `speed` follows the finger and the
+  // buttons; it snaps back here whenever a command fails, so the card never keeps
+  // showing a speed the fan is not running at.
+  const reportedSpeed = Math.max(0, Math.round(fan.percentage) || 0)
+  const [speed, setSpeed] = useState(reportedSpeed)
   const name = label ?? entityName(entityId, fan.attributes.friendly_name)
   const unavailable = fan.isUnavailable
   const { value: isOn, commit: commitOn } = useOptimisticValue(fan.isOn && !unavailable)
@@ -128,23 +144,26 @@ export function FanTile({
     () => (canSpeed ? matchingPreset(speedPresets, speed, step) : null),
     [canSpeed, speed, speedPresets, step],
   )
+  const mode = fan.presetMode ? capitalize(String(fan.presetMode)) : null
   // Auto / Sleep modes run the fan themselves and report no percentage at all.
   const autoMode =
     isOn &&
     !unavailable &&
     Boolean(fan.presetMode) &&
     (fan.attributes as { percentage?: number | null }).percentage == null
+  const autoLabel = mode && !/^auto/i.test(mode) ? `Automatic (${mode})` : 'Automatic'
 
   useEffect(() => {
-    setSpeed(Math.max(0, Math.round(fan.percentage) || 0))
-  }, [fan.percentage, fan.isOn])
+    setSpeed(reportedSpeed)
+  }, [reportedSpeed, fan.isOn])
 
   const handleToggle = () => {
-    commitOn(!isOn, async () => {
+    const turningOn = !isOn
+    commitOn(turningOn, async () => {
       try {
         await fan.toggle()
       } catch (e) {
-        notify('Fan failed', e instanceof Error ? e.message : 'Unknown error')
+        notify(`${name} didn't turn ${turningOn ? 'on' : 'off'}`, failureDetail(e))
         throw e
       }
     })
@@ -152,9 +171,7 @@ export function FanTile({
 
   const togglePress = useScrollSafePress(handleToggle)
 
-  const failSpeed = (e: unknown) => {
-    notify('Fan speed failed', e instanceof Error ? e.message : 'Error')
-  }
+  const rollbackSpeed = () => setSpeed(reportedSpeed)
 
   const commitSpeed = (pct: number) => {
     if (pct <= 0) {
@@ -162,7 +179,8 @@ export function FanTile({
         try {
           await fan.turnOff()
         } catch (e) {
-          failSpeed(e)
+          rollbackSpeed()
+          notify(`${name} didn't turn off`, failureDetail(e))
           throw e
         }
       })
@@ -173,22 +191,30 @@ export function FanTile({
         try {
           await fan.turnOn({ percentage: pct })
         } catch (e) {
-          failSpeed(e)
+          rollbackSpeed()
+          notify(`${name} didn't turn on`, failureDetail(e))
           throw e
         }
       })
       return
     }
     // Auto and Sleep own the speed: switch to Manual first so the new speed sticks.
-    const manual = autoMode ? presets.find((mode) => /^manual$/i.test(mode)) : undefined
+    const manual = autoMode ? presets.find((preset) => /^manual$/i.test(preset)) : undefined
     void (async () => {
       try {
         if (manual) await fan.setPresetMode(manual)
         await fan.setPercentage(pct)
       } catch (e) {
-        failSpeed(e)
+        rollbackSpeed()
+        notify(`${name} didn't change speed`, failureDetail(e))
       }
     })()
+  }
+
+  /** Show the new speed at once, then ask the fan for it. */
+  const applySpeed = (pct: number) => {
+    setSpeed(pct)
+    commitSpeed(pct)
   }
 
   async function setPresetMode(preset: string) {
@@ -196,7 +222,7 @@ export function FanTile({
       if (!fan.isOn) await fan.turnOn({ preset_mode: preset })
       else await fan.setPresetMode(preset)
     } catch (e) {
-      notify('Preset failed', e instanceof Error ? e.message : 'Error')
+      notify(`${name} didn't switch to ${preset}`, failureDetail(e))
     }
   }
 
@@ -208,12 +234,12 @@ export function FanTile({
     ? 'Unavailable'
     : isOn
       ? autoMode
-        ? String(fan.presetMode)
-        : canSpeed
+        ? (mode ?? 'On')
+        : canSpeed && speed > 0
           ? activePreset
             ? `${speed}% · ${activePreset.label}`
             : `${speed}%`
-          : fan.presetMode || 'On'
+          : (mode ?? 'On')
       : 'Off'
 
   return (
@@ -225,13 +251,13 @@ export function FanTile({
           isOn
             ? 'bg-on shadow-on border-transparent'
             : 'border-border-subtle bg-surface shadow-card modern:border-transparent',
-          unavailable && 'opacity-40',
         )}
       >
         <div className="relative flex items-start justify-between gap-2">
           <m.button
             type="button"
             disabled={unavailable}
+            aria-pressed={isOn}
             {...togglePress}
             whileTap={tap.soft}
             transition={snappy}
@@ -241,6 +267,9 @@ export function FanTile({
               className={cn(
                 'grid size-11 shrink-0 place-items-center rounded-control',
                 isOn ? 'bg-on-ink/10 text-on-ink' : 'bg-icon-well text-ink-muted',
+                // Only the icon fades when the fan is unreachable: the name and the
+                // reason stay at full contrast.
+                unavailable && 'opacity-40',
               )}
             >
               <Fan
@@ -259,8 +288,8 @@ export function FanTile({
               </span>
               <span
                 className={cn(
-                  'mt-0.5 block truncate text-xs',
-                  isOn ? 'text-on-ink-muted' : 'text-ink-muted',
+                  'mt-0.5 block truncate text-[0.8125rem] tabular-nums',
+                  isOn ? 'text-on-ink-muted' : unavailable ? 'text-ink' : 'text-ink-muted',
                 )}
               >
                 {status}
@@ -281,7 +310,7 @@ export function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink"
+            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink disabled:opacity-40"
           >
             <SlidersHorizontal className="size-4" />
           </button>
@@ -305,13 +334,10 @@ export function FanTile({
                       <button
                         key={preset.label}
                         type="button"
-                        disabled={unavailable}
-                        onClick={() => {
-                          setSpeed(preset.value)
-                          void commitSpeed(preset.value)
-                        }}
+                        aria-pressed={selected}
+                        onClick={() => applySpeed(preset.value)}
                         className={cn(
-                          'touch-target min-w-0 flex-1 rounded-control border px-1.5 text-xs font-semibold transition-ui',
+                          'touch-target min-w-0 flex-1 rounded-control border px-1.5 text-[0.8125rem] font-semibold transition-ui',
                           selected
                             ? 'border-on-ink bg-on-ink text-on-from'
                             : 'border-transparent bg-on-ink/10 text-on-ink-muted hover:text-on-ink',
@@ -333,26 +359,21 @@ export function FanTile({
                     </span>
                   </div>
                   {autoMode ? (
-                    <p className="text-xs text-on-ink-muted">
-                      {String(fan.presetMode)} sets the speed. Pick one above to take over.
+                    <p className="text-pretty text-[0.8125rem] text-on-ink-muted">
+                      {mode} sets the speed. Pick Low, Med or High to take over.
                     </p>
                   ) : (
-                  <Slider
-                    onCard
-                    aria-label={`${name} speed`}
-                    min={0}
-                    max={100}
-                    step={step}
-                    value={speed}
-                    onValueChange={(value) => {
-                      setSpeed(Array.isArray(value) ? value[0] : value)
-                    }}
-                    onValueCommitted={(value) => {
-                      const next = Array.isArray(value) ? value[0] : value
-                      setSpeed(next)
-                      void commitSpeed(next)
-                    }}
-                  />
+                    <Slider
+                      onCard
+                      aria-label={`${name} speed`}
+                      valueText={percentText}
+                      min={0}
+                      max={100}
+                      step={step}
+                      value={speed}
+                      onValueChange={(value) => setSpeed(sliderValue(value))}
+                      onValueCommitted={(value) => applySpeed(sliderValue(value))}
+                    />
                   )}
                 </div>
               </div>
@@ -375,11 +396,8 @@ export function FanTile({
                   <button
                     key={preset.label}
                     type="button"
-                    onClick={() => {
-                      setSpeed(preset.value)
-                      void commitSpeed(preset.value)
-                    }}
-                    className="touch-target min-w-0 flex-1 rounded-control border border-border-subtle bg-canvas/40 px-1.5 text-xs font-semibold text-ink-muted transition-ui hover:border-info/30 hover:text-ink"
+                    onClick={() => applySpeed(preset.value)}
+                    className="touch-target min-w-0 flex-1 rounded-control border border-border-subtle bg-canvas/40 px-1.5 text-[0.8125rem] font-semibold text-ink-muted transition-ui hover:border-info/30 hover:text-ink"
                   >
                     {preset.label}
                   </button>
@@ -408,7 +426,7 @@ export function FanTile({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-ink-muted">Speed</span>
                   <span className="tabular-nums text-ink">
-                    {autoMode ? `Automatic (${String(fan.presetMode)})` : `${speed}%`}
+                    {autoMode ? autoLabel : `${speed}%`}
                   </span>
                 </div>
                 <div className="flex gap-1.5">
@@ -417,10 +435,7 @@ export function FanTile({
                       key={preset.label}
                       pressed={activePreset?.value === preset.value && isOn}
                       disabled={unavailable}
-                      onPressedChange={() => {
-                        setSpeed(preset.value)
-                        void commitSpeed(preset.value)
-                      }}
+                      onPressedChange={() => applySpeed(preset.value)}
                       className="flex-1"
                     >
                       {preset.label}
@@ -428,22 +443,17 @@ export function FanTile({
                   ))}
                 </div>
                 {autoMode ? null : (
-                <Slider
-                  aria-label="Fan speed"
-                  min={0}
-                  max={100}
-                  step={step}
-                  disabled={unavailable}
-                  value={speed}
-                  onValueChange={(value) => {
-                    setSpeed(Array.isArray(value) ? value[0] : value)
-                  }}
-                  onValueCommitted={(value) => {
-                    const next = Array.isArray(value) ? value[0] : value
-                    setSpeed(next)
-                    void commitSpeed(next)
-                  }}
-                />
+                  <Slider
+                    aria-label={`${name} speed`}
+                    valueText={percentText}
+                    min={0}
+                    max={100}
+                    step={step}
+                    disabled={unavailable}
+                    value={speed}
+                    onValueChange={(value) => setSpeed(sliderValue(value))}
+                    onValueCommitted={(value) => applySpeed(sliderValue(value))}
+                  />
                 )}
               </div>
             ) : null}
@@ -473,14 +483,17 @@ export function FanTile({
                   <div className="flex items-center justify-between rounded-card border border-border-subtle bg-canvas/40 px-3 py-2.5">
                     <span className="text-sm text-ink">Oscillate</span>
                     <Switch
-                      aria-label="Oscillate"
+                      aria-label={`${name} oscillate`}
                       checked={Boolean(fan.isOscillating)}
                       disabled={unavailable || !isOn}
                       onCheckedChange={(checked) => {
                         void fan
                           .setOscillating(checked)
                           .catch((e) =>
-                            notify('Oscillate failed', e instanceof Error ? e.message : 'Error'),
+                            notify(
+                              `${name} didn't ${checked ? 'start' : 'stop'} oscillating`,
+                              failureDetail(e),
+                            ),
                           )
                       }}
                     />
@@ -495,7 +508,7 @@ export function FanTile({
                       void fan
                         .setDirection(next)
                         .catch((e) =>
-                          notify('Direction failed', e instanceof Error ? e.message : 'Error'),
+                          notify(`${name} didn't switch to ${next}`, failureDetail(e)),
                         )
                     }}
                     className="flex items-center justify-between rounded-card border border-border-subtle bg-canvas/40 px-3 py-2.5 text-left text-sm text-ink disabled:opacity-40"

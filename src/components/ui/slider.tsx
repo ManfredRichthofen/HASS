@@ -24,9 +24,12 @@ export function Slider({
   tone = 'accent',
   onCard = false,
   size = 'md',
+  valueText,
   ...props
 }: SliderRootProps & {
   'aria-label'?: string
+  /** Spoken value for assistive tech, e.g. `(v) => \`${v}%\``. Defaults to the bare number. */
+  valueText?: (value: number) => string
   /** `light` fills with the lit gradient (brightness, colour temperature). */
   tone?: 'accent' | 'light'
   /** For use on a lit (bg-on) surface. */
@@ -40,6 +43,7 @@ export function Slider({
     controlled ? asNumber(value) : asNumber(defaultValue ?? 0),
   )
   const dragging = useRef(false)
+  const ariaValueText = valueText ? (_formatted: string, next: number) => valueText(next) : undefined
 
   useEffect(() => {
     if (!controlled || dragging.current) return
@@ -76,6 +80,7 @@ export function Slider({
             <BaseSlider.Indicator className="absolute h-full rounded-pill bg-ink transition-none" />
             <BaseSlider.Thumb
               aria-label={ariaLabel}
+              getAriaValueText={ariaValueText}
               className={cn(
                 'size-4 rounded-pill bg-ink outline-none select-none',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
@@ -106,6 +111,7 @@ export function Slider({
             />
             <BaseSlider.Thumb
               aria-label={ariaLabel}
+              getAriaValueText={ariaValueText}
               className={cn(
                 'h-full w-6 outline-none select-none',
                 'after:absolute after:top-1/2 after:left-1/2 after:-mt-[9px] after:h-[18px] after:w-1 after:-translate-x-[10px] after:rounded-full after:content-[""]',

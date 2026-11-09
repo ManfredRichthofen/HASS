@@ -483,6 +483,18 @@
   --nav-offset: max(0.875rem, env(safe-area-inset-bottom));
 }
 
+/* In a plain browser tab there is no home indicator to clear, so the bar sits
+   lower: no floor on Walnut, a small float on Modern / Glass / Forest. */
+@media (display-mode: browser) {
+  :root {
+    --nav-offset: env(safe-area-inset-bottom, 0px);
+  }
+
+  :root:is([data-theme="modern"], [data-theme="glass"], [data-theme="forest"]) {
+    --nav-offset: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
 /* The now-playing bar (4rem) plus a gap; <main> eases its padding by this. */
 :root:has([data-now-playing]) {
   --now-playing-space: 4.75rem;

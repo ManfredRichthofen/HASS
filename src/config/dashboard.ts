@@ -274,6 +274,21 @@ export const entities = {
     remoteId: 'remote.living_room_tv',
     /** Google Cast player for the same TV: reports playing/paused, title and artwork. */
     playbackId: 'media_player.living_room_tv_cast',
+    /**
+     * Jellyfin sessions for the same TV. The integration creates a new entity per
+     * client session (Wholphin, Jellyfin Android TV, ...), so the ID changes with
+     * the app; missing IDs are ignored. Whichever is playing/paused wins over Cast.
+     */
+    jellyfinIds: [
+      'media_player.living_room_tv_2',
+      'media_player.living_room_tv_3',
+      'media_player.living_room_tv_4',
+      'media_player.living_room_tv_5',
+      'media_player.living_room_tv_6',
+      'media_player.65s451_p000x',
+      'media_player.65s451_p000x_2',
+      'media_player.65s451_p000x_3',
+    ],
     label: 'Living Room TV',
   },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',

@@ -40,7 +40,9 @@ export function useScrollSafePress(
       cancelled.current = true
     },
     onClick: (e) => {
-      if (cancelled.current) {
+      // `detail === 0` is a keyboard (or assistive-tech) activation: it has no pointer
+      // gesture to judge, and a stale `cancelled` from an earlier scroll must not eat it.
+      if (cancelled.current && e.detail !== 0) {
         e.preventDefault()
         e.stopPropagation()
         return
