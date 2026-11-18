@@ -56,7 +56,7 @@ export function SpeakersPanel({
             <button
               type="button"
               onClick={() => (allSelected ? clear() : void actions.selectAll(current.leader))}
-              className="min-h-9 text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
+              className="touch-target inline-flex items-center text-sm font-semibold text-ink-muted transition-ui hover:text-ink"
             >
               {allSelected ? 'Just this one' : 'All rooms'}
             </button>

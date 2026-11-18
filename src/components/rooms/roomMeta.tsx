@@ -23,5 +23,11 @@ export const roomIcons: Record<string, LucideIcon> = {
 export function Temp({ entityId }: { entityId: string }) {
   const temp = useSensor(entityId)
   if (temp.isUnavailable || temp.numericValue == null) return null
-  return <span>{` · ${Math.round(temp.numericValue)}°`}</span>
+  const degrees = Math.round(temp.numericValue)
+  return (
+    <span>
+      {' · '}
+      <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
+    </span>
+  )
 }

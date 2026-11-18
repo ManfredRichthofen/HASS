@@ -180,7 +180,7 @@ function TrackRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
-        <p className="truncate text-xs text-ink-muted">{itemSubtitle(item)}</p>
+        <p className="truncate text-[0.8125rem] text-ink-muted">{itemSubtitle(item)}</p>
       </div>
       <Button
         size="icon"
@@ -264,7 +264,7 @@ function MediaCard({
       <p className={cn('mt-2 truncate text-sm font-semibold text-ink', round && 'text-center')}>
         {item.title}
       </p>
-      <p className={cn('truncate text-xs text-ink-muted', round && 'text-center')}>
+      <p className={cn('truncate text-[0.8125rem] text-ink-muted', round && 'text-center')}>
         {itemSubtitle(item)}
       </p>
     </button>
@@ -500,12 +500,12 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
       {!query && recentSearches.length > 0 ? (
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <p className="text-label">Recent</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[0.8125rem] font-medium text-ink-faint">Recent</p>
             <button
               type="button"
               onClick={handleClearRecent}
-              className="text-xs font-medium text-ink-muted transition-ui hover:text-ink"
+              className="touch-target inline-flex items-center px-2 text-[0.8125rem] font-medium text-ink-muted transition-ui hover:text-ink"
             >
               Clear
             </button>
@@ -516,7 +516,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
                 key={recent}
                 type="button"
                 onClick={() => handleRecent(recent)}
-                className="touch-target flex max-w-full items-center gap-1.5 rounded-pill border border-border-subtle px-3.5 text-xs font-medium text-ink-muted transition-ui hover:text-ink"
+                className="touch-target flex max-w-full items-center gap-1.5 rounded-pill border border-border-subtle px-3.5 text-[0.8125rem] font-medium text-ink-muted transition-ui hover:text-ink"
               >
                 <History className="size-3.5 shrink-0" />
                 <span className="truncate">{recent}</span>
@@ -527,7 +527,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
       ) : null}
 
       <div className="space-y-1.5">
-        <p className="text-label">Tapping a result will</p>
+        <p className="text-[0.8125rem] font-medium text-ink-faint">Tapping a result will</p>
         <div role="group" aria-label="Tapping a result will" className="grid grid-cols-3 gap-1 rounded-card bg-canvas p-1">
           {enqueueModes.map((mode) => (
             <button
@@ -537,7 +537,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
               aria-pressed={enqueue === mode.id}
               onClick={() => setEnqueue(mode.id)}
               className={cn(
-                'touch-target flex items-center justify-center gap-1.5 rounded-control px-2 text-xs font-medium transition-ui',
+                'touch-target flex items-center justify-center gap-1.5 rounded-control px-2 text-[0.8125rem] font-medium transition-ui',
                 enqueue === mode.id ? 'bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
               )}
             >
@@ -570,7 +570,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
               aria-pressed={filter === item.id}
               onClick={() => setFilter(item.id)}
               className={cn(
-                'touch-target shrink-0 rounded-pill border px-3.5 text-xs font-medium transition-ui',
+                'touch-target shrink-0 rounded-pill border px-3.5 text-[0.8125rem] font-medium transition-ui',
                 filter === item.id
                   ? 'border-accent bg-accent text-on-accent'
                   : 'border-border-subtle text-ink-muted hover:text-ink',
@@ -601,7 +601,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
         {searching ? <SearchResultsSkeleton /> : null}
 
         {stale && !searching && shownQuery.current ? (
-          <p className="text-xs text-ink-muted">
+          <p className="text-[0.8125rem] text-ink-muted">
             Showing results for “{shownQuery.current}” while “{activeQuery}” loads
           </p>
         ) : null}

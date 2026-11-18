@@ -161,3 +161,10 @@ export function setQueueAutoplay(queueId: string, autoplayEnabled: boolean) {
     autoplay_enabled: autoplayEnabled,
   })
 }
+
+export function setQueueCrossfade(queueId: string, crossfadeEnabled: boolean) {
+  return massCommand<void>('player_queues/crossfade', {
+    queue_id: queueId,
+    crossfade_enabled: crossfadeEnabled,
+  })
+}

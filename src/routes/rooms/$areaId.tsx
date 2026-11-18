@@ -57,6 +57,7 @@ function RoomLightsButton({ ids, name }: { ids: string[]; name: string }) {
       size="sm"
       variant={isLit ? 'secondary' : 'primary'}
       {...press}
+      aria-pressed={isLit}
       aria-label={isLit ? `Turn off all ${name} lights` : `Turn on all ${name} lights`}
     >
       {isLit ? (

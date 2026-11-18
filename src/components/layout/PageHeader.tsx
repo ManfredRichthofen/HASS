@@ -39,6 +39,7 @@ export function PageHeader({
       {backTo ? (
         <Link
           to={backTo}
+          activeOptions={{ exact: true }}
           aria-label={`Back to ${backLabel}`}
           className={cn(
             '-mb-1 inline-flex min-h-11 items-center gap-1.5 justify-self-start text-sm font-semibold text-ink-muted transition-ui hover:text-ink md:hidden',
@@ -54,6 +55,7 @@ export function PageHeader({
           {backTo ? (
             <Link
               to={backTo}
+              activeOptions={{ exact: true }}
               aria-label={`Back to ${backLabel}`}
               className={cn(
                 'hidden size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink md:-ml-2 md:grid',

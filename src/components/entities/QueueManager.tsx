@@ -2,6 +2,7 @@ import { useServiceCall } from 'hass-react'
 import {
   ArrowDown,
   ArrowUp,
+  AudioLines,
   ChevronDown,
   ListEnd,
   ListMusic,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MediaArt, uniqueArtCandidates } from '#/components/media/MediaArt'
+import { WaveformSeek } from '#/components/media/WaveformSeek'
 import { Button } from '#/components/ui/button'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
@@ -82,19 +84,21 @@ function PlaybackProgress({
   duration,
   playing,
   disabled,
+  seed,
 }: {
   player: Player
   duration: number | null
   playing: boolean
   disabled: boolean
+  seed: string
 }) {
-  const { position, pct, jumpTo } = useLivePosition(player.mediaPosition, duration, playing)
+  const { position, jumpTo } = useLivePosition(player.mediaPosition, duration, playing)
   const [dragPosition, setDragPosition] = useState<number | null>(null)
   const canSeek = player.supportsSeek && duration != null && duration > 0
   const shown = dragPosition ?? position
+  const max = duration != null && duration > 0 ? Math.floor(duration) : 1
 
-  const handleSeekCommit = (value: number | readonly number[]) => {
-    const seconds = Array.isArray(value) ? (value[0] ?? 0) : (value as number)
+  const handleSeekCommit = (seconds: number) => {
     setDragPosition(null)
     jumpTo(seconds)
     void player.seek(seconds).catch((e) => {
@@ -103,40 +107,19 @@ function PlaybackProgress({
   }
 
   return (
-    <div className="grid gap-2.5">
-      {canSeek ? (
-        <Slider
-          size="thin"
-          className="-my-4"
-          aria-label="Seek"
-          min={0}
-          max={Math.floor(duration)}
-          step={1}
-          disabled={disabled}
-          value={Math.floor(position)}
-          onValueChange={(value) => setDragPosition(Array.isArray(value) ? value[0] : value)}
-          onValueCommitted={handleSeekCommit}
-        />
-      ) : (
-        <div
-          className="relative h-1.5 rounded-pill bg-surface-hover"
-          role="progressbar"
-          aria-label="Playback progress"
-          aria-valuenow={Math.round(pct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <span
-            className="absolute inset-y-0 left-0 rounded-pill bg-ink"
-            style={{ width: `${pct}%` }}
-          />
-          <span
-            className="absolute top-1/2 -mt-2 -ml-2 size-4 rounded-pill bg-ink"
-            style={{ left: `${pct}%` }}
-          />
-        </div>
-      )}
-      <div className="flex justify-between text-xs text-ink-faint tabular-nums">
+    <div className="grid gap-1">
+      <WaveformSeek
+        className="-my-1"
+        aria-label="Seek"
+        seed={seed}
+        seekable={canSeek}
+        disabled={disabled || !canSeek}
+        max={max}
+        value={Math.floor(shown)}
+        onValueChange={setDragPosition}
+        onValueCommitted={handleSeekCommit}
+      />
+      <div className="flex justify-between text-[0.8125rem] text-ink-faint tabular-nums">
         <span>{formatDuration(shown)}</span>
         <span>
           {duration ? `−${formatDuration(Math.max(0, duration - shown))}` : formatDuration(duration)}
@@ -162,7 +145,7 @@ function ActionTile({
       type="button"
       onClick={onClick}
       className={cn(
-        'press flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 text-xs font-semibold transition-ui hover:bg-surface-hover',
+        'press flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 text-[0.8125rem] font-semibold transition-ui hover:bg-surface-hover',
         danger ? 'text-danger' : 'text-ink',
       )}
     >
@@ -341,7 +324,7 @@ const QueueRow = memo(function QueueRow({
         </button>
 
         {item.duration != null ? (
-          <span className="hidden shrink-0 text-xs tabular-nums text-ink-faint sm:block">
+          <span className="hidden shrink-0 text-[0.8125rem] tabular-nums text-ink-faint sm:block">
             {formatDuration(item.duration)}
           </span>
         ) : null}
@@ -462,6 +445,7 @@ export function QueueManager({
     refresh,
     player,
     endlessMixEnabled,
+    crossfadeEnabled,
     shuffleEnabled,
     repeatMode,
   } = queueApi
@@ -470,6 +454,7 @@ export function QueueManager({
   const [visibleCount, setVisibleCount] = useState(ROW_PAGE)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
+  const transferMenuRef = useRef<HTMLDivElement>(null)
   const { value: isPlaying, commit: commitPlaying } = useOptimisticValue(player.isPlaying)
   const { value: isMuted, commit: commitMuted } = useOptimisticValue(
     Boolean(groupVolume ? groupVolume.muted : player.isMuted),
@@ -491,8 +476,30 @@ export function QueueManager({
     setVolume(serverVolume)
   }, [serverVolume])
 
+  useEffect(() => {
+    if (!menuOpen) return
+    const handlePointerDown = (event: MouseEvent | PointerEvent) => {
+      if (transferMenuRef.current?.contains(event.target as Node)) return
+      setMenuOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
+
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
+  const progressSeed =
+    queue?.current_item?.queue_item_id ??
+    queue?.current_item?.media_item?.uri ??
+    currentTitle ??
+    target
   const playerArt = playerArtSources(player.attributes, haUrl)
   const queueArt = queueItemImage(queue?.current_item, massUrl, 512)
   const playerArtKey = playerArt.join('|')
@@ -667,6 +674,17 @@ export function QueueManager({
     }, 'Endless Mix failed')
   }
 
+  function toggleCrossfade(next = !crossfadeEnabled) {
+    if (next === crossfadeEnabled) return
+    runToggle(async () => {
+      await queueApi.setCrossfade(next)
+      notify(
+        next ? 'Crossfade on' : 'Crossfade off',
+        next ? 'Tracks blend into each other' : 'Tracks change cleanly',
+      )
+    }, 'Crossfade failed')
+  }
+
   return (
     <div
       className={cn(
@@ -675,24 +693,43 @@ export function QueueManager({
       )}
     >
       {endlessToggle ? (
-        <div className="flex items-center justify-between gap-4 rounded-card border-ui border-border-subtle bg-surface px-4 py-2.5 shadow-card modern:border-transparent">
-          <div className="flex min-w-0 items-center gap-3">
-            <Radio className="size-5 shrink-0 text-ink-muted" />
-            <div className="min-w-0">
-              <p className="text-[0.9375rem] font-semibold text-ink">Endless Mix</p>
-              <p className="truncate text-[0.8125rem] text-ink-muted">
-                {!hasNowPlaying && !endlessMixEnabled
-                  ? 'Play something to turn this on'
-                  : 'Adds similar songs when the queue ends'}
-              </p>
+        <div className="overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent">
+          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <Radio className="size-5 shrink-0 text-ink-muted" />
+              <div className="min-w-0">
+                <p className="text-[0.9375rem] font-semibold text-ink">Endless Mix</p>
+                <p className="truncate text-[0.8125rem] text-ink-muted">
+                  {!hasNowPlaying && !endlessMixEnabled
+                    ? 'Play something to turn this on'
+                    : 'Adds similar songs when the queue ends'}
+                </p>
+              </div>
             </div>
+            <Switch
+              aria-label="Endless Mix"
+              checked={endlessMixEnabled}
+              disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
+              onCheckedChange={(checked) => toggleEndless(checked)}
+            />
           </div>
-          <Switch
-            aria-label="Endless Mix"
-            checked={endlessMixEnabled}
-            disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
-            onCheckedChange={(checked) => toggleEndless(checked)}
-          />
+          <div className="flex items-center justify-between gap-4 border-t border-border-subtle px-4 py-2.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <AudioLines className="size-5 shrink-0 text-ink-muted" />
+              <div className="min-w-0">
+                <p className="text-[0.9375rem] font-semibold text-ink">Crossfade</p>
+                <p className="truncate text-[0.8125rem] text-ink-muted">
+                  Blend the end of one track into the next
+                </p>
+              </div>
+            </div>
+            <Switch
+              aria-label="Crossfade"
+              checked={crossfadeEnabled}
+              disabled={unavailable}
+              onCheckedChange={(checked) => toggleCrossfade(checked)}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -720,7 +757,7 @@ export function QueueManager({
           <p className="mt-3 text-sm font-medium text-ink">
             {view === 'queue' ? 'Nothing queued' : 'Nothing playing'}
           </p>
-          <p className="mt-1 text-xs text-ink-muted">Search to play or queue something.</p>
+          <p className="mt-1 text-[0.8125rem] text-ink-muted">Search to play or queue something.</p>
         </div>
       ) : null}
 
@@ -772,7 +809,7 @@ export function QueueManager({
                   <p className="mt-0.5 truncate text-[0.9375rem] text-ink-muted">{currentArtist}</p>
                 ) : null}
               </div>
-              <div className="relative shrink-0">
+              <div className="relative shrink-0" ref={transferMenuRef}>
                 {view === 'player' ? (
                   ensuring ? (
                     <Loader2
@@ -787,17 +824,23 @@ export function QueueManager({
                     disabled={unavailable || busy !== null}
                     aria-label="Queue options"
                     aria-expanded={menuOpen}
+                    aria-haspopup="menu"
                     onClick={() => setMenuOpen((open) => !open)}
                   >
                     <MoreHorizontal className="size-5" />
                   </Button>
                 )}
                 {menuOpen ? (
-                  <div className="absolute right-0 bottom-full z-20 mb-1 min-w-[12rem] overflow-hidden rounded-control border-ui border-border bg-canvas-elevated shadow-sheet">
+                  <div
+                    role="menu"
+                    aria-label="Move queue"
+                    className="absolute right-0 bottom-full z-20 mb-1 min-w-[12rem] overflow-hidden rounded-control border-ui border-border bg-canvas-elevated shadow-sheet"
+                  >
                     {transferTargets.map((dest) => (
                       <button
                         key={dest.id}
                         type="button"
+                        role="menuitem"
                         className="block min-h-11 w-full px-4 py-2.5 text-left text-sm text-ink transition hover:bg-surface-hover"
                         onClick={() => void transferTo(dest.id)}
                       >
@@ -815,6 +858,7 @@ export function QueueManager({
             duration={duration}
             playing={isPlaying}
             disabled={unavailable}
+            seed={progressSeed}
           />
 
           <div className="flex items-center justify-between px-1">
@@ -943,11 +987,12 @@ export function QueueManager({
               >
                 Up next
               </h3>
-              <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <p className="flex items-center gap-1.5 text-[0.8125rem] text-ink-muted">
                 <span>
                   {totalUpNext} {totalUpNext === 1 ? 'track' : 'tracks'}
                   {fullyLoaded && upNextDuration > 0 ? ` · ${formatDuration(upNextDuration)}` : ''}
                   {endlessMixEnabled ? ' · Endless Mix on' : ''}
+                  {crossfadeEnabled ? ' · Crossfade on' : ''}
                 </span>
                 {fetching && !loading ? (
                   <Loader2 className="size-3 animate-spin text-ink-faint" aria-label="Refreshing" />

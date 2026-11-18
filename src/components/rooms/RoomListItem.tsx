@@ -9,7 +9,13 @@ import { cn } from '#/lib/cn'
 function Temp({ entityId }: { entityId: string }) {
   const temp = useSensor(entityId)
   if (temp.isUnavailable || temp.numericValue == null) return null
-  return <span>{` · ${Math.round(temp.numericValue)}°`}</span>
+  const degrees = Math.round(temp.numericValue)
+  return (
+    <span>
+      {' · '}
+      <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
+    </span>
+  )
 }
 
 /** Compact room row for the wide-tablet master list. */
@@ -51,13 +57,14 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
         <button
           type="button"
           {...powerPress}
+          aria-pressed={room.isLit}
           aria-label={`${room.isLit ? 'Turn off' : 'Turn on'} ${area.name} lights`}
           className={cn(
             'press relative z-[2] grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state',
             room.isLit ? 'bg-on shadow-on text-on-ink' : 'bg-icon-well hover:text-ink',
           )}
         >
-          <Power className="size-[18px]" />
+          <Power className="size-[18px]" aria-hidden />
         </button>
       ) : null}
     </div>

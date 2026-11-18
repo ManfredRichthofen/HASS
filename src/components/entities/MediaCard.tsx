@@ -75,12 +75,13 @@ export function MediaCard({
         type="button"
         disabled={unavailable}
         onClick={togglePlayback}
+        aria-label={`${isPlaying ? 'Pause' : 'Play'} ${title}${artist ? `, ${artist}` : `, ${name}`}`}
         className={cn(
           'flex min-h-14 w-full items-center gap-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-3 text-left transition-ui hover:bg-surface-hover',
           unavailable && 'opacity-40',
         )}
       >
-        <span className="grid size-11 place-items-center rounded-control bg-canvas text-accent">
+        <span className="grid size-11 place-items-center rounded-control bg-canvas text-accent" aria-hidden>
           {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
@@ -110,20 +111,28 @@ export function MediaCard({
           size="icon"
           variant="ghost"
           disabled={unavailable}
+          aria-label={`Previous track on ${name}`}
           onClick={() => void run(() => player.previousTrack(), 'Previous failed')}
         >
-          <SkipBack className="size-5" />
+          <SkipBack className="size-5" aria-hidden />
         </Button>
-        <Button size="icon" variant="accent" disabled={unavailable} onClick={togglePlayback}>
-          {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
+        <Button
+          size="icon"
+          variant="accent"
+          disabled={unavailable}
+          aria-label={isPlaying ? `Pause ${name}` : `Play ${name}`}
+          onClick={togglePlayback}
+        >
+          {isPlaying ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
         </Button>
         <Button
           size="icon"
           variant="ghost"
           disabled={unavailable}
+          aria-label={`Next track on ${name}`}
           onClick={() => void run(() => player.nextTrack(), 'Next failed')}
         >
-          <SkipForward className="size-5" />
+          <SkipForward className="size-5" aria-hidden />
         </Button>
       </div>
 
@@ -132,10 +141,10 @@ export function MediaCard({
           type="button"
           className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-canvas hover:text-ink"
           disabled={unavailable}
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
+          aria-label={isMuted ? `Unmute ${name}` : `Mute ${name}`}
           onClick={toggleMute}
         >
-          {isMuted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+          {isMuted ? <VolumeX className="size-5" aria-hidden /> : <Volume2 className="size-5" aria-hidden />}
         </button>
         <Slider
           className="min-w-0 flex-1"

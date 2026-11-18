@@ -423,7 +423,11 @@ export function LightTile({ entityId, className }: { entityId: string; className
         tabIndex={unavailable ? -1 : 0}
         aria-checked={on}
         aria-disabled={unavailable}
-        aria-label={`${name}, ${state}${canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`}
+        aria-label={
+          unavailable
+            ? `${name}, Unavailable`
+            : `${name}, ${state}${canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`
+        }
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -499,7 +503,7 @@ export function LightTile({ entityId, className }: { entityId: string; className
                   style={{ background: swatch }}
                 />
               ) : (
-                <Ellipsis className="size-[18px]" />
+                <Ellipsis className="size-[18px]" aria-hidden />
               )}
             </button>
           ) : null}

@@ -188,9 +188,15 @@ function MusicPage() {
       </div>
 
       <Drawer {...sheetProps('queue')}>
-        <DrawerContent>
+        <DrawerContent title="Up next">
           {sheet === 'queue' ? (
-            <QueueManager view="queue" endlessToggle target={target} onTargetChange={setPicked} />
+            <QueueManager
+              view="queue"
+              endlessToggle
+              heading={false}
+              target={target}
+              onTargetChange={setPicked}
+            />
           ) : null}
         </DrawerContent>
       </Drawer>

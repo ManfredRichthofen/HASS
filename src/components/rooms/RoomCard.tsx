@@ -10,7 +10,8 @@ import { m, snappy, staggerItem, tap } from '#/lib/motion'
 function RoomTemp({ entityId }: { entityId: string }) {
   const temp = useSensor(entityId)
   if (temp.isUnavailable || temp.numericValue == null) return null
-  return <>{Math.round(temp.numericValue)}°</>
+  const degrees = Math.round(temp.numericValue)
+  return <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
 }
 
 /**
@@ -80,6 +81,7 @@ export function RoomCard({ area }: { area: AreaConfig }) {
           <button
             type="button"
             {...powerPress}
+            aria-pressed={room.isLit}
             aria-label={`${room.isLit ? 'Turn off' : 'Turn on'} ${area.name} lights`}
             className={cn(
               'press relative z-[2] -mr-1 -mb-1 grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-state hover:text-ink',

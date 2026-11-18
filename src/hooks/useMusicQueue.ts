@@ -13,6 +13,7 @@ import {
   playQueueIndex,
   setDontStopTheMusic,
   setQueueAutoplay,
+  setQueueCrossfade,
   setQueueRepeat,
   setQueueShuffle,
 } from '#/lib/massClient'
@@ -71,10 +72,12 @@ export type MusicQueueState = {
   playIndex: (index: number | string) => Promise<void>
   setShuffle: (enabled: boolean) => Promise<void>
   setRepeat: (mode: string) => Promise<void>
-  /** Endless Mix (Music Assistant’s “Don’t stop the music”): similar songs when the queue ends. */
+  /** Endless Mix (autoplay / Don’t stop the music): similar songs when the queue ends. */
   setEndlessMix: (enabled: boolean) => Promise<void>
+  setCrossfade: (enabled: boolean) => Promise<void>
   /** Display values — optimistic until HA/MA catches up. */
   endlessMixEnabled: boolean
+  crossfadeEnabled: boolean
   shuffleEnabled: boolean
   repeatMode: string
 }
@@ -497,12 +500,15 @@ export function useMusicQueue(
     shuffle?: boolean
     repeat?: string
     endlessMix?: boolean
+    crossfade?: boolean
   }
   const [optimistic, setOptimistic] = useState<OptimisticToggles>({})
 
+  // Prefer autoplay (v11 / Don’t Stop the Music rename); fall back to the legacy flag only.
   const serverEndless = Boolean(
-    queue?.dont_stop_the_music_enabled ?? (queue?.autoplay_enabled || queue?.is_dynamic),
+    queue?.autoplay_enabled ?? queue?.dont_stop_the_music_enabled,
   )
+  const serverCrossfade = Boolean(queue?.crossfade_enabled)
   const serverShuffle = Boolean(player.shuffle ?? queue?.shuffle_enabled ?? false)
   const serverRepeat = String(player.repeat ?? queue?.repeat_mode ?? 'off').toLowerCase()
 
@@ -515,6 +521,10 @@ export function useMusicQueue(
         delete next.endlessMix
         changed = true
       }
+      if (prev.crossfade !== undefined && prev.crossfade === serverCrossfade) {
+        delete next.crossfade
+        changed = true
+      }
       if (prev.shuffle !== undefined && prev.shuffle === serverShuffle) {
         delete next.shuffle
         changed = true
@@ -525,9 +535,10 @@ export function useMusicQueue(
       }
       return changed ? next : prev
     })
-  }, [serverEndless, serverShuffle, serverRepeat])
+  }, [serverCrossfade, serverEndless, serverShuffle, serverRepeat])
 
   const endlessMixEnabled = optimistic.endlessMix ?? serverEndless
+  const crossfadeEnabled = optimistic.crossfade ?? serverCrossfade
   const shuffleEnabled = optimistic.shuffle ?? serverShuffle
   const repeatMode = optimistic.repeat ?? serverRepeat
 
@@ -637,26 +648,25 @@ export function useMusicQueue(
     async (enabled: boolean) => {
       // Optimistic only — do not patch the query cache. Patching made serverEndless
       // match immediately so the clear-effect dropped optimistic, then HA refetch
-      // (often missing dont_stop_the_music) snapped the switch back to off.
+      // (often missing autoplay) snapped the switch back to off.
       setOptimistic((prev) => ({ ...prev, endlessMix: enabled }))
       try {
-        if (massApiConfigured && queueId) {
-          try {
-            await setDontStopTheMusic(queueId, enabled)
-          } catch {
-            await setQueueAutoplay(queueId, enabled)
-          }
+        // mass_queue v11: set_autoplay is the Don’t Stop the Music replacement.
+        if (massQueueAvailable) {
+          await callService('mass_queue', 'set_autoplay', {
+            ...massQueueEntityData(entityId),
+            enabled,
+          })
           afterMutation()
           return
         }
 
-        // Through Home Assistant: flips the queue's setting without touching playback.
-        if (massQueueAvailable && queueId) {
-          await callService('mass_queue', 'send_command', {
-            config_entry_id: entities.massQueueEntryId,
-            command: 'player_queues/dont_stop_the_music',
-            data: { queue_id: queueId, dont_stop_the_music_enabled: enabled },
-          })
+        if (massApiConfigured && queueId) {
+          try {
+            await setQueueAutoplay(queueId, enabled)
+          } catch {
+            await setDontStopTheMusic(queueId, enabled)
+          }
           afterMutation()
           return
         }
@@ -706,6 +716,34 @@ export function useMusicQueue(
     ],
   )
 
+  const setCrossfade = useCallback(
+    async (enabled: boolean) => {
+      setOptimistic((prev) => ({ ...prev, crossfade: enabled }))
+      try {
+        if (massQueueAvailable) {
+          await callService('mass_queue', 'set_crossfade', {
+            ...massQueueEntityData(entityId),
+            enabled,
+          })
+          afterMutation()
+          return
+        }
+
+        if (massApiConfigured && queueId) {
+          await setQueueCrossfade(queueId, enabled)
+          afterMutation()
+          return
+        }
+
+        throw new Error('Crossfade needs Music Assistant Queue Actions, or a Music Assistant sign-in')
+      } catch (e) {
+        setOptimistic((prev) => ({ ...prev, crossfade: !enabled }))
+        throw e
+      }
+    },
+    [afterMutation, callService, entityId, massApiConfigured, massQueueAvailable, queueId],
+  )
+
   return useMemo(
     () => ({
       queueId,
@@ -729,11 +767,13 @@ export function useMusicQueue(
       refresh,
       player,
       endlessMixEnabled,
+      crossfadeEnabled,
       shuffleEnabled,
       repeatMode,
       setShuffle,
       setRepeat,
       setEndlessMix,
+      setCrossfade,
       clear: async () => {
         await withOptimisticQueue(emptyQueueList, async () => {
           if (massApiConfigured && queueId && !viaMassQueue) {
@@ -845,6 +885,7 @@ export function useMusicQueue(
       afterMutation,
       callService,
       configured,
+      crossfadeEnabled,
       ensuring,
       endlessMixEnabled,
       entityId,
@@ -862,6 +903,7 @@ export function useMusicQueue(
       queueId,
       refresh,
       repeatMode,
+      setCrossfade,
       setEndlessMix,
       setRepeat,
       setShuffle,
