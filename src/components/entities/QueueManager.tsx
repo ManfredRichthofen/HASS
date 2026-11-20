@@ -112,6 +112,7 @@ function PlaybackProgress({
         className="-my-1"
         aria-label="Seek"
         seed={seed}
+        playing={playing}
         seekable={canSeek}
         disabled={disabled || !canSeek}
         max={max}

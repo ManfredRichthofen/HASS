@@ -1,6 +1,7 @@
 import { Outlet, useRouterState } from '@tanstack/react-router'
 import { useHAConnection } from 'hass-react'
 import type { KeyboardEvent, ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/layout/BottomNav'
 import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
 import { SideNav } from '#/components/layout/SideNav'
@@ -15,14 +16,8 @@ import { usePerf } from '#/lib/perf'
 
 const loadMotionFeatures = () => import('#/lib/motionFeatures').then((mod) => mod.default)
 
-function ConnectingSplash({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6">
-      <div className="size-10 animate-pulse rounded-pill bg-on" />
-      <p className="text-sm text-ink-muted">{label}</p>
-    </div>
-  )
-}
+/** Only surface a connecting notice if HA stays unreachable this long. */
+const CONNECTING_NOTICE_DELAY_MS = 3_000
 
 function ConnectionAction({
   title,
@@ -123,55 +118,72 @@ function ConnectedShell({ children }: { children: ReactNode }) {
         ? 'Check that you’re on the home network, then try again.'
         : undefined
 
-  // After a successful session, keep the shell mounted and reconnect quietly
-  // in the background (phone wake / network blip) instead of a full-screen splash.
-  if (connected || hasBeenConnected) {
-    const showReconnectBanner =
-      !connected &&
-      (connecting || isAutoRetrying || Boolean(error) || connectionState === 'disconnected')
+  const isOffline =
+    !connected &&
+    (connecting ||
+      isAutoRetrying ||
+      Boolean(error) ||
+      connectionState === 'disconnected' ||
+      connectionState === 'idle')
 
-    return (
-      <LocationProvider>
-        <UpdateChecker />
-        <DoorbellPopup />
-        {showReconnectBanner ? (
-          <ReconnectBanner
-            label={
-              error && !isAutoRetrying && !connecting
-                ? 'Connection lost'
-                : 'Reconnecting to Home Assistant…'
-            }
-            detail={reconnectDetail}
-            onRetry={reconnect}
-          />
-        ) : null}
-        {children}
-      </LocationProvider>
-    )
-  }
+  const needsSignIn =
+    !connected &&
+    !hasBeenConnected &&
+    !connecting &&
+    !isAutoRetrying &&
+    !error &&
+    connectionState !== 'idle' &&
+    connectionState !== 'disconnected'
 
-  if (error || isAutoRetrying) {
+  const [showConnectingNotice, setShowConnectingNotice] = useState(false)
+
+  useEffect(() => {
+    if (!isOffline) {
+      setShowConnectingNotice(false)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowConnectingNotice(true)
+    }, CONNECTING_NOTICE_DELAY_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [isOffline])
+
+  // First-time auth only — otherwise keep the shell interactive while HA connects
+  // in the background and only show a notice after a short delay.
+  if (needsSignIn) {
     return (
       <ConnectionAction
-        title={isAutoRetrying ? 'Reconnecting to Home Assistant…' : 'Connection failed'}
-        detail={reconnectDetail ?? 'Retrying shortly…'}
-        actionLabel="Retry"
+        title="Sign in to Home Assistant"
+        detail="Connect this device to continue."
+        actionLabel="Sign in"
         onAction={reconnect}
       />
     )
   }
 
-  if (connecting || connectionState === 'idle') {
-    return <ConnectingSplash label="Connecting to Home Assistant…" />
-  }
-
   return (
-    <ConnectionAction
-      title="Sign in to Home Assistant"
-      detail="Connect this device to continue."
-      actionLabel="Sign in"
-      onAction={reconnect}
-    />
+    <LocationProvider>
+      <UpdateChecker />
+      <DoorbellPopup />
+      {showConnectingNotice ? (
+        <ReconnectBanner
+          label={
+            error && !isAutoRetrying && !connecting
+              ? hasBeenConnected
+                ? 'Connection lost'
+                : 'Unable to connect'
+              : hasBeenConnected
+                ? 'Reconnecting to Home Assistant…'
+                : 'Connecting to Home Assistant…'
+          }
+          detail={reconnectDetail}
+          onRetry={reconnect}
+        />
+      ) : null}
+      {children}
+    </LocationProvider>
   )
 }
 
