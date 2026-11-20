@@ -66,17 +66,6 @@ export const tap = {
   hard: { scale: 0.92 },
 } as const
 
-/**
- * Page route enter (AppShell AnimatedOutlet). Enter-only, opacity-only: no exit
- * (an exiting Outlet renders the new route, doubling the mount) and no
- * transform (page sections already rise via staggerItem).
- */
-export const pageFade = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: { duration: duration.fast, ease: easeOut },
-}
-
 /** Generic fade-up for standalone entrances */
 export const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -130,8 +119,8 @@ export const staggerContainer = {
 
 /**
  * Child of staggerContainer — soft rise.
- * Opacity stays at 1 so nested pageFade + stagger don't multiply into a blank
- * flash (especially heavy pages like Climate).
+ * Transform only: opacity stays at 1 so a route never paints blank while it
+ * enters (there is no route-level fade). Skipped under smooth / reduced motion.
  */
 export const staggerItem = {
   initial: { y: 10 },

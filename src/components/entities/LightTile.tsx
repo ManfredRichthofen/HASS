@@ -10,6 +10,7 @@ import {
 import {
   type KeyboardEvent,
   type MouseEvent,
+  memo,
   type PointerEvent,
   useEffect,
   useRef,
@@ -88,7 +89,13 @@ type DragGesture = {
  * - Once dimming, touchmove is non-passive so we can preventDefault and stop
  *   the page stealing the gesture (touch-action cannot change mid-touch).
  */
-export function LightTile({ entityId, className }: { entityId: string; className?: string }) {
+export const LightTile = memo(function LightTile({
+  entityId,
+  className,
+}: {
+  entityId: string
+  className?: string
+}) {
   // useLight only accepts light.* — callers must not pass switch.* or other domains.
   const light = useLight(entityId)
   const [open, setOpen] = useState(false)
@@ -604,4 +611,4 @@ export function LightTile({ entityId, className }: { entityId: string; className
       ) : null}
     </>
   )
-}
+})

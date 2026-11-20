@@ -20,14 +20,18 @@ export const roomIcons: Record<string, LucideIcon> = {
   outside: TreePine,
 }
 
-export function Temp({ entityId }: { entityId: string }) {
+/** Rounded room temperature; `separated` prefixes a " · " for inline summaries. */
+export function RoomTemp({ entityId, separated }: { entityId: string; separated?: boolean }) {
   const temp = useSensor(entityId)
   if (temp.isUnavailable || temp.numericValue == null) return null
   const degrees = Math.round(temp.numericValue)
-  return (
+  const label = <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
+  return separated ? (
     <span>
       {' · '}
-      <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
+      {label}
     </span>
+  ) : (
+    label
   )
 }

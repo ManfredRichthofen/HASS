@@ -5,7 +5,7 @@ import { cn } from '#/lib/cn'
 
 type SliderRootProps = ComponentProps<typeof BaseSlider.Root>
 
-function asNumber(value: number | readonly number[]) {
+export function asNumber(value: number | readonly number[]) {
   return Array.isArray(value) ? value[0]! : value
 }
 

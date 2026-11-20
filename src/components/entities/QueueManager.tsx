@@ -1,5 +1,6 @@
 import { useServiceCall } from 'hass-react'
 import {
+  type LucideIcon,
   ArrowDown,
   ArrowUp,
   AudioLines,
@@ -67,12 +68,11 @@ function useLivePosition(position: number | null, duration: number | null, playi
 
   const live = playing ? base.position + (now - base.at) / 1000 : base.position
   const clamped = duration != null ? Math.min(Math.max(live, 0), duration) : Math.max(live, 0)
-  const pct = duration && duration > 0 ? Math.min(100, (clamped / duration) * 100) : 0
   const jumpTo = useCallback((seconds: number) => {
     setBase({ position: seconds, at: Date.now() })
     setNow(Date.now())
   }, [])
-  return { position: clamped, pct, jumpTo }
+  return { position: clamped, jumpTo }
 }
 
 /**
@@ -84,19 +84,16 @@ function PlaybackProgress({
   duration,
   playing,
   disabled,
-  seed,
 }: {
   player: Player
   duration: number | null
   playing: boolean
   disabled: boolean
-  seed: string
 }) {
   const { position, jumpTo } = useLivePosition(player.mediaPosition, duration, playing)
   const [dragPosition, setDragPosition] = useState<number | null>(null)
   const canSeek = player.supportsSeek && duration != null && duration > 0
   const shown = dragPosition ?? position
-  const max = duration != null && duration > 0 ? Math.floor(duration) : 1
 
   const handleSeekCommit = (seconds: number) => {
     setDragPosition(null)
@@ -111,11 +108,10 @@ function PlaybackProgress({
       <WaveformSeek
         className="-my-1"
         aria-label="Seek"
-        seed={seed}
         playing={playing}
         seekable={canSeek}
-        disabled={disabled || !canSeek}
-        max={max}
+        disabled={disabled}
+        max={duration ?? 1}
         value={Math.floor(shown)}
         onValueChange={setDragPosition}
         onValueCommitted={handleSeekCommit}
@@ -126,6 +122,40 @@ function PlaybackProgress({
           {duration ? `−${formatDuration(Math.max(0, duration - shown))}` : formatDuration(duration)}
         </span>
       </div>
+    </div>
+  )
+}
+
+function ToggleRow({
+  icon: Icon,
+  title,
+  caption,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  icon: LucideIcon
+  title: string
+  caption: string
+  checked: boolean
+  disabled: boolean
+  onCheckedChange: (checked: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-border-subtle px-4 py-2.5 first:border-t-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon className="size-5 shrink-0 text-ink-muted" />
+        <div className="min-w-0">
+          <p className="text-[0.9375rem] font-semibold text-ink">{title}</p>
+          <p className="truncate text-[0.8125rem] text-ink-muted">{caption}</p>
+        </div>
+      </div>
+      <Switch
+        aria-label={title}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(next) => onCheckedChange(next)}
+      />
     </div>
   )
 }
@@ -496,11 +526,6 @@ export function QueueManager({
 
   const currentTitle = queueItemTitle(queue?.current_item) ?? player.mediaTitle
   const currentArtist = queueItemArtist(queue?.current_item) ?? player.mediaArtist
-  const progressSeed =
-    queue?.current_item?.queue_item_id ??
-    queue?.current_item?.media_item?.uri ??
-    currentTitle ??
-    target
   const playerArt = playerArtSources(player.attributes, haUrl)
   const queueArt = queueItemImage(queue?.current_item, massUrl, 512)
   const playerArtKey = playerArt.join('|')
@@ -695,42 +720,26 @@ export function QueueManager({
     >
       {endlessToggle ? (
         <div className="overflow-hidden rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent">
-          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-            <div className="flex min-w-0 items-center gap-3">
-              <Radio className="size-5 shrink-0 text-ink-muted" />
-              <div className="min-w-0">
-                <p className="text-[0.9375rem] font-semibold text-ink">Endless Mix</p>
-                <p className="truncate text-[0.8125rem] text-ink-muted">
-                  {!hasNowPlaying && !endlessMixEnabled
-                    ? 'Play something to turn this on'
-                    : 'Adds similar songs when the queue ends'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              aria-label="Endless Mix"
-              checked={endlessMixEnabled}
-              disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
-              onCheckedChange={(checked) => toggleEndless(checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4 border-t border-border-subtle px-4 py-2.5">
-            <div className="flex min-w-0 items-center gap-3">
-              <AudioLines className="size-5 shrink-0 text-ink-muted" />
-              <div className="min-w-0">
-                <p className="text-[0.9375rem] font-semibold text-ink">Crossfade</p>
-                <p className="truncate text-[0.8125rem] text-ink-muted">
-                  Blend the end of one track into the next
-                </p>
-              </div>
-            </div>
-            <Switch
-              aria-label="Crossfade"
-              checked={crossfadeEnabled}
-              disabled={unavailable}
-              onCheckedChange={(checked) => toggleCrossfade(checked)}
-            />
-          </div>
+          <ToggleRow
+            icon={Radio}
+            title="Endless Mix"
+            caption={
+              !hasNowPlaying && !endlessMixEnabled
+                ? 'Play something to turn this on'
+                : 'Adds similar songs when the queue ends'
+            }
+            checked={endlessMixEnabled}
+            disabled={unavailable || (!hasNowPlaying && !endlessMixEnabled)}
+            onCheckedChange={toggleEndless}
+          />
+          <ToggleRow
+            icon={AudioLines}
+            title="Crossfade"
+            caption="Blend the end of one track into the next"
+            checked={crossfadeEnabled}
+            disabled={unavailable}
+            onCheckedChange={toggleCrossfade}
+          />
         </div>
       ) : null}
 
@@ -859,7 +868,6 @@ export function QueueManager({
             duration={duration}
             playing={isPlaying}
             disabled={unavailable}
-            seed={progressSeed}
           />
 
           <div className="flex items-center justify-between px-1">

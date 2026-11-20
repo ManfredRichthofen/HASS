@@ -1,7 +1,12 @@
-/* Casa PWA service worker — runtime cache for shell assets.
-   Avoids precaching hashed bundles (TanStack Start build pipeline). */
+/* Casa PWA service worker — precaches the hashed shell (entry JS + CSS) and
+   runtime-caches everything else under /assets. BUILD_ID and PRECACHE are
+   filled in after `vite build` by the casa-sw-precache plugin (vite.config.ts);
+   unbuilt (dev) they stay empty and only runtime caching applies. */
 
-const VERSION = 'casa-v1'
+const BUILD_ID = 'dev' /* @casa-build-id */
+const PRECACHE = [] /* @casa-precache */
+
+const VERSION = `casa-v1-${BUILD_ID}`
 const ASSET_CACHE = `${VERSION}-assets`
 const SHELL_CACHE = `${VERSION}-shell`
 
@@ -10,6 +15,10 @@ self.addEventListener('install', (event) => {
     (async () => {
       const cache = await caches.open(SHELL_CACHE)
       await cache.addAll(['/manifest.webmanifest', '/icons/icon-192.png'])
+      // Shell bundles are content-hashed, so a cached copy is valid until the next build.
+      // Best-effort: one failed fetch must not block the worker from installing.
+      const assets = await caches.open(ASSET_CACHE)
+      await Promise.all(PRECACHE.map((url) => assets.add(url).catch(() => {})))
       self.skipWaiting()
     })(),
   )

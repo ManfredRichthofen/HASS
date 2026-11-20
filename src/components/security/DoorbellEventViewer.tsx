@@ -265,7 +265,12 @@ export function DoorbellEventViewer({ camera, instanceId, active, onInteract }: 
           ) : (
             <div className="space-y-4">
               {groups.map((group) => (
-                <section key={group.key} aria-label={dayLabel(group.key, 'long')}>
+                // Offscreen days skip render; -m-1 p-1 keeps the selected ring out of the paint clip.
+                <section
+                  key={group.key}
+                  aria-label={dayLabel(group.key, 'long')}
+                  className="-m-1 p-1 [content-visibility:auto] [contain-intrinsic-size:auto_12rem]"
+                >
                   {day ? null : (
                     <h4 className="mb-2 flex items-baseline justify-between text-[0.8125rem] font-semibold text-ink-muted">
                       <span>{dayLabel(group.key, 'long')}</span>

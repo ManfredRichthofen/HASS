@@ -1,6 +1,6 @@
 import { useFan, useLight } from 'hass-react'
 import { Fan, Lightbulb, Wind } from 'lucide-react'
-import { type PointerEvent, useEffect, useMemo, useState } from 'react'
+import { memo, type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { notify } from '#/components/ui/toast'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
@@ -26,7 +26,7 @@ function spinDuration(pct: number) {
 }
 
 /** Ceiling fan + light kit — both entities on one card. */
-export function FanLightTile({
+export const FanLightTile = memo(function FanLightTile({
   label,
   lightId,
   fanId,
@@ -272,4 +272,4 @@ export function FanLightTile({
       </AnimatePresence>
     </div>
   )
-}
+})

@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "fraunces",
+        "createdAt": "2026-11-20T21:07:25.514Z",
+        "reason": "Claude: pre-existing Walnut theme display face (already in styles.css --ui-display and the prior Google Fonts URL); only moved to self-hosted @font-face"
+      }
+    ]
+  }
+}

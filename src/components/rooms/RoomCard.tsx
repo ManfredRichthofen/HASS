@@ -1,18 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { useSensor } from 'hass-react'
 import { Power } from 'lucide-react'
+import { RoomTemp } from '#/components/rooms/roomMeta'
 import { useRoom } from '#/components/rooms/useRoom'
 import type { AreaConfig } from '#/config/dashboard'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
 import { m, snappy, staggerItem, tap } from '#/lib/motion'
-
-function RoomTemp({ entityId }: { entityId: string }) {
-  const temp = useSensor(entityId)
-  if (temp.isUnavailable || temp.numericValue == null) return null
-  const degrees = Math.round(temp.numericValue)
-  return <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
-}
 
 /**
  * A room on the Rooms page: name on top, summary under it, temperature bottom

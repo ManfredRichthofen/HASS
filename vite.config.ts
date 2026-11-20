@@ -1,9 +1,50 @@
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
+
+/**
+ * Fills public/sw.js's precache list with the client entry chunk, its static imports and
+ * their CSS — the shell needed before any route renders — and stamps a build id so each
+ * deploy gets fresh caches. Runs on the client build only; dev keeps the empty placeholders.
+ */
+function swPrecache(): Plugin {
+  let shell: string[] = []
+  return {
+    name: 'casa-sw-precache',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      if (this.environment.name !== 'client') return
+      const files = new Set<string>()
+      const visit = (fileName: string) => {
+        const chunk = bundle[fileName]
+        if (chunk?.type !== 'chunk' || files.has(fileName)) return
+        files.add(fileName)
+        for (const css of chunk.viteMetadata?.importedCss ?? []) files.add(css)
+        for (const dep of chunk.imports) visit(dep)
+      }
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type === 'chunk' && chunk.isEntry) visit(chunk.fileName)
+      }
+      shell = [...files].sort().map((file) => `/${file}`)
+    },
+    writeBundle(options) {
+      if (this.environment.name !== 'client' || !options.dir) return
+      const swPath = join(options.dir, 'sw.js')
+      if (!existsSync(swPath) || shell.length === 0) return
+      const buildId = createHash('sha256').update(shell.join(',')).digest('hex').slice(0, 10)
+      const sw = readFileSync(swPath, 'utf8')
+        .replace(/'dev' \/\* @casa-build-id \*\//, `'${buildId}'`)
+        .replace(/\[\] \/\* @casa-precache \*\//, JSON.stringify(shell))
+      writeFileSync(swPath, sw)
+    },
+  }
+}
 
 const host = process.env.TAURI_DEV_HOST
 
@@ -35,6 +76,7 @@ export default defineConfig(({ mode }) => {
           : undefined,
       ),
       viteReact(),
+      swPrecache(),
     ],
     server: {
       port: 3000,

@@ -1,4 +1,4 @@
-import { Link, useRouterState } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useServiceCall } from 'hass-react'
 import { Minus, Music2, Pause, Play, Plus, Tv } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -8,9 +8,9 @@ import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
-import { useActiveMedia } from '#/hooks/useActiveMedia'
+import type { useActiveMedia } from '#/hooks/useActiveMedia'
 import { useOptimisticValue } from '#/hooks/useOptimisticValue'
-import { useTvNowPlaying } from '#/hooks/useTvNowPlaying'
+import type { useTvNowPlaying } from '#/hooks/useTvNowPlaying'
 import { cn } from '#/lib/cn'
 import { AnimatePresence, m, slideUp, snappy, tap } from '#/lib/motion'
 import { playerArtSources } from '#/lib/musicAssistant'
@@ -18,12 +18,17 @@ import { playerArtSources } from '#/lib/musicAssistant'
 /**
  * Floating player card above the nav while music plays (hidden on the Music page).
  * `data-now-playing` reserves room for it via `--now-playing-space` in styles.css.
+ * Lazy-loaded and fed by NowPlayingSlot, which owns the media / TV subscriptions.
  */
-export function NowPlayingBar() {
-  const media = useActiveMedia()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-
-  const tvNow = useTvNowPlaying()
+export function NowPlayingBar({
+  media,
+  tvNow,
+  onMusicPage,
+}: {
+  media: ReturnType<typeof useActiveMedia>
+  tvNow: ReturnType<typeof useTvNowPlaying>
+  onMusicPage: boolean
+}) {
   const [remoteOpen, setRemoteOpen] = useState(false)
   const { callService } = useServiceCall()
   // TV wins the bar unless music is actively playing; tapping it opens the remote.
@@ -33,7 +38,7 @@ export function NowPlayingBar() {
     tvMode ? tvNow.playing : media.isPlaying,
   )
 
-  const visible = tvMode || (media.isActive && !pathname.startsWith('/media'))
+  const visible = tvMode || (media.isActive && !onMusicPage)
 
   const toggle = () => {
     const next = !shownPlaying

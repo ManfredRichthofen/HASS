@@ -627,7 +627,11 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
         {!searching
           ? groups.map((group) => (
-              <section key={group.key} className="space-y-2">
+              // Offscreen groups skip render; -m-1 p-1 keeps card shadows/rings out of the paint clip.
+              <section
+                key={group.key}
+                className="-m-1 space-y-2 p-1 [content-visibility:auto] [contain-intrinsic-size:auto_18rem]"
+              >
                 <h4 className="text-label">{group.title}</h4>
                 {group.key === 'track' ? (
                   <div className="space-y-2">

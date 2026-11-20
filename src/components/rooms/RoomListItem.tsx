@@ -1,22 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { useSensor } from 'hass-react'
 import { Power } from 'lucide-react'
+import { RoomTemp } from '#/components/rooms/roomMeta'
 import { useRoom } from '#/components/rooms/useRoom'
 import type { AreaConfig } from '#/config/dashboard'
 import { useScrollSafePress } from '#/hooks/useScrollSafePress'
 import { cn } from '#/lib/cn'
-
-function Temp({ entityId }: { entityId: string }) {
-  const temp = useSensor(entityId)
-  if (temp.isUnavailable || temp.numericValue == null) return null
-  const degrees = Math.round(temp.numericValue)
-  return (
-    <span>
-      {' · '}
-      <span aria-label={`Temperature ${degrees} degrees`}>{degrees}°</span>
-    </span>
-  )
-}
 
 /** Compact room row for the wide-tablet master list. */
 export function RoomListItem({ area, active }: { area: AreaConfig; active: boolean }) {
@@ -50,7 +38,7 @@ export function RoomListItem({ area, active }: { area: AreaConfig; active: boole
         <p className="text-display truncate text-lg leading-tight">{area.name}</p>
         <p className={cn('truncate text-[0.8125rem] text-ink-muted')}>
           {room.summary}
-          {room.tempId ? <Temp entityId={room.tempId} /> : null}
+          {room.tempId ? <RoomTemp entityId={room.tempId} separated /> : null}
         </p>
       </div>
       {room.hasLights ? (

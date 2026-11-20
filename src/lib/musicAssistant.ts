@@ -90,7 +90,6 @@ export interface MusicQueue {
   autoplay_enabled?: boolean
   /** MA “Don’t stop the music” — fills similar tracks near end of queue. */
   dont_stop_the_music_enabled?: boolean
-  is_dynamic?: boolean
   current_index: number | null
   elapsed_time: number
   state?: string
@@ -242,13 +241,14 @@ export function normalizeQueue(raw: MusicQueue): MusicQueue {
     shuffle_enabled: Boolean(raw.shuffle_enabled),
     repeat_mode: typeof raw.repeat_mode === 'string' ? raw.repeat_mode : 'off',
     crossfade_enabled: Boolean(raw.crossfade_enabled),
-    autoplay_enabled: Boolean(raw.autoplay_enabled),
-    // Undefined when the source (HA's get_queue) does not report it.
+    // Undefined when the source does not report it, so callers can fall back
+    // from autoplay (newer MA) to Don't Stop the Music (older MA).
+    autoplay_enabled:
+      typeof raw.autoplay_enabled === 'boolean' ? raw.autoplay_enabled : undefined,
     dont_stop_the_music_enabled:
       typeof raw.dont_stop_the_music_enabled === 'boolean'
         ? raw.dont_stop_the_music_enabled
         : undefined,
-    is_dynamic: Boolean(raw.is_dynamic),
     current_index: typeof raw.current_index === 'number' ? raw.current_index : null,
     elapsed_time: typeof raw.elapsed_time === 'number' ? raw.elapsed_time : 0,
     state: raw.state,

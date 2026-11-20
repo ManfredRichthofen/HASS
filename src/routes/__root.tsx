@@ -2,16 +2,12 @@ import { ClientOnly, createRootRoute, HeadContent, Scripts } from '@tanstack/rea
 import { lazy, Suspense } from 'react'
 import { AppProviders } from '#/components/AppProviders'
 import { AppShell } from '#/components/layout/AppShell'
+import { ShellSkeleton } from '#/components/layout/ShellSkeleton'
 import { PwaRegister } from '#/components/PwaRegister'
 import { perfBootScript } from '#/lib/perf'
 import { defaultTheme, themeBootScript, themes } from '#/lib/theme'
 
 import appCss from '../styles.css?url'
-
-// Fonts for every theme: Fraunces (Walnut & Cream), Geist (Walnut & Cream, Modern),
-// Plus Jakarta Sans (Glass, Forest).
-const fontCss =
-  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Geist:wght@400..700&family=Plus+Jakarta+Sans:wght@400..700&display=swap'
 
 const Devtools = import.meta.env.DEV
   ? lazy(() => import('#/components/Devtools').then((mod) => ({ default: mod.Devtools })))
@@ -45,13 +41,6 @@ export const Route = createRootRoute({
       { rel: 'manifest', href: '/manifest.webmanifest' },
       { rel: 'icon', href: '/icons/icon.svg', type: 'image/svg+xml' },
       { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
-        crossOrigin: 'anonymous',
-      },
-      { rel: 'stylesheet', href: fontCss },
     ],
     scripts: [{ children: themeBootScript }, { children: perfBootScript }],
   }),
@@ -66,13 +55,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ClientOnly
-          fallback={
-            <div className="root flex min-h-dvh items-center justify-center">
-              <div className="size-10 animate-pulse rounded-pill bg-on" />
-            </div>
-          }
-        >
+        <ClientOnly fallback={<ShellSkeleton />}>
           <AppProviders>
             <PwaRegister />
             <div className="root">{children}</div>

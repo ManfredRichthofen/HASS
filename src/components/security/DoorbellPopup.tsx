@@ -1,7 +1,6 @@
 import { useBinarySensor, useCamera } from 'hass-react'
 import { Bell } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { DoorbellEventViewer } from '#/components/security/DoorbellEventViewer'
 import { Dialog, DialogContent } from '#/components/ui/dialog'
 import { entities } from '#/config/dashboard'
 import { subscribeDoorbellOpen } from '#/lib/doorbellUi'
@@ -9,6 +8,13 @@ import { frigateCameraFromEntity, frigateMetaFromCameraAttributes } from '#/lib/
 
 const CameraStream = lazy(() =>
   import('#/components/entities/CameraStream').then((mod) => ({ default: mod.CameraStream })),
+)
+
+// Event history only renders inside the open dialog, so keep it out of the shell chunk.
+const DoorbellEventViewer = lazy(() =>
+  import('#/components/security/DoorbellEventViewer').then((mod) => ({
+    default: mod.DoorbellEventViewer,
+  })),
 )
 
 const AUTO_CLOSE_MS = 90_000
@@ -72,6 +78,9 @@ export function DoorbellPopup() {
   const [open, setOpen] = useState(false)
   // Once the visitor starts browsing history, stop the ring auto-close timer.
   const [browsing, setBrowsing] = useState(false)
+  // Load history on first open, then keep it mounted so the close animation doesn't reflow.
+  const [opened, setOpened] = useState(false)
+  if (open && !opened) setOpened(true)
 
   const frigateAttrs = frigateMetaFromCameraAttributes(
     cameraMeta.attributes as Record<string, unknown>,
@@ -133,12 +142,16 @@ export function DoorbellPopup() {
           </Suspense>
         ) : null}
 
-        <DoorbellEventViewer
-          camera={frigateCamera}
-          instanceId={frigateInstanceId}
-          active={open}
-          onInteract={() => setBrowsing(true)}
-        />
+        {opened ? (
+          <Suspense fallback={null}>
+            <DoorbellEventViewer
+              camera={frigateCamera}
+              instanceId={frigateInstanceId}
+              active={open}
+              onInteract={() => setBrowsing(true)}
+            />
+          </Suspense>
+        ) : null}
       </DialogContent>
     </Dialog>
   )

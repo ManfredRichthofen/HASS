@@ -1,6 +1,6 @@
 import { useFan, useSensor } from 'hass-react'
 import { ArrowDownUp, Fan, SlidersHorizontal, Wind } from 'lucide-react'
-import { type PointerEvent, useEffect, useMemo, useState } from 'react'
+import { memo, type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { Drawer, DrawerContent } from '#/components/ui/drawer'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
@@ -110,7 +110,7 @@ function SensorHint({
   )
 }
 
-export function FanTile({
+export const FanTile = memo(function FanTile({
   entityId,
   label,
   tempId,
@@ -527,4 +527,4 @@ export function FanTile({
       </Drawer>
     </>
   )
-}
+})

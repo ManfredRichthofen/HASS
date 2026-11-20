@@ -1,3 +1,4 @@
-import { domMax } from 'motion/react'
+import { domAnimation } from 'motion/react'
 
-export default domMax
+/** First-paint motion: animations, variants, exit, tap/hover/focus. No layout projection. */
+export default domAnimation

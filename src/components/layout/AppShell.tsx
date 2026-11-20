@@ -1,20 +1,53 @@
-import { Outlet, useRouterState } from '@tanstack/react-router'
+import { Outlet } from '@tanstack/react-router'
 import { useHAConnection } from 'hass-react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BottomNav } from '#/components/layout/BottomNav'
-import { NowPlayingBar } from '#/components/layout/NowPlayingBar'
+import { NowPlayingSlot } from '#/components/layout/NowPlayingSlot'
+import { PerfTip } from '#/components/layout/PerfTip'
 import { SideNav } from '#/components/layout/SideNav'
 import { LocationProvider } from '#/components/location/LocationProvider'
 import { DoorbellPopup } from '#/components/security/DoorbellPopup'
 import { ToastProvider } from '#/components/ui/toast'
-import { UpdateChecker } from '#/components/update/UpdateChecker'
 import { haUrl } from '#/config/ha'
 import { useHAResumeReconnect } from '#/hooks/useHAResumeReconnect'
-import { LazyMotion, MotionConfig, m, pageFade } from '#/lib/motion'
+import { useIdle } from '#/hooks/useIdle'
+import { isTauri } from '#/lib/deviceLocation'
+import { LazyMotion, MotionConfig } from '#/lib/motion'
 import { usePerf } from '#/lib/perf'
 
+/** Animations + gestures for first paint; layout projection follows at idle. */
 const loadMotionFeatures = () => import('#/lib/motionFeatures').then((mod) => mod.default)
+const loadLayoutFeatures = () => import('#/lib/motionLayout').then((mod) => mod.default)
+
+const UpdateChecker = lazy(() =>
+  import('#/components/update/UpdateChecker').then((mod) => ({ default: mod.UpdateChecker })),
+)
+
+/** Startup extras that never compete with first paint: perf tip, Tauri-only update check. */
+function IdleExtras() {
+  const idle = useIdle()
+  if (!idle) return null
+  return (
+    <>
+      <PerfTip />
+      {isTauri() ? (
+        <Suspense fallback={null}>
+          <UpdateChecker />
+        </Suspense>
+      ) : null}
+    </>
+  )
+}
+
+/**
+ * Loads `domMax` (layout / layoutId) after first paint. Feature definitions are global,
+ * so this childless LazyMotion upgrades every `m` element under the main one.
+ */
+function DeferredLayoutFeatures() {
+  const idle = useIdle()
+  return idle ? <LazyMotion features={loadLayoutFeatures}>{null}</LazyMotion> : null
+}
 
 /** Only surface a connecting notice if HA stays unreachable this long. */
 const CONNECTING_NOTICE_DELAY_MS = 3_000
@@ -118,22 +151,14 @@ function ConnectedShell({ children }: { children: ReactNode }) {
         ? 'Check that you’re on the home network, then try again.'
         : undefined
 
-  const isOffline =
-    !connected &&
-    (connecting ||
-      isAutoRetrying ||
-      Boolean(error) ||
-      connectionState === 'disconnected' ||
-      connectionState === 'idle')
-
-  const needsSignIn =
-    !connected &&
-    !hasBeenConnected &&
-    !connecting &&
-    !isAutoRetrying &&
-    !error &&
-    connectionState !== 'idle' &&
-    connectionState !== 'disconnected'
+  const pending =
+    connecting ||
+    isAutoRetrying ||
+    Boolean(error) ||
+    connectionState === 'disconnected' ||
+    connectionState === 'idle'
+  const isOffline = !connected && pending
+  const needsSignIn = !connected && !hasBeenConnected && !pending
 
   const [showConnectingNotice, setShowConnectingNotice] = useState(false)
 
@@ -165,7 +190,7 @@ function ConnectedShell({ children }: { children: ReactNode }) {
 
   return (
     <LocationProvider>
-      <UpdateChecker />
+      <IdleExtras />
       <DoorbellPopup />
       {showConnectingNotice ? (
         <ReconnectBanner
@@ -191,34 +216,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (!haUrl) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6 text-center">
-        <p className="text-danger">
-          This app isn’t connected to the house yet.
-        </p>
+        <p className="text-danger">This app isn’t connected to the house yet.</p>
       </div>
     )
   }
 
   return <ConnectedShell>{children}</ConnectedShell>
-}
-
-function AnimatedOutlet() {
-  // Top-level section only, so /rooms → /rooms/x keeps the rooms layout mounted.
-  const section = useRouterState({ select: (s) => s.location.pathname.split('/')[1] ?? '' })
-
-  // Enter-only: an exiting <Outlet /> re-renders the *new* route, which mounted
-  // every page twice per navigation. Opacity-only keeps backdrop-filter surfaces
-  // (glass theme) off a moving transform.
-  return (
-    <m.div
-      key={section}
-      className="w-full"
-      initial={pageFade.initial}
-      animate={pageFade.animate}
-      transition={pageFade.transition}
-    >
-      <Outlet />
-    </m.div>
-  )
 }
 
 export function AppShell() {
@@ -227,13 +230,16 @@ export function AppShell() {
     <ToastProvider>
       <MotionConfig reducedMotion={smooth ? 'always' : 'user'}>
         <LazyMotion features={loadMotionFeatures} strict>
+          <DeferredLayoutFeatures />
           <div className="flex min-h-dvh w-full flex-col md:pl-[5.5rem] lg:pl-60">
             <AuthGate>
               <SideNav />
               <main className="mx-auto w-full max-w-[80rem] flex-1 overflow-x-hidden px-page pb-[calc(var(--nav-clearance)+1rem+var(--now-playing-space))] pt-3 transition-[padding-bottom] duration-slow ease-out sm:px-5 md:px-6 md:pb-[calc(2rem+var(--now-playing-space))] md:pt-4 lg:px-8">
-                <AnimatedOutlet />
+                {/* No route-level fade: pages paint at full opacity and sections rise via
+                    staggerItem (transform only, skipped under smooth / reduced motion). */}
+                <Outlet />
               </main>
-              <NowPlayingBar />
+              <NowPlayingSlot />
               <BottomNav />
             </AuthGate>
           </div>
