@@ -129,7 +129,7 @@ export function useGroupActions() {
       add: (leader: string, id: string) =>
         run(
           () => callService('media_player', 'join', { entity_id: leader, group_members: [id] }),
-          `Playing in ${labelOf(id)}`,
+          `${labelOf(id)} added`,
           'Couldn’t add room',
         ),
       /** Take a speaker out of its group (it stops playing). */
@@ -147,7 +147,7 @@ export function useGroupActions() {
               entity_id: leader,
               group_members: roomIds.filter((id) => id !== leader),
             }),
-          'All speakers selected',
+          'All rooms added',
           'Grouping failed',
         ),
       /**

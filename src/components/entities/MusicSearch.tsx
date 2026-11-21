@@ -6,6 +6,7 @@ import {
   ListPlus,
   ListStart,
   Loader2,
+  MoreHorizontal,
   Music2,
   Play,
   Radio,
@@ -13,17 +14,18 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { RoomChips } from '#/components/media/SpeakersPanel'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Toggle } from '#/components/ui/toggle'
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '#/components/ui/menu'
 import { notify } from '#/components/ui/toast'
 import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
+import type { MusicSession } from '#/hooks/useMusicSessions'
 import { cn } from '#/lib/cn'
 import { getMassBaseUrl } from '#/lib/massConfig'
 import {
   type EnqueueMode,
-  enqueueModes,
   type MediaSearchItem,
   mediaClassFilters,
   mediaClassLabel,
@@ -131,10 +133,45 @@ const GROUP_TITLES: Record<string, string> = {
   other: 'More',
 }
 
-function ModeIcon({ mode, className }: { mode: EnqueueMode; className?: string }) {
-  if (mode === 'add') return <ListPlus className={className} />
-  if (mode === 'next') return <ListStart className={className} />
-  return <Play className={cn(className, 'fill-current')} />
+type PlayHandler = (mode: EnqueueMode, radio?: boolean) => void
+
+/** Tap a result to play it now; the ⋯ menu queues it or starts song radio. */
+function ResultMenu({
+  item,
+  onPlay,
+  className,
+}: {
+  item: MediaSearchItem
+  onPlay: PlayHandler
+  className?: string
+}) {
+  return (
+    <Menu>
+      <MenuTrigger
+        aria-label={`More options for ${item.title}`}
+        className={cn(
+          'grid size-11 shrink-0 place-items-center rounded-pill text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink data-popup-open:bg-surface-hover data-popup-open:text-ink',
+          className,
+        )}
+      >
+        <MoreHorizontal className="size-5" />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuItem onClick={() => onPlay('next')}>
+          <ListStart />
+          Play next
+        </MenuItem>
+        <MenuItem onClick={() => onPlay('add')}>
+          <ListPlus />
+          Add to end of queue
+        </MenuItem>
+        <MenuItem onClick={() => onPlay('play', true)}>
+          <Radio />
+          Start song radio
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  )
 }
 
 function Thumb({ item, round }: { item: MediaSearchItem; round?: boolean }) {
@@ -164,38 +201,39 @@ function Thumb({ item, round }: { item: MediaSearchItem; round?: boolean }) {
 function TrackRow({
   item,
   busy,
-  mode,
   onPlay,
 }: {
   item: MediaSearchItem
   busy: boolean
-  mode: EnqueueMode
-  onPlay: () => void
+  onPlay: PlayHandler
 }) {
-  const hint = enqueueModes.find((m) => m.id === mode)?.hint ?? 'Play'
   return (
-    <div className="flex items-center gap-3 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-2">
-      <div className="size-12 shrink-0 overflow-hidden rounded-control">
-        <Thumb item={item} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
-        <p className="truncate text-[0.8125rem] text-ink-muted">{itemSubtitle(item)}</p>
-      </div>
-      <Button
-        size="icon"
-        variant="accent"
-        className="shrink-0"
+    <div className="flex items-center gap-1 rounded-card border-ui border-border-subtle bg-surface pr-1 shadow-card transition-ui hover:bg-surface-hover modern:border-transparent">
+      <button
+        type="button"
         disabled={busy}
-        aria-label={`${hint} ${item.title}`}
-        onClick={onPlay}
+        aria-label={`Play ${item.title}`}
+        onClick={() => onPlay('play')}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-card p-2 text-left"
       >
-        {busy ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <ModeIcon mode={mode} className="size-4" />
-        )}
-      </Button>
+        <span className="relative size-12 shrink-0 overflow-hidden rounded-control">
+          <Thumb item={item} />
+          {busy ? (
+            <span className="absolute inset-0 grid place-items-center bg-black/45 text-white">
+              <Loader2 className="size-5 animate-spin" aria-hidden />
+            </span>
+          ) : null}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[0.9375rem] font-semibold text-ink">
+            {item.title}
+          </span>
+          <span className="block truncate text-[0.8125rem] text-ink-muted">
+            {itemSubtitle(item)}
+          </span>
+        </span>
+      </button>
+      <ResultMenu item={item} onPlay={onPlay} />
     </div>
   )
 }
@@ -223,60 +261,75 @@ function SearchResultsSkeleton() {
 function MediaCard({
   item,
   busy,
-  mode,
   onPlay,
 }: {
   item: MediaSearchItem
   busy: boolean
-  mode: EnqueueMode
-  onPlay: () => void
+  onPlay: PlayHandler
 }) {
-  const hint = enqueueModes.find((m) => m.id === mode)?.hint ?? 'Play'
   const round = item.media_class === 'artist'
   return (
-    <button
-      type="button"
-      disabled={busy}
-      aria-label={`${hint} ${item.title}`}
-      onClick={onPlay}
-      className="group min-w-0 rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent p-2 text-left transition-ui hover:bg-surface-hover"
-    >
-      <div
-        className={cn(
-          'relative aspect-square w-full overflow-hidden',
-          round ? 'rounded-pill' : 'rounded-control',
-        )}
+    <div className="relative min-w-0 rounded-card border-ui border-border-subtle bg-surface shadow-card transition-ui hover:bg-surface-hover modern:border-transparent">
+      <button
+        type="button"
+        disabled={busy}
+        aria-label={`Play ${item.title}`}
+        onClick={() => onPlay('play')}
+        className="block w-full min-w-0 rounded-card p-2 text-left"
       >
-        <Thumb item={item} round={round} />
         <span
           className={cn(
-            'absolute right-1.5 bottom-1.5 grid size-8 place-items-center rounded-pill bg-accent text-on-accent shadow-md transition-ui',
-            !busy && 'opacity-90 group-hover:opacity-100',
+            'relative block aspect-square w-full overflow-hidden',
+            round ? 'rounded-pill' : 'rounded-control',
           )}
         >
-          {busy ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ModeIcon mode={mode} className="size-4" />
-          )}
+          <Thumb item={item} round={round} />
+          <span className="absolute right-1.5 bottom-1.5 grid size-9 place-items-center rounded-pill bg-accent text-on-accent shadow-card">
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Play className="size-4 fill-current" aria-hidden />
+            )}
+          </span>
         </span>
-      </div>
-      <p className={cn('mt-2 truncate text-sm font-semibold text-ink', round && 'text-center')}>
-        {item.title}
-      </p>
-      <p className={cn('truncate text-[0.8125rem] text-ink-muted', round && 'text-center')}>
-        {itemSubtitle(item)}
-      </p>
-    </button>
+        <span
+          className={cn(
+            'mt-2 block truncate pr-9 text-sm font-semibold text-ink',
+            round && 'pl-9 text-center',
+          )}
+        >
+          {item.title}
+        </span>
+        <span
+          className={cn(
+            'block truncate pr-9 text-[0.8125rem] text-ink-muted',
+            round && 'pl-9 text-center',
+          )}
+        >
+          {itemSubtitle(item)}
+        </span>
+      </button>
+      <ResultMenu item={item} onPlay={onPlay} className="absolute right-0.5 bottom-0.5" />
+    </div>
   )
 }
 
-export function MusicSearch({ target, onQueued }: { target: string; onQueued?: () => void }) {
+export function MusicSearch({
+  target,
+  current,
+  onFollow,
+  onQueued,
+}: {
+  target: string
+  /** The music being controlled; its rooms show as "Plays in" chips. */
+  current?: MusicSession
+  /** Follow the music when its main speaker changes. */
+  onFollow?: (id: string) => void
+  onQueued?: () => void
+}) {
   const { callService, callServiceWithResponse } = useServiceCall()
   const [query, setQuery] = useState(lastQuery)
   const [activeQuery, setActiveQuery] = useState(lastQuery)
-  const [enqueue, setEnqueue] = useState<EnqueueMode>('play')
-  const [radio, setRadio] = useState(false)
   const [filter, setFilter] = useState<string>('all')
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [recentSearches, setRecentSearches] = useState<string[]>(readRecentSearches)
@@ -411,7 +464,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
     writeRecentSearches([])
   }
 
-  async function playItem(item: MediaSearchItem, mode: EnqueueMode = enqueue) {
+  async function playItem(item: MediaSearchItem, mode: EnqueueMode = 'play', radio = false) {
     if (stale) return
     if (!item.can_play && !item.media_content_id) return
     setPlayingId(item.media_content_id)
@@ -498,6 +551,8 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
         </Button>
       </form>
 
+      {current && onFollow ? <RoomChips current={current} onFollow={onFollow} /> : null}
+
       {!query && recentSearches.length > 0 ? (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -525,37 +580,6 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
           </div>
         </div>
       ) : null}
-
-      <div className="space-y-1.5">
-        <p className="text-[0.8125rem] font-medium text-ink-faint">Tapping a result will</p>
-        <div role="group" aria-label="Tapping a result will" className="grid grid-cols-3 gap-1 rounded-card bg-canvas p-1">
-          {enqueueModes.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              title={mode.hint}
-              aria-pressed={enqueue === mode.id}
-              onClick={() => setEnqueue(mode.id)}
-              className={cn(
-                'touch-target flex items-center justify-center gap-1.5 rounded-control px-2 text-[0.8125rem] font-medium transition-ui',
-                enqueue === mode.id ? 'bg-accent text-on-accent' : 'text-ink-muted hover:text-ink',
-              )}
-            >
-              <ModeIcon mode={mode.id} className="size-3.5" />
-              {mode.hint}
-            </button>
-          ))}
-        </div>
-        <Toggle
-          pressed={radio}
-          onPressedChange={setRadio}
-          aria-label="Song radio: after the song you pick, keep playing similar songs"
-          className="w-full gap-2"
-        >
-          <Radio className="size-4" />
-          Song radio
-        </Toggle>
-      </div>
 
       {results.length > 0 ? (
         <div
@@ -621,7 +645,7 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
 
         {!searching && !searched ? (
           <p className="py-6 text-center text-sm text-ink-muted">
-            Find something to play, play next, or add to the queue.
+            Tap a result to play it now. Its ⋯ menu can play it next or add it to the queue.
           </p>
         ) : null}
 
@@ -639,9 +663,8 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
                       <TrackRow
                         key={`${item.media_content_id}-${i}`}
                         item={item}
-                        mode={enqueue}
                         busy={playingId === item.media_content_id}
-                        onPlay={() => void playItem(item)}
+                        onPlay={(mode, radio) => void playItem(item, mode, radio)}
                       />
                     ))}
                   </div>
@@ -651,9 +674,8 @@ export function MusicSearch({ target, onQueued }: { target: string; onQueued?: (
                       <MediaCard
                         key={`${item.media_content_id}-${i}`}
                         item={item}
-                        mode={enqueue}
                         busy={playingId === item.media_content_id}
-                        onPlay={() => void playItem(item)}
+                        onPlay={(mode, radio) => void playItem(item, mode, radio)}
                       />
                     ))}
                   </div>

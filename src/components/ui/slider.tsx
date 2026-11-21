@@ -52,7 +52,7 @@ export function Slider({
 
   return (
     <BaseSlider.Root
-      className={cn('relative w-full min-w-0 touch-none select-none', className)}
+      className={cn('relative w-full min-w-0 touch-pan-y select-none', className)}
       {...props}
       value={controlled ? local : undefined}
       defaultValue={controlled ? undefined : defaultValue}
@@ -69,7 +69,7 @@ export function Slider({
       }}
     >
       {thin ? (
-        <BaseSlider.Control className="flex w-full min-w-0 cursor-pointer touch-none py-4">
+        <BaseSlider.Control className="flex min-h-11 w-full min-w-0 cursor-pointer touch-pan-y items-center">
           <BaseSlider.Track
             className={cn(
               'relative h-1.5 w-full min-w-0 grow rounded-pill bg-surface-hover',
@@ -89,7 +89,7 @@ export function Slider({
           </BaseSlider.Track>
         </BaseSlider.Control>
       ) : (
-        <BaseSlider.Control className="flex w-full min-w-0 cursor-pointer touch-none">
+        <BaseSlider.Control className="flex w-full min-w-0 cursor-pointer touch-pan-y">
           <BaseSlider.Track
             className={cn(
               'relative h-11 w-full min-w-0 grow overflow-hidden rounded-control border-ui border-transparent',

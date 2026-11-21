@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Pause, Play, Volume1 } from 'lucide-react'
+import { ArrowRightLeft, Check, Pause, Play, Plus, Volume1 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Slider } from '#/components/ui/slider'
 import { Switch } from '#/components/ui/switch'
@@ -108,6 +108,113 @@ function OtherSession({ session, onControl }: { session: MusicSession; onControl
   )
 }
 
+/**
+ * Add a room to the music or take it out. The last room stays on (something has
+ * to play), and taking out the main speaker hands the music to the next one.
+ */
+function useRoomToggle(
+  room: RoomInfo,
+  current: MusicSession,
+  onFollow: (id: string) => void,
+) {
+  const actions = useGroupActions()
+  const playing = current.state !== 'idle'
+  const inSession = current.members.includes(room.id)
+  const { value: on, commit } = useOptimisticValue(inSession)
+  const locked = on && current.members.length === 1
+
+  function toggle() {
+    if (locked || room.unavailable) return
+    if (!on) {
+      commit(true, () => actions.add(current.leader, room.id))
+    } else if (room.id === current.leader) {
+      commit(false, async () => {
+        const next = await actions.dropLeader(current.members, playing)
+        if (next) onFollow(next)
+      })
+    } else {
+      commit(false, () => actions.remove(room.id))
+    }
+  }
+
+  return { on, locked, playing, toggle }
+}
+
+/**
+ * "Plays in": the rooms as chips, for choosing speakers without leaving Search.
+ * Same rules as the Speakers list: tap to add or remove, the last room stays on.
+ */
+export function RoomChips({
+  current,
+  onFollow,
+}: {
+  current: MusicSession
+  onFollow: (id: string) => void
+}) {
+  const { rooms } = useMusicSessions()
+  const actions = useGroupActions()
+  const available = rooms.filter((r) => !r.unavailable)
+  const everywhere = available.length > 1 && available.every((r) => current.members.includes(r.id))
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
+      <span className="text-label" id="plays-in-label">
+        Plays in
+      </span>
+      <div
+        role="group"
+        aria-labelledby="plays-in-label"
+        className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5"
+      >
+        {rooms.map((room) => (
+          <RoomChip key={room.id} room={room} current={current} onFollow={onFollow} />
+        ))}
+        {available.length > 1 && !everywhere ? (
+          <button
+            type="button"
+            onClick={() => void actions.selectAll(current.leader)}
+            className="press inline-flex h-11 shrink-0 items-center rounded-pill px-3.5 text-[0.8125rem] font-semibold text-ink-muted transition-ui hover:text-ink"
+          >
+            All rooms
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function RoomChip({
+  room,
+  current,
+  onFollow,
+}: {
+  room: RoomInfo
+  current: MusicSession
+  onFollow: (id: string) => void
+}) {
+  const { on, locked, toggle } = useRoomToggle(room, current, onFollow)
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-disabled={locked || undefined}
+      disabled={room.unavailable}
+      title={locked ? 'Music needs at least one room' : undefined}
+      onClick={toggle}
+      className={cn(
+        'press inline-flex h-11 shrink-0 items-center gap-1.5 rounded-pill border-ui px-3.5 text-[0.8125rem] font-semibold transition-state',
+        on
+          ? 'border-accent bg-accent text-on-accent'
+          : 'border-border-subtle text-ink-muted hover:text-ink',
+        room.unavailable && 'opacity-45',
+      )}
+    >
+      {on ? <Check className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />}
+      {room.label}
+    </button>
+  )
+}
+
 function RoomRow({
   room,
   current,
@@ -121,13 +228,9 @@ function RoomRow({
   onFollow: (id: string) => void
 }) {
   const actions = useGroupActions()
-  const playing = current.state !== 'idle'
-  const inSession = current.members.includes(room.id)
-  const { value: on, commit } = useOptimisticValue(inSession)
+  const { on, locked, playing, toggle } = useRoomToggle(room, current, onFollow)
   const [volume, setVolume] = useState(room.volume)
   useEffect(() => setVolume(room.volume), [room.volume])
-  // Something has to play the music: the last selected speaker stays on.
-  const locked = on && current.members.length === 1
 
   const status = locked
     ? 'Needs at least one room'
@@ -141,21 +244,6 @@ function RoomRow({
           ? 'Unavailable'
           : 'Off'
 
-  function toggle() {
-    if (locked) return
-    if (!on) {
-      commit(true, () => actions.add(current.leader, room.id))
-    } else if (room.id === current.leader) {
-      // The main speaker leaves: the music carries on from the next one.
-      commit(false, async () => {
-        const next = await actions.dropLeader(current.members, playing)
-        if (next) onFollow(next)
-      })
-    } else {
-      commit(false, () => actions.remove(room.id))
-    }
-  }
-
   return (
     <div
       className={cn(
@@ -166,17 +254,25 @@ function RoomRow({
       )}
     >
       <div className="flex min-h-16 items-center gap-2 pr-1 pl-4">
-        <div className="min-w-0 flex-1">
-          <p
+        {/* The whole name area is a big tap target for the switch beside it. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden
+          onClick={toggle}
+          disabled={room.unavailable || locked}
+          className="min-h-14 min-w-0 flex-1 cursor-pointer self-stretch text-left disabled:cursor-default"
+        >
+          <span
             className={cn(
-              'truncate text-[0.9375rem]',
+              'block truncate text-[0.9375rem]',
               on ? 'font-semibold text-ink' : 'font-medium text-ink-muted',
             )}
           >
             {room.label}
-          </p>
-          <p className="truncate text-[0.8125rem] text-ink-faint">{status}</p>
-        </div>
+          </span>
+          <span className="block truncate text-[0.8125rem] text-ink-faint">{status}</span>
+        </button>
 
         {playing && !on ? (
           <button

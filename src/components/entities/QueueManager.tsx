@@ -15,6 +15,7 @@ import {
   Radio,
   Repeat,
   Repeat1,
+  Search,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -444,6 +445,7 @@ export function QueueManager({
   endlessToggle = false,
   heading = true,
   groupVolume,
+  onSearch,
 }: {
   target: string
   onTargetChange: (id: string) => void
@@ -457,6 +459,8 @@ export function QueueManager({
    * whole group instead of just the leader.
    */
   groupVolume?: GroupVolume
+  /** Offer a way to find music when nothing is playing. */
+  onSearch?: () => void
 }) {
   const showPlayer = view !== 'queue'
   const showQueue = view !== 'player'
@@ -767,7 +771,17 @@ export function QueueManager({
           <p className="mt-3 text-sm font-medium text-ink">
             {view === 'queue' ? 'Nothing queued' : 'Nothing playing'}
           </p>
-          <p className="mt-1 text-[0.8125rem] text-ink-muted">Search to play or queue something.</p>
+          <p className="mt-1 text-[0.8125rem] text-ink-muted">
+            {view === 'queue'
+              ? 'Songs you add from Search show up here.'
+              : 'Find a song, artist or playlist to start.'}
+          </p>
+          {onSearch && view !== 'queue' ? (
+            <Button variant="accent" className="mt-5" onClick={onSearch}>
+              <Search className="size-[18px]" aria-hidden />
+              Search music
+            </Button>
+          ) : null}
         </div>
       ) : null}
 

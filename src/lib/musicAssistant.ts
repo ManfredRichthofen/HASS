@@ -23,12 +23,6 @@ export interface MediaSearchResponse {
 
 export type EnqueueMode = 'play' | 'replace' | 'next' | 'replace_next' | 'add'
 
-export const enqueueModes = [
-  { id: 'play' as const, label: 'Play', hint: 'Play now' },
-  { id: 'next' as const, label: 'Next', hint: 'Play next' },
-  { id: 'add' as const, label: 'Queue', hint: 'Add to end' },
-]
-
 export interface QueueMediaArtist {
   name?: string
   image?: QueueImage | null

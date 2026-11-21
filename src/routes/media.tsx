@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { ListMusic, Search, Speaker } from 'lucide-react'
-import { type ReactNode, useCallback, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { MusicSearch } from '#/components/entities/MusicSearch'
 import { type GroupVolume, QueueManager } from '#/components/entities/QueueManager'
 import { SpeakersPanel } from '#/components/media/SpeakersPanel'
@@ -36,14 +36,24 @@ function MusicPage() {
   const { rooms, sessions } = useMusicSessions()
   const actions = useGroupActions()
   const [picked, setPicked] = useState<string | null>(null)
-  const [panel, setPanel] = useState<Panel>('queue')
+  // Until someone picks a tab, the tablet panel opens on Search when nothing is playing.
+  const [chosenPanel, setPanel] = useState<Panel | null>(null)
   const [sheet, setSheet] = useState<Panel | null>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   // `picked` is a room; follow it to whichever group it is in now.
   const pickedLeader = picked ? (rooms.find((r) => r.id === picked)?.leader ?? picked) : null
   const current = sessions.find((s) => s.leader === pickedLeader) ?? sessions[0]
   const target = current?.leader ?? rooms[0]?.id ?? 'media_player.all'
   const label = current?.label ?? 'Speakers'
+  const idle = !sessions.some((s) => s.state !== 'idle')
+  const panel: Panel = chosenPanel ?? (idle ? 'search' : 'queue')
+
+  // Phone opens the Search sheet; tablet (the @xl panel, 36rem and up) switches its tab.
+  const openSearch = () => {
+    if ((pageRef.current?.offsetWidth ?? 0) >= 576) setPanel('search')
+    else setSheet('search')
+  }
 
   const refreshQueue = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['music-queue', target] })
@@ -91,6 +101,7 @@ function MusicPage() {
 
   return (
     <m.div
+      ref={pageRef}
       initial="initial"
       animate="animate"
       variants={staggerContainer}
@@ -135,6 +146,7 @@ function MusicPage() {
               target={target}
               onTargetChange={setPicked}
               groupVolume={groupVolume}
+              onSearch={openSearch}
             />
           </div>
         </m.div>
@@ -146,8 +158,20 @@ function MusicPage() {
           className="flex shrink-0 items-center gap-2 @xl:hidden"
         >
           <SheetButton icon={<ListMusic />} label="Up next" onClick={() => setSheet('queue')} />
-          <SheetButton wide icon={<Speaker />} label={label} onClick={() => setSheet('speakers')} />
-          <SheetButton icon={<Search />} label="Search" onClick={() => setSheet('search')} />
+          <SheetButton
+            wide
+            icon={<Speaker />}
+            label={label}
+            aria-label={`Speakers: ${label}`}
+            onClick={() => setSheet('speakers')}
+          />
+          <SheetButton
+            showLabel
+            primary={idle}
+            icon={<Search />}
+            label="Search"
+            onClick={() => setSheet('search')}
+          />
         </m.nav>
 
         {/* Tablet: Up next / Search beside the player. */}
@@ -179,7 +203,12 @@ function MusicPage() {
                 {panel === 'speakers' ? speakersPanel : null}
 
                 {panel === 'search' ? (
-                  <MusicSearch target={target} onQueued={refreshQueue} />
+                  <MusicSearch
+                    target={target}
+                    current={current}
+                    onFollow={setPicked}
+                    onQueued={refreshQueue}
+                  />
                 ) : null}
               </m.div>
             </AnimatePresence>
@@ -209,38 +238,60 @@ function MusicPage() {
 
       <Drawer {...sheetProps('search')}>
         <DrawerContent title="Search" className="h-[88dvh]">
-          {sheet === 'search' ? <MusicSearch target={target} onQueued={refreshQueue} /> : null}
+          {sheet === 'search' ? (
+            <MusicSearch
+              target={target}
+              current={current}
+              onFollow={setPicked}
+              onQueued={refreshQueue}
+            />
+          ) : null}
         </DrawerContent>
       </Drawer>
     </m.div>
   )
 }
 
-/** Up next and Search are round icon buttons; the speaker pill between them names the room. */
+/**
+ * Up next is a round icon button; the speaker pill names the room; Search keeps
+ * its label and takes the primary fill when nothing is playing.
+ */
 function SheetButton({
   icon,
   label,
   onClick,
   wide = false,
+  showLabel = wide,
+  primary = false,
+  'aria-label': ariaLabel,
 }: {
   icon: ReactNode
   label: string
   onClick: () => void
   wide?: boolean
+  showLabel?: boolean
+  primary?: boolean
+  'aria-label'?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={ariaLabel}
       className={cn(
-        'press flex h-12 min-w-0 items-center justify-center gap-2 rounded-pill text-sm font-semibold text-ink transition-ui',
-        wide ? 'flex-1 px-4' : 'w-12 shrink-0',
-        'bg-surface hover:bg-surface-hover [&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-ink-muted',
-        'walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised glass:[&_svg]:text-on-raised',
+        'press flex h-12 min-w-0 items-center justify-center gap-2 rounded-pill text-sm font-semibold transition-ui',
+        wide ? 'flex-1 px-4' : showLabel ? 'shrink-0 px-5' : 'w-12 shrink-0',
+        '[&_svg]:size-[18px] [&_svg]:shrink-0',
+        primary
+          ? 'bg-accent text-on-accent hover:bg-accent-strong'
+          : cn(
+              'bg-surface text-ink hover:bg-surface-hover [&_svg]:text-ink-muted',
+              'walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised glass:[&_svg]:text-on-raised',
+            ),
       )}
     >
       {icon}
-      <span className={wide ? 'truncate' : 'sr-only'}>{label}</span>
+      <span className={showLabel ? 'truncate' : 'sr-only'}>{label}</span>
     </button>
   )
 }
