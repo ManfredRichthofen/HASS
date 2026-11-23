@@ -1,3 +1,5 @@
+import { DEMO_MODE, isMassReadCommand } from '#/lib/demoMode'
+import { simulateMassCommand } from '#/lib/demoMusic'
 import { clearMassAuth } from '#/lib/massAuth'
 import { readMassConfig } from '#/lib/massConfig'
 import type { MusicQueue, QueueItem } from '#/lib/musicAssistant'
@@ -21,6 +23,10 @@ export async function massCommand<T = unknown>(
   command: string,
   args?: Record<string, unknown>,
 ): Promise<T> {
+  if (DEMO_MODE && !isMassReadCommand(command)) {
+    simulateMassCommand(command, args)
+    return undefined as T
+  }
   const config = readMassConfig()
   if (!config) {
     throw new MassApiError('Music Assistant is not configured')

@@ -1,0 +1,112 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 69c9f99d908be8c3cfdd58c784040d76f2f536f7..51fa53f0a6faae1508f6fc5f45b4d8909e3a73fa 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -55,6 +55,8 @@ let activeStateSubscription = null;
+ let pendingSnapshot = null;
+ let stateSubscriptionError = null;
+ let connectionGeneration = 0;
++/** Entities snapshotted on this connection; state_changed keeps them fresh after unmount. */
++const warmEntities = /* @__PURE__ */ new Set();
+ const useStore = zustand.create((set, get) => ({
+   entities: /* @__PURE__ */ new Map(),
+   subscriptionErrors: /* @__PURE__ */ new Map(),
+@@ -66,6 +68,7 @@ const useStore = zustand.create((set, get) => ({
+     pendingSnapshot = null;
+     stateSubscriptionError = null;
+     inFlightRegistrations.clear();
++    warmEntities.clear();
+     if (previousSubscription) {
+       unsubscribeSafely(previousSubscription.unsubscribe);
+     }
+@@ -152,6 +155,9 @@ const useStore = zustand.create((set, get) => ({
+     if (!connection) {
+       return;
+     }
++    if (warmEntities.has(entityId) && (activeStateSubscription == null ? void 0 : activeStateSubscription.generation) === generation && get().entities.has(entityId)) {
++      return;
++    }
+     try {
+       await initializeEntity(connection, generation, entityId);
+     } catch {
+@@ -192,6 +198,7 @@ const useStore = zustand.create((set, get) => ({
+     entitySubscriptions.clear();
+     allStateChangeSubscriptions.clear();
+     inFlightRegistrations.clear();
++    warmEntities.clear();
+     entityEventVersions.clear();
+     set({
+       entities: /* @__PURE__ */ new Map(),
+@@ -224,7 +231,7 @@ function dispatchStateChanged(event, connection, generation) {
+     return;
+   }
+   const entityId = event.data.entity_id;
+-  if (entitySubscriptions.has(entityId)) {
++  if (entitySubscriptions.has(entityId) || warmEntities.has(entityId)) {
+     entityEventVersions.set(entityId, (entityEventVersions.get(entityId) ?? 0) + 1);
+     if (event.data.new_state) {
+       useStore.getState().updateEntity(entityId, event.data.new_state);
+@@ -255,6 +262,7 @@ function initializeEntity(connection, generation, entityId) {
+         }
+       }
+       if ((activeStateSubscription == null ? void 0 : activeStateSubscription.generation) === generation) {
++        warmEntities.add(entityId);
+         useStore.getState().setSubscriptionError(entityId, null);
+       } else if (stateSubscriptionError) {
+         useStore.getState().setSubscriptionError(entityId, stateSubscriptionError);
+diff --git a/dist/index.es.js b/dist/index.es.js
+index df36925036f3c30e9d06652ab37a7524afaa5062..686830c625741bfd086a41814687b5c340e87df2 100644
+--- a/dist/index.es.js
++++ b/dist/index.es.js
+@@ -53,6 +53,8 @@ let activeStateSubscription = null;
+ let pendingSnapshot = null;
+ let stateSubscriptionError = null;
+ let connectionGeneration = 0;
++/** Entities snapshotted on this connection; state_changed keeps them fresh after unmount. */
++const warmEntities = /* @__PURE__ */ new Set();
+ const useStore = create((set, get) => ({
+   entities: /* @__PURE__ */ new Map(),
+   subscriptionErrors: /* @__PURE__ */ new Map(),
+@@ -64,6 +66,7 @@ const useStore = create((set, get) => ({
+     pendingSnapshot = null;
+     stateSubscriptionError = null;
+     inFlightRegistrations.clear();
++    warmEntities.clear();
+     if (previousSubscription) {
+       unsubscribeSafely(previousSubscription.unsubscribe);
+     }
+@@ -150,6 +153,9 @@ const useStore = create((set, get) => ({
+     if (!connection) {
+       return;
+     }
++    if (warmEntities.has(entityId) && (activeStateSubscription == null ? void 0 : activeStateSubscription.generation) === generation && get().entities.has(entityId)) {
++      return;
++    }
+     try {
+       await initializeEntity(connection, generation, entityId);
+     } catch {
+@@ -190,6 +196,7 @@ const useStore = create((set, get) => ({
+     entitySubscriptions.clear();
+     allStateChangeSubscriptions.clear();
+     inFlightRegistrations.clear();
++    warmEntities.clear();
+     entityEventVersions.clear();
+     set({
+       entities: /* @__PURE__ */ new Map(),
+@@ -222,7 +229,7 @@ function dispatchStateChanged(event, connection, generation) {
+     return;
+   }
+   const entityId = event.data.entity_id;
+-  if (entitySubscriptions.has(entityId)) {
++  if (entitySubscriptions.has(entityId) || warmEntities.has(entityId)) {
+     entityEventVersions.set(entityId, (entityEventVersions.get(entityId) ?? 0) + 1);
+     if (event.data.new_state) {
+       useStore.getState().updateEntity(entityId, event.data.new_state);
+@@ -253,6 +260,7 @@ function initializeEntity(connection, generation, entityId) {
+         }
+       }
+       if ((activeStateSubscription == null ? void 0 : activeStateSubscription.generation) === generation) {
++        warmEntities.add(entityId);
+         useStore.getState().setSubscriptionError(entityId, null);
+       } else if (stateSubscriptionError) {
+         useStore.getState().setSubscriptionError(entityId, stateSubscriptionError);

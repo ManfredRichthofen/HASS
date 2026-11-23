@@ -10,7 +10,7 @@ import { m, snappy, staggerItem, tap } from '#/lib/motion'
 /**
  * A room on the Rooms page: name on top, summary under it, temperature bottom
  * left and the power control bottom right. A lit room glows from the corner
- * (Modern: a single amber dot; Brutalist: a yellow bar across the top).
+ * (Modern: a single amber dot).
  */
 export function RoomCard({ area }: { area: AreaConfig }) {
   const room = useRoom(area)
@@ -47,7 +47,7 @@ export function RoomCard({ area }: { area: AreaConfig }) {
         aria-hidden
       />
       <div className="relative grid min-w-0 gap-2 pr-8 modern:pr-6">
-        <p className="text-display line-clamp-2 text-2xl leading-tight text-ink walnut:text-[1.75rem] walnut:font-light">
+        <p className="text-display line-clamp-2 text-2xl leading-tight text-ink">
           {area.name}
         </p>
         {room.hasLights ? (

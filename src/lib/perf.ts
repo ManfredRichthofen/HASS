@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Performance profile. `smooth` drops the expensive effects (backdrop blur, the drifting
- * background, large soft shadows, layout animations) for lower-powered tablets. `auto` picks
+ * Performance profile. `smooth` drops the expensive effects (backdrop blur, large soft
+ * shadows, layout animations) for lower-powered tablets. `auto` picks
  * `smooth` on devices that report little memory or few cores.
  */
 export type PerfSetting = 'auto' | 'full' | 'smooth'

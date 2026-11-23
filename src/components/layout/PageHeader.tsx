@@ -67,7 +67,7 @@ export function PageHeader({
           ) : null}
           <div className="min-w-0">
           {eyebrow ? <div className="text-label mb-1.5">{eyebrow}</div> : null}
-          <h1 className="text-display text-[2.25rem] leading-[1.02] text-ink md:text-[2rem] walnut:font-light">
+          <h1 className="text-display text-[2.25rem] leading-[1.02] text-ink md:text-[2rem]">
             {title}
           </h1>
           {subtitle ? (

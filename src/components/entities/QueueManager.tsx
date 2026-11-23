@@ -53,13 +53,20 @@ const ROW_PAGE = 30
 
 type Player = ReturnType<typeof useMusicQueue>['player']
 
-function useLivePosition(position: number | null, duration: number | null, playing: boolean) {
+function useLivePosition(
+  position: number | null,
+  /** HA's `media_position_updated_at`: a new report can repeat the same position (a track starting at 0). */
+  reportedAt: unknown,
+  duration: number | null,
+  playing: boolean,
+) {
   const [now, setNow] = useState(() => Date.now())
   const [base, setBase] = useState({ position: position ?? 0, at: Date.now() })
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reportedAt re-anchors on a repeated position
   useEffect(() => {
     setBase({ position: position ?? 0, at: Date.now() })
-  }, [position])
+  }, [position, reportedAt])
 
   useEffect(() => {
     if (!playing) return
@@ -91,7 +98,12 @@ function PlaybackProgress({
   playing: boolean
   disabled: boolean
 }) {
-  const { position, jumpTo } = useLivePosition(player.mediaPosition, duration, playing)
+  const { position, jumpTo } = useLivePosition(
+    player.mediaPosition,
+    player.attributes.media_position_updated_at,
+    duration,
+    playing,
+  )
   const [dragPosition, setDragPosition] = useState<number | null>(null)
   const canSeek = player.supportsSeek && duration != null && duration > 0
   const shown = dragPosition ?? position
@@ -1005,7 +1017,7 @@ export function QueueManager({
               <h3
                 className={cn(
                   heading ? 'block' : 'sr-only',
-                  'text-ink walnut:font-serif walnut:text-xl walnut:italic modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink',
+                  'text-ink modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted glass:text-base glass:font-semibold glass:text-ink',
                 )}
               >
                 Up next

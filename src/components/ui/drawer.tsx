@@ -20,8 +20,8 @@ export function Drawer({
 
 /**
  * The bottom sheet behind every tile: a device's full controls.
- * Walnut: attached to the bottom edge. Modern: a floating card inset from the
- * edges. Brutalist: square, ruled, over a hatched scrim.
+ * A floating card inset from the edges (Modern: borderless; Forest: frosted,
+ * with rounder corners).
  */
 export function DrawerContent({
   title,

@@ -1,22 +1,44 @@
 import { Slider as BaseSlider } from '@base-ui/react/slider'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { asNumber } from '#/components/ui/slider'
 import { useMediaQuery } from '#/hooks/useMediaQuery'
 import { cn } from '#/lib/cn'
+import { useAppearance } from '#/lib/theme'
 
-/** Wavelength of one full sine cycle, in CSS px. */
-const WAVE_LENGTH = 22
-/** Peak vertical excursion while playing, in CSS px. */
-const WAVE_AMPLITUDE = 3.5
-/** How fast the wave travels, in wavelength-fractions per second. */
-const PHASE_SPEED = 1.15
-/** Seconds for amplitude to ease in/out on play/pause. */
-const AMPLITUDE_EASE = 0.28
-/** Sample spacing along the path, in CSS px. */
-const SAMPLE_STEP = 2
-const SVG_HEIGHT = Math.ceil(WAVE_AMPLITUDE * 2 + 8)
-/** Distance over which the wave tapers to flat at the thumb, in CSS px. */
-const TAPER = WAVE_LENGTH * 0.55
+/*
+ * One UI-style seek bar: a solid played bar with soft, translucent hills of
+ * light rising off it and drifting while music plays, a ringed round playhead,
+ * and the remaining time as a slim pill after a small gap.
+ */
+
+/** Tallest the hills rise above the bar while playing, in CSS px. */
+const HILL_HEIGHT = 30
+/** Room drawn above the bar for the hills (crest stroke included), in CSS px. */
+const CANVAS_HEIGHT = HILL_HEIGHT + 6
+/** Time constant for the hills to rise or sink, in seconds. */
+const RISE_TAU = 0.28
+/** Sample spacing along the hills, in CSS px. */
+const SAMPLE_STEP = 3
+/** Playhead diameter, in CSS px (matches size-[18px]). */
+const THUMB = 18
+/** Clear space between the playhead and the remaining bar, in CSS px. */
+const GAP = 5
+
+/**
+ * Three overlapping layers. Each is a smooth, always-positive swell; their
+ * different wavelengths and speeds keep the shape from ever visibly repeating.
+ */
+const LAYERS = [
+  { wavelength: 150, speed: 0.09, scale: 1, alpha: 0.6 },
+  { wavelength: 95, speed: -0.13, scale: 0.78, alpha: 0.5 },
+  { wavelength: 62, speed: 0.2, scale: 0.55, alpha: 0.42 },
+] as const
+
+/** Smooth 0→1 ramp, so the envelope has no visible corners. */
+const ease = (t: number) => {
+  const c = Math.min(1, Math.max(0, t))
+  return c * c * (3 - 2 * c)
+}
 
 type WaveformSeekProps = {
   /** Controlled position; the caller owns any in-progress drag value. */
@@ -24,7 +46,7 @@ type WaveformSeekProps = {
   max: number
   disabled?: boolean
   seekable?: boolean
-  /** When true the squiggle travels; otherwise it settles to a flat line. */
+  /** When true the hills rise and drift; otherwise they sink into the bar. */
   playing?: boolean
   'aria-label'?: string
   onValueChange?: (value: number) => void
@@ -32,70 +54,96 @@ type WaveformSeekProps = {
   className?: string
 }
 
-/**
- * Build the played squiggle and remaining straight segment, matching Android’s
- * SquigglyProgress: sine while playing, tapered to flat at the thumb.
- */
-const buildPaths = (
-  width: number,
-  progressPx: number,
-  phase: number,
-  amplitude: number,
-): { played: string; rest: string } => {
-  const midY = SVG_HEIGHT / 2
-  const clampProgress = Math.max(0, Math.min(width, progressPx))
-
-  let played = `M 0 ${midY.toFixed(2)}`
-  if (clampProgress > 0) {
-    for (let x = 0; x <= clampProgress; x += SAMPLE_STEP) {
-      const taperFactor = Math.min(1, Math.max(0, (clampProgress - x) / TAPER))
-      const y = midY + amplitude * taperFactor * Math.sin((x / WAVE_LENGTH) * Math.PI * 2 + phase)
-      played += ` L ${x.toFixed(2)} ${y.toFixed(2)}`
-    }
-    if (clampProgress % SAMPLE_STEP !== 0) {
-      played += ` L ${clampProgress.toFixed(2)} ${midY.toFixed(2)}`
-    }
-  }
-
-  const rest =
-    clampProgress < width
-      ? `M ${clampProgress.toFixed(2)} ${midY.toFixed(2)} L ${width.toFixed(2)} ${midY.toFixed(2)}`
-      : ''
-
-  return { played, rest }
-}
-
-type SquiggleVisualProps = {
+type HillsProps = {
   playing: boolean
+  /** Scrubbing: the hills sink and the playhead grows. */
+  dragging: boolean
   value: number
   max: number
 }
 
 /**
- * Imperatively animated squiggle so playback doesn’t re-render React at 60fps.
- * The frame loop only runs while the wave is travelling or easing in/out; when
- * idle it repaints once per value or size change.
+ * The hills, drawn on a canvas imperatively so playback never re-renders React
+ * at 60fps. The frame loop runs only while the hills drift or rise/sink; when
+ * settled it repaints once per position, size or theme change.
  */
-const SquiggleVisual = ({ playing, value, max }: SquiggleVisualProps) => {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const playedRef = useRef<SVGPathElement>(null)
-  const restRef = useRef<SVGPathElement>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
+function Hills({ playing, dragging, value, max }: HillsProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const anim = useRef({ phase: 0, amplitude: 0, width: 0, frame: 0 })
-  const live = useRef({ playing, value, max, reduceMotion })
-  live.current = { playing, value, max, reduceMotion }
+  // Theme switches change the CSS color the hills are painted in.
+  const { theme, resolved: mode } = useAppearance()
+  const anim = useRef({
+    phases: LAYERS.map(() => Math.random() * 10),
+    height: 0,
+    frame: 0,
+    color: '',
+  })
+  const live = useRef({ playing, dragging, value, max, reduceMotion })
+  live.current = { playing, dragging, value, max, reduceMotion }
 
   const paint = useCallback(() => {
-    const { width, phase, amplitude } = anim.current
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+    const dpr = window.devicePixelRatio || 1
+    const width = canvas.clientWidth
     if (width <= 0) return
-    const { value: v, max: m } = live.current
-    const { played, rest } = buildPaths(width, (v / m) * width, phase, amplitude)
-    playedRef.current?.setAttribute('d', played)
-    if (restRef.current) {
-      restRef.current.setAttribute('d', rest)
-      restRef.current.style.display = rest ? '' : 'none'
+    if (canvas.width !== Math.round(width * dpr)) {
+      canvas.width = Math.round(width * dpr)
+      canvas.height = Math.round(CANVAS_HEIGHT * dpr)
     }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, width, CANVAS_HEIGHT)
+
+    const { height, phases } = anim.current
+    const { value: v, max: m } = live.current
+    // The hills sit on the played bar and fade out just before the playhead.
+    const span = (v / m) * width - THUMB / 2
+    if (height < 0.2 || span < 8) return
+
+    // Theme color, read from CSS so light, dark and every theme just work.
+    // Cached: reading computed style every frame can force a style recalc.
+    if (!anim.current.color) anim.current.color = getComputedStyle(canvas).color
+    const { color } = anim.current
+    // Short tracks get lower hills; the shape rises from the start and fades at the playhead.
+    const peak = height * ease(span / 60)
+    const riseIn = Math.max(24, span * 0.4)
+    const fadeOut = Math.max(16, Math.min(70, span * 0.3))
+
+    LAYERS.forEach((layer, i) => {
+      const phase = phases[i] ?? 0
+      const top: Array<[number, number]> = []
+      for (let x = 0; x <= span; x += SAMPLE_STEP) {
+        const envelope = ease(x / riseIn) * ease((span - x) / fadeOut)
+        const swell = 0.5 + 0.5 * Math.sin((x / layer.wavelength) * Math.PI * 2 - phase)
+        top.push([x, CANVAS_HEIGHT - peak * layer.scale * envelope * swell])
+      }
+      top.push([span, CANVAS_HEIGHT])
+
+      // Body: bright at the crest, clear where it meets the bar.
+      // The gradient ends below the bar so the hills stay lit right down to where they meet it.
+      const fill = ctx.createLinearGradient(0, CANVAS_HEIGHT - peak * layer.scale, 0, CANVAS_HEIGHT + peak * 0.8)
+      fill.addColorStop(0, color)
+      fill.addColorStop(1, 'transparent')
+      ctx.globalAlpha = layer.alpha
+      ctx.fillStyle = fill
+      ctx.beginPath()
+      ctx.moveTo(0, CANVAS_HEIGHT)
+      for (const [x, y] of top) ctx.lineTo(x, y)
+      ctx.closePath()
+      ctx.fill()
+
+      // A thin crest line catches the light along the top of each hill.
+      ctx.globalAlpha = Math.min(1, layer.alpha * 1.7)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1.5
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(...top[0])
+      for (const [x, y] of top.slice(1, -1)) ctx.lineTo(x, y)
+      ctx.stroke()
+    })
+    ctx.globalAlpha = 1
   }, [])
 
   const startLoop = useCallback(() => {
@@ -105,35 +153,33 @@ const SquiggleVisual = ({ playing, value, max }: SquiggleVisualProps) => {
     const tick = (ts: number) => {
       const dt = Math.min(0.05, (ts - lastTs) / 1000)
       lastTs = ts
-      const { playing: isPlaying, reduceMotion: still } = live.current
+      const { playing: isPlaying, dragging: scrubbing, reduceMotion: still } = live.current
 
-      // Paused → flat. Playing + reduced motion → static squiggle. Else travel.
-      const targetAmp = isPlaying ? WAVE_AMPLITUDE : 0
-      const ampDelta = targetAmp - a.amplitude
-      const step = (WAVE_AMPLITUDE / AMPLITUDE_EASE) * dt
-      a.amplitude =
-        Math.abs(ampDelta) < 0.01 ? targetAmp : a.amplitude + Math.sign(ampDelta) * Math.min(Math.abs(ampDelta), step)
+      // Paused or scrubbing → the hills sink into the bar. Reduced motion → they hold still.
+      const target = isPlaying && !scrubbing ? HILL_HEIGHT : 0
+      if (still) {
+        a.height = target
+      } else {
+        a.height += (target - a.height) * (1 - Math.exp(-dt / RISE_TAU))
+        if (Math.abs(target - a.height) < 0.05) a.height = target
+      }
 
-      const travelling = isPlaying && !still
-      if (travelling) a.phase += dt * PHASE_SPEED * Math.PI * 2
+      const drifting = !still && a.height > 0
+      if (drifting) {
+        for (const [i, layer] of LAYERS.entries()) a.phases[i] += dt * layer.speed * Math.PI * 2
+      }
 
       paint()
-      a.frame = travelling || a.amplitude !== targetAmp ? requestAnimationFrame(tick) : 0
+      a.frame = drifting || a.height !== target ? requestAnimationFrame(tick) : 0
     }
     a.frame = requestAnimationFrame(tick)
   }, [paint])
 
   useEffect(() => {
-    const node = trackRef.current
-    if (!node) return
-    const syncWidth = () => {
-      anim.current.width = node.clientWidth
-      svgRef.current?.setAttribute('width', String(Math.max(1, anim.current.width)))
-      paint()
-    }
-    syncWidth()
-    const observer = new ResizeObserver(syncWidth)
-    observer.observe(node)
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const observer = new ResizeObserver(() => paint())
+    observer.observe(canvas)
     return () => {
       observer.disconnect()
       cancelAnimationFrame(anim.current.frame)
@@ -141,57 +187,67 @@ const SquiggleVisual = ({ playing, value, max }: SquiggleVisualProps) => {
     }
   }, [paint])
 
-  // Play/pause or motion preference change → run the loop until it settles.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: playing/reduceMotion are read via live ref; they are the restart triggers
-  useEffect(() => startLoop(), [startLoop, playing, reduceMotion])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: playing/dragging/reduceMotion are read via live ref; they are the restart triggers
+  useEffect(() => startLoop(), [startLoop, playing, dragging, reduceMotion])
 
-  // Position or length changed while idle → one repaint.
   // biome-ignore lint/correctness/useExhaustiveDependencies: value/max are read via live ref; they are the repaint triggers
   useEffect(() => {
     if (!anim.current.frame) paint()
   }, [paint, value, max])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: theme/mode change the CSS color; they are the repaint triggers
+  useEffect(() => {
+    anim.current.color = ''
+    if (!anim.current.frame) paint()
+  }, [paint, theme, mode])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-x-0 w-full text-ink glass:text-on-raised"
+      style={{ height: CANVAS_HEIGHT, bottom: '50%' }}
+      aria-hidden
+    />
+  )
+}
+
+/** Bars, hills and playhead. The slider's own thumb stays invisible on top for focus and drag. */
+function SeekVisual({ playing, dragging, value, max }: HillsProps) {
+  const pct = (value / max) * 100
   return (
     <div
-      ref={trackRef}
       className="pointer-events-none absolute inset-x-0 top-1/2 h-7 -translate-y-1/2"
       aria-hidden
     >
-      <svg
-        ref={svgRef}
-        className="absolute left-0 top-1/2 -translate-y-1/2 overflow-visible text-ink"
-        width="1"
-        height={SVG_HEIGHT}
-      >
-        <path
-          ref={restRef}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          className="opacity-25 glass:opacity-20"
-        />
-        <path
-          ref={playedRef}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="glass:text-on-raised"
-        />
-      </svg>
+      <Hills playing={playing} dragging={dragging} value={value} max={max} />
+      {/* Played: solid, running into the playhead. */}
       <span
-        className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-pill bg-ink shadow-sm glass:bg-on-raised"
-        style={{ left: `${(value / max) * 100}%` }}
+        className="absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-pill bg-ink glass:bg-on-raised"
+        style={{ width: `${pct}%` }}
+      />
+      {/* Remaining: a slim pill that starts just past the playhead. */}
+      <span
+        className="absolute top-1/2 right-0 h-1 -translate-y-1/2 rounded-pill bg-ink/30 glass:bg-on-raised/35"
+        style={{ left: `min(100%, calc(${pct}% + ${THUMB / 2 + GAP}px))` }}
+      />
+      {/* Ringed playhead; grows a little while scrubbing. */}
+      <span
+        className={cn(
+          'absolute top-1/2 size-[18px] -translate-x-1/2 -translate-y-1/2 rounded-pill border-[3px] border-ink bg-on-ink shadow-card',
+          'glass:border-on-raised',
+          'transition-[scale] duration-fast ease-out motion-reduce:transition-none',
+          dragging && 'scale-125',
+        )}
+        style={{ left: `${pct}%` }}
       />
     </div>
   )
 }
 
 /**
- * Spotify / Android-style squiggly seek bar. Played portion undulates; remaining
- * stays a straight hairline. Settles flat when paused or when motion is reduced.
+ * One UI-style seek bar. Hills of light rise off the played bar and drift while
+ * music plays, sink into it when paused or while scrubbing, and hold still with
+ * reduced motion.
  */
 export const WaveformSeek = ({
   value,
@@ -206,7 +262,8 @@ export const WaveformSeek = ({
 }: WaveformSeekProps) => {
   const safeMax = Math.max(1, Math.floor(max))
   const clamped = Math.min(value, safeMax)
-  const visual = <SquiggleVisual playing={playing} value={clamped} max={safeMax} />
+  const [dragging, setDragging] = useState(false)
+  const visual = <SeekVisual playing={playing} dragging={dragging} value={clamped} max={safeMax} />
 
   if (!seekable) {
     return (
@@ -218,30 +275,36 @@ export const WaveformSeek = ({
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        {visual}
+        <div className="relative h-7">{visual}</div>
       </div>
     )
   }
 
   return (
     <BaseSlider.Root
-      className={cn('relative w-full min-w-0 touch-none select-none', className)}
+      className={cn('relative w-full min-w-0 touch-pan-y select-none', className)}
       min={0}
       max={safeMax}
       step={1}
       disabled={disabled}
       value={clamped}
-      onValueChange={(next) => onValueChange?.(asNumber(next))}
-      onValueCommitted={(next) => onValueCommitted?.(asNumber(next))}
+      onValueChange={(next) => {
+        setDragging(true)
+        onValueChange?.(asNumber(next))
+      }}
+      onValueCommitted={(next) => {
+        setDragging(false)
+        onValueCommitted?.(asNumber(next))
+      }}
     >
-      <BaseSlider.Control className="relative flex w-full min-w-0 cursor-pointer touch-none py-4">
+      <BaseSlider.Control className="relative flex w-full min-w-0 cursor-pointer touch-pan-y py-4">
         {visual}
         <BaseSlider.Track className="relative h-7 w-full min-w-0 grow bg-transparent">
           <BaseSlider.Indicator className="absolute h-full bg-transparent" />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
             className={cn(
-              'size-4 rounded-pill bg-transparent outline-none',
+              'size-6 rounded-pill bg-transparent outline-none',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             )}
           />

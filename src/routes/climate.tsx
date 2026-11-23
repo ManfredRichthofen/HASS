@@ -4,11 +4,11 @@ import { ClimateCard } from '#/components/entities/ClimateCard'
 import { ClimateReadingCard } from '#/components/entities/ClimateReadingCard'
 import { FanTile } from '#/components/entities/FanTile'
 import { WeatherCard } from '#/components/home/WeatherCard'
-import { CardGrid } from '#/components/layout/CardGrid'
 import { Page } from '#/components/layout/Page'
 import { PageHeader } from '#/components/layout/PageHeader'
 import { Section } from '#/components/layout/Section'
 import { climateFans, entities, houseClimateReadings } from '#/config/dashboard'
+import { cn } from '#/lib/cn'
 import { m, staggerContainer, staggerItem } from '#/lib/motion'
 
 export const Route = createFileRoute('/climate')({ component: ClimatePage })
@@ -30,7 +30,7 @@ function ClimateSummary() {
   return (
     <m.p
       variants={staggerItem}
-      className="text-display text-[1.5rem] leading-tight text-balance text-ink walnut:font-light"
+      className="text-display text-[1.5rem] leading-tight text-balance text-ink"
     >
       {inside}
       {detail ? `, ${detail}` : ''}.
@@ -45,40 +45,56 @@ function ClimatePage() {
         <PageHeader title="Climate" />
         <ClimateSummary />
 
-        {/* Thermostat first, then the weather outside, each room, and the fans. */}
-        <div className="grid items-start gap-section @xl:grid-cols-2 @xl:gap-x-6">
-          <m.div variants={staggerItem} className="min-w-0">
+        {/*
+          Phone: one column (thermostat, outside, rooms, air).
+          Portrait tablet (@xl): thermostat beside outside, rooms and air full width below.
+          Landscape tablet (@3xl): the thermostat holds the left column and stays pinned
+          in view, while everything you glance at (outside, rooms, air) stacks on the right.
+        */}
+        <div className="grid gap-section @xl:grid-cols-2 @xl:gap-x-6 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] @5xl:gap-x-8">
+          <m.div
+            variants={staggerItem}
+            className="min-w-0 @3xl:sticky @3xl:top-[max(1rem,env(safe-area-inset-top))] @3xl:self-start"
+          >
             <ClimateCard entityId={entities.climate} />
           </m.div>
-          <Section title="Outside">
-            <WeatherCard />
-          </Section>
-        </div>
 
-        <Section title="Room by room">
-          <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4 @xl:gap-4">
-            {houseClimateReadings.map((room) => (
-              <ClimateReadingCard key={room.tempId} {...room} />
-            ))}
+          <div className="contents @3xl:flex @3xl:min-w-0 @3xl:flex-col @3xl:gap-section">
+            <Section title="Outside" className="flex flex-col [&>*:last-child]:flex-1">
+              <WeatherCard />
+            </Section>
+
+            <Section title="Room by room" className="@xl:col-span-2">
+              <div className="grid grid-cols-2 gap-3 @xl:gap-4 @2xl:grid-cols-4 @3xl:grid-cols-2">
+                {houseClimateReadings.map((room) => (
+                  <ClimateReadingCard key={room.tempId} {...room} />
+                ))}
+              </div>
+            </Section>
+
+            {climateFans.length > 0 ? (
+              <Section title="Air" className="@xl:col-span-2">
+                <div
+                  className={cn(
+                    'grid gap-3 [&>*]:min-w-0',
+                    climateFans.length > 1 && '@xl:grid-cols-2 @3xl:grid-cols-1',
+                  )}
+                >
+                  {climateFans.map((fan) => (
+                    <FanTile
+                      key={fan.fanId}
+                      entityId={fan.fanId}
+                      label={fan.label}
+                      tempId={fan.tempId}
+                      humidityId={fan.humidityId}
+                      readings={fan.readings}
+                    />
+                  ))}
+                </div>
+              </Section>
+            ) : null}
           </div>
-        </Section>
-
-        {climateFans.length > 0 ? (
-          <Section title="Air">
-            <CardGrid className="items-start">
-              {climateFans.map((fan) => (
-                <FanTile
-                  key={fan.fanId}
-                  entityId={fan.fanId}
-                  label={fan.label}
-                  tempId={fan.tempId}
-                  humidityId={fan.humidityId}
-                readings={fan.readings}
-                />
-              ))}
-            </CardGrid>
-          </Section>
-        ) : null}
+        </div>
       </Page>
     </m.div>
   )

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHAConnection, useMediaPlayer, useServiceCall } from 'hass-react'
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { DEMO_MODE } from '#/lib/demoMode'
 import { ensureMassFromHomeAssistant } from '#/lib/massAuth'
 import {
   clearQueue,
@@ -97,7 +98,7 @@ const SNAPSHOT_DROP_KEYS = new Set([
   'review',
 ])
 
-type QueueData = {
+export type QueueData = {
   queueId: string | null
   queue: MusicQueue | null
   items: QueueItem[]
@@ -389,13 +390,13 @@ export function useMusicQueue(
     // HA-driven invalidation above; poll as a backstop.
     refetchInterval: active ? 15_000 : 30_000,
     refetchOnWindowFocus: false,
-    queryFn: async (): Promise<{
-      queueId: string | null
-      queue: MusicQueue | null
-      items: QueueItem[]
-      haQueueAvailable: boolean
-      viaMassQueue: boolean
-    }> => {
+    queryFn: async (): Promise<QueueData> => {
+      // Demo mode: after the first real load, keep the local copy so simulated
+      // skips, reorders and removals are not overwritten by the house's real queue.
+      if (DEMO_MODE) {
+        const local = queryClient.getQueryData<QueueData>(['music-queue', entityId, itemLimit])
+        if (local) return local
+      }
       const attrs = player.attributes as Record<string, unknown>
       const attrQueueId =
         typeof attrs.active_queue === 'string' && attrs.active_queue ? attrs.active_queue : null

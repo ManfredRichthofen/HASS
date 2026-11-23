@@ -39,7 +39,7 @@ export function ColorPicker({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-ink-muted">Color</span>
+        <span className="text-label">Color</span>
         <label
           className={cn(
             'relative size-11 overflow-hidden rounded-pill border border-border shadow-inner',

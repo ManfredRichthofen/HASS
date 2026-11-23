@@ -68,26 +68,22 @@ export function ShellSkeleton() {
       <nav
         aria-hidden
         className={cn(
-          'fixed inset-x-0 bottom-0 z-40 md:hidden',
-          'border-t border-border-subtle bg-canvas-elevated pt-1.5 pb-[var(--nav-offset)]',
-          'modern:inset-x-3.5 modern:bottom-[var(--nav-offset)] modern:rounded-pill modern:border-0 modern:bg-surface/88 modern:p-1.5',
-          'glass:inset-x-3.5 glass:bottom-[var(--nav-offset)] glass:rounded-pill glass:border-ui glass:border-border-subtle glass:bg-canvas-elevated glass:p-1.5',
+          'fixed inset-x-3.5 bottom-[var(--nav-offset)] z-40 rounded-pill p-1.5 md:hidden',
+          'modern:bg-surface/88',
+          'glass:border-ui glass:border-border-subtle glass:bg-canvas-elevated',
         )}
       >
-        <div className="flex w-full items-stretch justify-between px-2 modern:px-0 glass:px-0">
+        <div className="flex w-full items-stretch justify-between">
           {navItems.map(({ to, label, icon: Icon }, i) => (
             <span
               key={to}
               className={cn(
-                'flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-pill font-label text-xs font-semibold text-ink-faint',
-                'modern:h-12 modern:flex-none modern:flex-row modern:gap-2 modern:px-3.5 modern:text-sm',
-                'glass:h-12 glass:flex-none glass:flex-row glass:gap-2 glass:px-3.5 glass:text-sm',
-                i === 0 &&
-                  'text-ink modern:bg-accent modern:text-on-accent glass:bg-accent glass:text-on-accent',
+                'flex h-12 min-w-0 items-center justify-center gap-2 rounded-pill px-3.5 font-label text-sm font-semibold text-ink-faint',
+                i === 0 && 'bg-accent text-on-accent',
               )}
             >
               <Icon className="size-[22px] shrink-0" />
-              <span className={cn('truncate', i !== 0 && 'modern:sr-only glass:sr-only')}>
+              <span className={i === 0 ? 'truncate' : 'sr-only'}>
                 {label}
               </span>
             </span>

@@ -16,17 +16,16 @@ export const entityLabels: Record<string, string> = {
   'light.bedroom_ceiling_light': 'Ceiling',
 
   // Fans
-  'fan.mts300': 'AC fan',
   'fan.bedroom_ceiling_fan': 'Ceiling fan',
   'fan.afg_smt_pro_2_0': 'Attic fan',
   'fan.living_room_living_room_air_purifier': 'Air purifier',
 
   // Climate / weather
-  'climate.mts300': 'Thermostat',
+  'climate.living_room_aqara_thermostat_hub_w200': 'Thermostat',
   'weather.forecast_home': 'Weather',
   'sensor.outdoor_temperature': 'Outside',
-  'sensor.mts300_temperature': 'Living room',
-  'sensor.mts300_humidity': 'Living humidity',
+  'sensor.living_room_aqara_thermostat_hub_w200_temperature': 'Living room',
+  'sensor.living_room_aqara_thermostat_hub_w200_humidity': 'Living humidity',
   'sensor.presence_multi_sensor_fp300_temperature': 'Bedroom',
   'sensor.presence_multi_sensor_fp300_humidity': 'Bedroom humidity',
   'sensor.office_climate_sensor_temperature': 'Office',

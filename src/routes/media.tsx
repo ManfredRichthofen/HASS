@@ -107,23 +107,22 @@ function MusicPage() {
       variants={staggerContainer}
       className={cn(
         '@container flex min-h-0 flex-col gap-4',
-        // Page height minus the shell's padding: top + bottom nav on phone (the
-        // floating nav in Modern / Glass is shorter), padding only from md up.
-        '[--chrome:7.5rem] modern:[--chrome:6.25rem] glass:[--chrome:6.25rem]',
-        'h-[calc(100dvh-var(--chrome)-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4.5rem)]',
+        // Page height minus the shell's padding: top + floating bottom nav on
+        // phone, padding only from md up.
+        'h-[calc(100dvh-6.25rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4.5rem)]',
       )}
     >
       <m.header
         variants={staggerItem}
         className="flex shrink-0 flex-col gap-3 pt-[max(0.25rem,env(safe-area-inset-top))] @xl:flex-row @xl:items-center @xl:justify-between @xl:gap-6"
       >
-        <h1 className="text-display text-[2rem] leading-none text-ink walnut:font-light md:text-[2.5rem]">
+        <h1 className="text-display text-[2rem] leading-none text-ink md:text-[2.5rem]">
           Music
         </h1>
         <button
           type="button"
           onClick={() => setPanel('speakers')}
-          className="hidden min-h-11 max-w-xs items-center gap-2 rounded-pill bg-surface px-4 text-sm font-semibold text-ink shadow-card transition-ui hover:bg-surface-hover @xl:inline-flex walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised"
+          className="hidden min-h-11 max-w-xs items-center gap-2 rounded-pill bg-surface px-4 text-sm font-semibold text-ink shadow-card transition-ui hover:bg-surface-hover @xl:inline-flex glass:bg-raised glass:text-on-raised"
         >
           <Speaker className="size-[18px] shrink-0 text-ink-muted glass:text-on-raised" />
           <span className="truncate">{label}</span>
@@ -286,7 +285,7 @@ function SheetButton({
           ? 'bg-accent text-on-accent hover:bg-accent-strong'
           : cn(
               'bg-surface text-ink hover:bg-surface-hover [&_svg]:text-ink-muted',
-              'walnut:border-ui walnut:border-border-subtle glass:bg-raised glass:text-on-raised glass:[&_svg]:text-on-raised',
+              'glass:bg-raised glass:text-on-raised glass:[&_svg]:text-on-raised',
             ),
       )}
     >

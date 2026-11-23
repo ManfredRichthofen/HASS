@@ -4,45 +4,8 @@
    Fonts — self-hosted variable woff2 (latin + latin-ext, from Fontsource; OFL
    licences beside the files). A browser only downloads a face whose family
    is used by rendered text, so each theme's --ui-* stack pulls in just its
-   own family: Walnut → Fraunces + Geist, Modern → Geist, Glass/Forest → Plus
-   Jakarta Sans. No remote font CSS, no preconnect.
+   own family: Modern → Geist, Forest → Plus Jakarta Sans. No remote font CSS, no preconnect.
    ────────────────────────────────────────────────────────────────────────── */
-
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/fraunces-latin-ext-opsz-normal.woff2") format("woff2");
-  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
-}
-
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/fraunces-latin-opsz-normal.woff2") format("woff2");
-  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-}
-
-@font-face {
-  font-family: "Fraunces";
-  font-style: italic;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/fraunces-latin-ext-opsz-italic.woff2") format("woff2");
-  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
-}
-
-@font-face {
-  font-family: "Fraunces";
-  font-style: italic;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/fraunces-latin-opsz-italic.woff2") format("woff2");
-  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-}
 
 @font-face {
   font-family: "Geist";
@@ -86,29 +49,19 @@
    (--c-*, --r-*, --ui-*) on <html data-theme="…">; Tailwind utilities read
    them through `@theme inline`, so `bg-surface`, `rounded-card`,
    `font-display` etc. follow the active theme. Per-theme construction
-   (different shapes, not just colours) uses the `walnut:` `modern:`
-   `glass:` (Glass and Forest) and `forest:` variants below.
+   (different shapes, not just colours) uses the `modern:` and `glass:`
+   variants below.
    ────────────────────────────────────────────────────────────────────────── */
 
-@custom-variant walnut (&:where([data-theme="walnut"], [data-theme="walnut"] *));
 @custom-variant modern (&:where([data-theme="modern"], [data-theme="modern"] *));
-/* Forest is built on Glass: every `glass:` rule applies to it too, and
-   `forest:` adds the few things that are its own. */
-@custom-variant glass (
-  &:where(
-    [data-theme="glass"],
-    [data-theme="glass"] *,
-    [data-theme="forest"],
-    [data-theme="forest"] *
-  )
-);
-@custom-variant forest (&:where([data-theme="forest"], [data-theme="forest"] *));
+/* `glass:` is the frosted-glass construction (translucent floating chrome);
+   Forest is the only glass theme, so it matches Forest. */
+@custom-variant glass (&:where([data-theme="forest"], [data-theme="forest"] *));
 
 @theme inline {
   --font-sans: var(--ui-text);
   --font-display: var(--ui-display);
   --font-label: var(--ui-label);
-  --font-serif: "Fraunces", ui-serif, Georgia, serif;
   --font-geist: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, Menlo, monospace;
 
@@ -144,7 +97,7 @@
   --color-danger-muted: color-mix(in srgb, var(--c-danger) 14%, var(--c-surface));
   --color-info: var(--c-info);
   --color-icon-well: var(--c-icon-well);
-  /* A chip raised off the glass (Fluid Glass); elsewhere a lighter surface. */
+  /* A chip raised off the glass (Forest); elsewhere a lighter surface. */
   --color-raised: var(--c-raised, var(--c-surface-hover));
   --color-on-raised: var(--c-on-raised, var(--c-ink));
 
@@ -156,7 +109,6 @@
   --shadow-card: var(--s-card);
   --shadow-on: var(--s-on);
   --shadow-sheet: var(--s-sheet);
-  --shadow-press: var(--s-press);
 }
 
 @theme {
@@ -174,57 +126,9 @@
   --default-transition-timing-function: var(--ease-out);
 }
 
-/* ── Walnut & Cream: dark walnut, cream type, honey light, serif ── */
+/* ── Modern: warm paper-white, near-black type, amber light, Geist ──
+   Also the :root fallback before the boot script picks a theme. */
 :root,
-[data-theme="walnut"] {
-  color-scheme: dark;
-  --c-canvas: #17110d;
-  --c-canvas-elevated: #1d1611;
-  --c-surface: #231b15;
-  --c-surface-hover: #2d241c;
-  --c-border: #4a3b2e;
-  --c-border-subtle: #33281f;
-  --c-border-strong: #8a7764;
-  --c-ink: #f3e9d8;
-  --c-ink-muted: #c4b59e;
-  --c-ink-faint: #a89983;
-  --c-accent: #f3e9d8;
-  --c-accent-soft: #f3e9d81a;
-  --c-accent-strong: #fff8ec;
-  --c-on-accent: #1c140e;
-  --c-light: #f2c56b;
-  --c-light-soft: #f2c56b24;
-  --c-on-from: #f2c56b;
-  --c-on-to: #de9f45;
-  --c-on-ink: #2a1c0b;
-  --c-on-ink-muted: #4f3615;
-  --c-success: #a9cf9f;
-  --c-danger: #e8826a;
-  --c-info: #a7c0d4;
-  --c-icon-well: #33291f;
-
-  --ui-display: "Fraunces", ui-serif, Georgia, serif;
-  --ui-text: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --ui-label: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 400;
-  --display-track: -0.015em;
-  --display-case: none;
-
-  --r-card: 1.625rem;
-  --r-control: 1rem;
-  --r-pill: 9999px;
-  --bw: 1px;
-  --icon-stroke: 1.6;
-
-  --s-card: 0 1px 0 #ffffff0a inset, 0 12px 32px -20px #000000cc;
-  --s-on: 0 18px 44px -18px #f2c56b8c;
-  --s-sheet: 0 -24px 60px -24px #000000;
-  --s-press: none;
-
-  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .9  0 0 0 0 .75  0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-
-/* ── Modern: warm paper-white, near-black type, amber light, Geist ── */
 [data-theme="modern"] {
   color-scheme: light;
   --c-canvas: #f3f3ef;
@@ -258,7 +162,6 @@
   --ui-label: "Geist", ui-sans-serif, system-ui, sans-serif;
   --display-weight: 600;
   --display-track: -0.035em;
-  --display-case: none;
 
   --r-card: 1.125rem;
   --r-control: 0.75rem;
@@ -269,70 +172,6 @@
   --s-card: 0 1px 2px #1414130a;
   --s-on: 0 14px 32px -16px #ffb3008c;
   --s-sheet: 0 -12px 40px -16px #14141340;
-  --s-press: none;
-
-  --grain: none;
-}
-
-/* ── Fluid Glass: frosted white panels over a soft, drifting lavender–cream light ── */
-[data-theme="glass"] {
-  color-scheme: light;
-  --c-base: #e4e5ec;
-  --c-canvas: #ffffff59;
-  --c-canvas-elevated: #ffffffd1;
-  --c-surface: #ffffff73;
-  --c-surface-hover: #ffffffd9;
-  --c-border: #ffffffcc;
-  --c-border-subtle: #ffffff99;
-  --c-border-strong: #7d8090;
-  --c-ink: #141a2e;
-  /* Darker muted/faint so labels hold AA over lavender–cream blobs (~4.1→5.7). */
-  --c-ink-muted: #454956;
-  --c-ink-faint: #4a4e5c;
-  --c-accent: #141a2e;
-  --c-accent-soft: #141a2e12;
-  --c-accent-strong: #000000;
-  --c-on-accent: #ffffff;
-  --c-light: #8a5a10;
-  --c-light-soft: #ffdca066;
-  --c-on-from: #ffffff;
-  --c-on-to: #f8e6c4;
-  --c-on-ink: #141a2e;
-  --c-on-ink-muted: #454956;
-  --c-success: #1b6e4c;
-  --c-danger: #b23a24;
-  --c-info: #2a58a6;
-  --c-icon-well: #ffffffcc;
-  --c-raised: #ffffff;
-  --c-on-raised: #141a2e;
-  --blob-a: #c9cdf0b3;
-  --blob-b: #f6e3c0b3;
-  --blob-c: #d5e2eeb3;
-
-  --ui-display: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
-  --ui-text: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
-  --ui-label: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --display-track: -0.025em;
-  --display-case: none;
-
-  --r-card: 1.5rem;
-  --r-control: 1.125rem;
-  --r-pill: 9999px;
-  --bw: 1px;
-  --icon-stroke: 1.75;
-
-  --s-card: inset 0 1px 0 #ffffff, 0 12px 32px -20px #1d224059;
-  --s-on: inset 0 1px 0 #ffffff, 0 0 0 1px #ffffff, 0 18px 48px -10px #ffc770b3;
-  --s-sheet: inset 0 1px 0 #ffffff, 0 -20px 50px -24px #1d224066;
-  --s-press: none;
-
-  /* Soft light: lavender at the top, warm cream low, a cool grey-blue in between. */
-  --grain:
-    radial-gradient(55% 45% at 85% 0%, #d3d6ee 0%, transparent 70%),
-    radial-gradient(50% 45% at 10% 15%, #dfe4ef 0%, transparent 70%),
-    radial-gradient(60% 50% at 80% 100%, #f2e6cf 0%, transparent 72%),
-    radial-gradient(45% 40% at 0% 90%, #ece2dc 0%, transparent 70%);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -341,39 +180,6 @@
    choice (or the system when set to Auto). Each block below flips one theme to
    its other mode; shapes, type and construction stay the theme's own.
    ────────────────────────────────────────────────────────────────────────── */
-
-/* Walnut & Cream, light: cream paper, walnut type, the same honey light. */
-[data-theme="walnut"][data-mode="light"] {
-  color-scheme: light;
-  --c-canvas: #f5efe4;
-  --c-canvas-elevated: #fbf7f0;
-  --c-surface: #fffdf8;
-  --c-surface-hover: #efe6d6;
-  --c-border: #d9ccb6;
-  --c-border-subtle: #e8dfcf;
-  --c-border-strong: #8f7d66;
-  --c-ink: #2a1d12;
-  --c-ink-muted: #6b5a47;
-  --c-ink-faint: #75634e;
-  --c-accent: #2a1d12;
-  --c-accent-soft: #2a1d1212;
-  --c-accent-strong: #000000;
-  --c-on-accent: #fbf7f0;
-  --c-light: #8f5c0d;
-  --c-light-soft: #f2c56b40;
-  --c-on-from: #f6cd7a;
-  --c-on-to: #e3a24a;
-  --c-on-ink: #2a1c0b;
-  --c-on-ink-muted: #4f3615;
-  --c-success: #3a7537;
-  --c-danger: #ad3f27;
-  --c-info: #3a6688;
-  --c-icon-well: #f1e8d8;
-  --s-card: 0 1px 0 #ffffff inset, 0 10px 28px -20px #4a2f1559;
-  --s-on: 0 16px 40px -18px #e3a24ab3;
-  --s-sheet: 0 -20px 50px -24px #4a2f1566;
-  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .25  0 0 0 0 .15  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
 
 /* Modern, dark: graphite, off-white type, the same amber light. */
 [data-theme="modern"][data-mode="dark"] {
@@ -403,51 +209,7 @@
   --s-sheet: 0 -12px 40px -16px #000000;
 }
 
-/* Fluid Glass, dark: frosted glass over a deep, glowing colour mesh. */
-[data-theme="glass"][data-mode="dark"] {
-  color-scheme: dark;
-  --c-base: #0c0f22;
-  --c-canvas: #0a0c2059;
-  --c-canvas-elevated: #161a3acc;
-  /* Slightly denser frost so panels stay readable over neon blobs. */
-  --c-surface: #ffffff22;
-  --c-surface-hover: #ffffff33;
-  --c-border: #ffffff38;
-  --c-border-subtle: #ffffff24;
-  --c-border-strong: #ffffffa6;
-  --c-ink: #ffffff;
-  --c-ink-muted: #ffffffd6;
-  --c-ink-faint: #ffffffb8;
-  --c-accent: #ffffff;
-  --c-accent-soft: #ffffff24;
-  --c-accent-strong: #ffffff;
-  --c-on-accent: #14152a;
-  --c-light: #ffd59a;
-  --c-light-soft: #ffc8793d;
-  --c-on-from: #fff3dc;
-  --c-on-to: #ffc879;
-  --c-on-ink: #2a1a05;
-  --c-on-ink-muted: #5a3d12;
-  --c-success: #8ef3c7;
-  --c-danger: #ffa392;
-  --c-info: #a6dcff;
-  --c-icon-well: #ffffff1a;
-  --c-raised: #ffffff38;
-  --c-on-raised: #ffffff;
-  --s-card: inset 0 1px 0 #ffffff40, 0 24px 48px -24px #04061a99;
-  --s-on: 0 0 0 1px #ffffff66, 0 18px 48px -12px #ffc879a6;
-  --s-sheet: inset 0 1px 0 #ffffff33, 0 -24px 60px -24px #04061acc;
-  --blob-a: #8b7bff99;
-  --blob-b: #ff86c299;
-  --blob-c: #3fd6e899;
-  --grain:
-    radial-gradient(42% 38% at 12% 8%, #6d5dfc 0%, transparent 70%),
-    radial-gradient(46% 40% at 92% 18%, #ff6fae 0%, transparent 70%),
-    radial-gradient(52% 46% at 78% 92%, #22c3d6 0%, transparent 72%),
-    radial-gradient(44% 42% at 6% 96%, #ff9f5a 0%, transparent 70%);
-}
-
-/* ── Forest: Fluid Glass over a misty pine forest at dawn ──
+/* ── Forest: frosted glass over a misty pine forest at dawn ──
    Dark: deep green frost over the photo, warm autumn-gold light.
    Light: the same forest washed in morning mist, dark pine type. */
 [data-theme="forest"] {
@@ -488,7 +250,6 @@
   --ui-label: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
   --display-weight: 600;
   --display-track: -0.025em;
-  --display-case: none;
 
   --r-card: 1.5rem;
   --r-control: 1.125rem;
@@ -499,8 +260,6 @@
   --s-card: inset 0 1px 0 #ffffff26, 0 24px 48px -24px #010805b3;
   --s-on: 0 0 0 1px #ffe8ad66, 0 18px 48px -12px #f0a33ca6;
   --s-sheet: inset 0 1px 0 #ffffff26, 0 -24px 60px -24px #010805cc;
-  --s-press: none;
-  --grain: none;
 }
 
 /* Forest, light: morning mist over the pines. */
@@ -542,11 +301,11 @@
 /* ── Phone nav geometry ──
    BottomNav, NowPlayingBar and <main> all derive their offsets from these, so
    the gaps between them hold on every theme and with or without a home indicator.
-   --nav-h: the bar itself · --nav-offset: safe area below it (padding on Walnut,
-   float distance on Modern / Glass) · --nav-gap: space above it. */
+   --nav-h: the floating bar itself · --nav-offset: its float distance above the
+   bottom edge / home indicator · --nav-gap: space above it. */
 :root {
-  --nav-h: 3.875rem;
-  --nav-offset: max(1rem, env(safe-area-inset-bottom));
+  --nav-h: 3.75rem;
+  --nav-offset: max(0.875rem, env(safe-area-inset-bottom));
   --nav-gap: 0.75rem;
   --nav-clearance: calc(var(--nav-h) + var(--nav-offset));
   --now-playing-space: 0px;
@@ -558,19 +317,10 @@
   }
 }
 
-:root:is([data-theme="modern"], [data-theme="glass"], [data-theme="forest"]) {
-  --nav-h: 3.75rem;
-  --nav-offset: max(0.875rem, env(safe-area-inset-bottom));
-}
-
 /* In a plain browser tab there is no home indicator to clear, so the bar sits
-   lower: no floor on Walnut, a small float on Modern / Glass / Forest. */
+   lower, with a small float. */
 @media (display-mode: browser) {
   :root {
-    --nav-offset: env(safe-area-inset-bottom, 0px);
-  }
-
-  :root:is([data-theme="modern"], [data-theme="glass"], [data-theme="forest"]) {
     --nav-offset: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
@@ -587,12 +337,11 @@
   border-width: var(--bw);
 }
 
-/* Display type: the theme's display face, weight, tracking and case. */
+/* Display type: the theme's display face, weight and tracking. */
 @utility text-display {
   font-family: var(--ui-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: var(--display-case);
 }
 
 /* Small labels in the theme's label face. */
@@ -695,7 +444,6 @@ body {
   font-size: 0.9375rem;
   line-height: 1.375rem;
   background-color: var(--c-canvas);
-  background-image: var(--grain);
   color: var(--c-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -767,9 +515,9 @@ svg.lucide {
   }
 }
 
-/* ── Fluid Glass extras ── */
+/* ── Frosted glass (Forest) ── */
 
-/* Frosted glass behind translucent surfaces (Glass and Forest).
+/* Frosted glass behind translucent surfaces.
    Cost is one extra GPU pass per blurred element, scaling with radius and area, so:
    - a pane inside another pane is not blurred again (its backdrop is already frosted), and
    - the radius stays small; at 10px the frost reads the same over a busy background. */
@@ -785,7 +533,7 @@ svg.lucide {
   }
 }
 
-:is([data-theme="glass"], [data-theme="forest"])
+[data-theme="forest"]
 :is(
   .bg-surface,
   .bg-surface-hover,
@@ -798,7 +546,7 @@ svg.lucide {
   backdrop-filter: blur(var(--glass-blur));
 }
 
-:is([data-theme="glass"], [data-theme="forest"])
+[data-theme="forest"]
 :is(
   .bg-surface,
   .bg-surface-hover,
@@ -817,11 +565,6 @@ svg.lucide {
 ) {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-}
-
-[data-theme="glass"] body {
-  background-color: var(--c-base);
-  background-attachment: fixed;
 }
 
 /* Forest: body stays clear so the photo layer below shows through. */
@@ -852,55 +595,14 @@ svg.lucide {
   }
 }
 
-/* The light drifts slowly behind the glass. */
-[data-theme="glass"] body::before {
-  content: "";
-  position: fixed;
-  inset: -20%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(28% 26% at 30% 30%, var(--blob-a), transparent 70%),
-    radial-gradient(26% 24% at 72% 62%, var(--blob-b), transparent 70%),
-    radial-gradient(30% 28% at 40% 85%, var(--blob-c), transparent 70%);
-  /* No filter: blur — the gradients already fade to transparent, and a
-     blurred full-screen layer behind every backdrop-filter is costly. */
-  will-change: transform;
-  animation: glass-drift 40s ease-in-out infinite alternate;
-}
-
-@keyframes glass-drift {
-  0% {
-    transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1);
-  }
-  50% {
-    transform: translate3d(5%, 3%, 0) rotate(10deg) scale(1.08);
-  }
-  100% {
-    transform: translate3d(-3%, 6%, 0) rotate(-6deg) scale(1.02);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="glass"] body::before {
-    animation: none;
-  }
-}
-
 /* ── Smooth performance profile (Settings → Performance, or Auto on weaker devices) ──
-   Drops what a low-powered GPU pays for: backdrop blur, the drifting background and large
-   soft shadows. Surfaces that were translucent glass become mostly opaque so text stays legible. */
+   Drops what a low-powered GPU pays for: backdrop blur and large soft shadows. Surfaces that were translucent glass become mostly opaque so text stays legible. */
 html[data-perf="smooth"] * {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
-html[data-perf="smooth"][data-theme="glass"] body::before {
-  animation: none;
-  will-change: auto;
-}
-
-html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"]) {
+html[data-perf="smooth"][data-theme="forest"] {
   --c-canvas: color-mix(in srgb, var(--c-base) 88%, transparent);
   --c-canvas-elevated: color-mix(in srgb, var(--c-base) 95%, transparent);
   --s-card: 0 6px 14px -10px #00000052;
@@ -908,12 +610,12 @@ html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"]) {
   --s-sheet: 0 -8px 20px -12px #00000066;
 }
 
-html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"])[data-mode="light"] {
+html[data-perf="smooth"][data-theme="forest"][data-mode="light"] {
   --c-surface: color-mix(in srgb, white 62%, var(--c-base));
   --c-surface-hover: color-mix(in srgb, white 88%, var(--c-base));
 }
 
-html[data-perf="smooth"]:is([data-theme="glass"], [data-theme="forest"])[data-mode="dark"] {
+html[data-perf="smooth"][data-theme="forest"][data-mode="dark"] {
   --c-surface: color-mix(in srgb, white 9%, var(--c-base));
   --c-surface-hover: color-mix(in srgb, white 16%, var(--c-base));
 }

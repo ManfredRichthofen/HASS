@@ -9,6 +9,7 @@
  */
 
 import { haUrl } from '#/config/ha'
+import { DEMO_MODE } from '#/lib/demoMode'
 import {
   getLocationWebhookId,
   locationTrackerEntityId,
@@ -95,6 +96,7 @@ export async function reportLocationViaWebhook(opts: {
   hostName: string
   deviceId: string
 }): Promise<void> {
+  if (DEMO_MODE) return
   const url = locationWebhookUrl(opts.haUrl, opts.webhookId)
   const body = buildLocationWebhookPayload(
     opts.lat,

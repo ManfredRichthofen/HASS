@@ -23,42 +23,42 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@tanstack/react-query": "^5.105.2",
+    "@tanstack/react-query": "^5.108.4",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
-    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/api": "^2.12.5",
     "@tauri-apps/plugin-geolocation": "^2.5.0",
-    "@tauri-apps/plugin-opener": "^2.7.2",
+    "@tauri-apps/plugin-opener": "^2.7.3",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "clsx": "^2.1.1",
     "hass-react": "^1.0.0",
     "hls.js": "^1.7.4",
-    "lucide-react": "^1.66.0",
-    "motion": "^14.9.0",
+    "lucide-react": "^1.78.0",
+    "motion": "^14.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@cloudflare/vite-plugin": "^1.67.0",
-    "@tailwindcss/vite": "^4.3.3",
+    "@cloudflare/vite-plugin": "^1.70.1",
+    "@tailwindcss/vite": "^4.3.5",
     "@tanstack/devtools-vite": "0.8.5",
     "@tanstack/react-devtools": "0.10.13",
-    "@tanstack/react-query-devtools": "^5.105.2",
+    "@tanstack/react-query-devtools": "^5.108.4",
     "@tanstack/react-router-devtools": "1.167.2",
-    "@tanstack/router-cli": "^1.167.46",
-    "@tauri-apps/cli": "^2.12.4",
+    "@tanstack/router-cli": "^1.168.0",
+    "@tauri-apps/cli": "^2.12.6",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.2.1",
+    "@vitejs/plugin-react": "^6.3.0",
     "sharp": "^0.35.5",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.5",
     "typescript": "^6.0.3",
-    "vite": "^8.3.5",
-    "wrangler": "^4.156.1"
+    "vite": "^8.3.8",
+    "wrangler": "^4.166.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -67,5 +67,8 @@
       "sharp",
       "workerd"
     ]
+  },
+  "patchedDependencies": {
+    "hass-react@1.0.0": "patches/hass-react@1.0.0.patch"
   }
 }

@@ -407,12 +407,10 @@ export const LightTile = memo(function LightTile({
     toggle()
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+  // Enter and Space reach the switch button as a native click (onClick on the card).
+  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (unavailable) return
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      toggle()
-    } else if (on && canDim && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    if (on && canDim && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault()
       const next = clampLevel(level + (e.key === 'ArrowUp' ? 10 : -10))
       setLevel(next)
@@ -424,117 +422,148 @@ export const LightTile = memo(function LightTile({
 
   return (
     <>
+      {/* Press scale lives on this wrapper so the card and its glow move together. */}
       <div
-        ref={tileRef}
-        role="switch"
-        tabIndex={unavailable ? -1 : 0}
-        aria-checked={on}
-        aria-disabled={unavailable}
-        aria-label={
-          unavailable
-            ? `${name}, Unavailable`
-            : `${name}, ${state}${canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`
-        }
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onClick={onClick}
-        onKeyDown={onKeyDown}
-        style={{ '--lvl': `${lit ? level : 100}%` } as React.CSSProperties}
         className={cn(
-          'group relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 md:aspect-auto md:h-36 md:min-h-0 min-w-0 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
-          'transition-[background-color,box-shadow,transform] duration-slow ease-out',
-          phase === 'idle' && 'active:scale-[0.97]',
-          phase !== 'idle' && 'scale-[1.03] shadow-press',
-          'walnut:aspect-[1/1.2]',
-          'modern:aspect-auto modern:min-h-34 modern:pb-8',
-          on && 'bg-on border-transparent shadow-on',
-          on &&
-            'modern:bg-none modern:bg-surface modern:text-ink modern:shadow-[inset_0_0_0_2px_var(--c-on-to)]',
-          unavailable && 'cursor-default opacity-45',
+          'relative min-w-0 transition-transform duration-slow ease-out',
+          phase === 'idle' && 'motion-safe:active:scale-[0.97]',
+          phase !== 'idle' && 'motion-safe:scale-[1.03]',
           className,
         )}
       >
-        {/* Shade above the level: the "empty" part of the glass. */}
+        {/* Lit glow: a layer that fades its opacity, so the shadow is never re-painted. */}
         <span
           aria-hidden
           className={cn(
-            'pointer-events-none absolute inset-x-0 top-0 h-0 border-b border-transparent bg-white/36',
-            !dimming && 'transition-[height] duration-200',
-            lit && canDim && 'h-[calc(100%-var(--lvl))] border-black/8',
-            'modern:hidden glass:bg-black/[0.05]',
+            'pointer-events-none absolute inset-0 rounded-card opacity-0 shadow-on transition-opacity duration-slow ease-out modern:hidden',
+            on && 'opacity-100',
           )}
         />
-        {/* Modern: a level bar along the bottom instead of a fill. */}
-        <span
-          aria-hidden
+        {/* Pointer surface for tap and hold-to-dim. Keyboard and assistive tech use the
+            role="switch" button inside, whose clicks bubble up to onClick here. */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: the switch button inside is the accessible control */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard is handled by the switch button inside */}
+        <div
+          ref={tileRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onClick={onClick}
+          style={{ '--lvl': `${lit ? level : 100}%` } as React.CSSProperties}
           className={cn(
-            'pointer-events-none absolute inset-x-4.5 bottom-3.5 hidden h-1 rounded-pill bg-surface-hover modern:block',
-            on &&
-              'bg-[linear-gradient(90deg,var(--c-on-to)_var(--lvl),var(--c-surface-hover)_var(--lvl))]',
+            'relative flex rounded-card border-ui border-border-subtle bg-surface shadow-card modern:border-transparent aspect-[1/1.12] min-h-38 md:aspect-auto md:h-36 md:min-h-0 min-w-0 cursor-pointer flex-col justify-between overflow-hidden p-4.5 text-left select-none',
+            'transition-[border-color,box-shadow] duration-slow ease-out',
+            'modern:aspect-auto modern:min-h-34 modern:pb-8',
+            on && 'border-transparent modern:shadow-[inset_0_0_0_2px_var(--c-on-to)]',
+            unavailable && 'cursor-default opacity-45',
           )}
-        />
-
-        <div className="relative flex items-start justify-between">
+        >
+          {/* Lit fill fades in (a gradient cannot transition as a background). */}
           <span
+            aria-hidden
             className={cn(
-              'text-ink-faint',
-              on && 'text-on-ink',
-              'modern:grid modern:size-10 modern:place-items-center modern:rounded-pill modern:bg-surface-hover modern:text-ink-muted',
-              on && 'modern:bg-on modern:text-on-ink',
+              'pointer-events-none absolute inset-0 bg-on opacity-0 transition-opacity duration-slow ease-out modern:hidden',
+              on && 'opacity-100',
             )}
-          >
-            <Icon className="size-[22px]" />
-          </span>
-          {hasSheet ? (
-            <button
-              type="button"
-              aria-label={`${name} settings`}
-              disabled={unavailable}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                setOpen(true)
-              }}
+          />
+          {/* Shade above the level: the "empty" part of the glass. */}
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute inset-x-0 top-0 h-0 border-b border-transparent bg-white/36',
+              !dimming && 'motion-safe:transition-[height] motion-safe:duration-200',
+              lit && canDim && 'h-[calc(100%-var(--lvl))] border-black/8',
+              'modern:hidden glass:bg-black/[0.05]',
+            )}
+          />
+          {/* The switch itself covers the card; the visible content below is decorative. */}
+          <button
+            type="button"
+            role="switch"
+            tabIndex={unavailable ? -1 : 0}
+            aria-checked={on}
+            aria-disabled={unavailable}
+            aria-label={
+              unavailable
+                ? `${name}, Unavailable`
+                : `${name}, ${state}${canDim ? '. Hold and drag, or use arrow keys, to dim' : ''}`
+            }
+            onKeyDown={onKeyDown}
+            className="absolute inset-0 cursor-[inherit] rounded-[inherit] focus-visible:outline-offset-[-4px]"
+          />
+          {/* Modern: a level bar along the bottom instead of a fill. */}
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute inset-x-4.5 bottom-3.5 hidden h-1 rounded-pill bg-surface-hover modern:block',
+              on &&
+                'bg-[linear-gradient(90deg,var(--c-on-to)_var(--lvl),var(--c-surface-hover)_var(--lvl))]',
+            )}
+          />
+
+          <div className="relative flex items-start justify-between">
+            <span
+              aria-hidden
               className={cn(
-                '-mt-2.5 -mr-2.5 grid size-11 place-items-center rounded-pill text-ink-faint transition-ui hover:bg-black/5',
-                on && 'text-on-ink modern:text-ink-muted',
+                'text-ink-faint transition-colors duration-slow ease-out',
+                on && 'text-on-ink',
+                'modern:grid modern:size-10 modern:place-items-center modern:rounded-pill modern:bg-surface-hover modern:text-ink-muted',
+                on && 'modern:bg-on modern:text-on-ink',
               )}
             >
-              {swatch ? (
-                <span
-                  className="size-3.5 rounded-pill ring-2 ring-white/80"
-                  style={{ background: swatch }}
-                />
-              ) : (
-                <Ellipsis className="size-[18px]" aria-hidden />
-              )}
-            </button>
-          ) : null}
-        </div>
+              <Icon className="size-[22px]" />
+            </span>
+            {hasSheet ? (
+              <button
+                type="button"
+                aria-label={`${name} settings`}
+                disabled={unavailable}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpen(true)
+                }}
+                className={cn(
+                  '-mt-2.5 -mr-2.5 grid size-11 place-items-center rounded-pill text-ink-faint transition-ui hover:bg-surface-hover',
+                  on && 'text-on-ink hover:bg-black/5 modern:text-ink-muted',
+                )}
+              >
+                {swatch ? (
+                  <span
+                    className="size-3.5 rounded-pill ring-2 ring-white/80"
+                    style={{ background: swatch }}
+                  />
+                ) : (
+                  <Ellipsis className="size-[18px]" aria-hidden />
+                )}
+              </button>
+            ) : null}
+          </div>
 
-        <div className="relative grid gap-1.5">
-          <span
-            className={cn(
-              lit && canDim
-                ? 'text-display text-[1.75rem] leading-none tabular-nums modern:text-2xl'
-                : 'text-[0.8125rem] text-ink-muted',
-              on && 'text-on-ink modern:text-ink',
-            )}
-          >
-            {state}
-          </span>
-          <span
-            className={cn(
-              'line-clamp-2 text-[0.9375rem] leading-5 font-semibold text-ink',
-              on && 'text-on-ink modern:text-ink',
-            )}
-          >
-            {name}
-          </span>
+          <div aria-hidden className="relative grid gap-1.5">
+            <span
+              className={cn(
+                'transition-colors duration-slow ease-out',
+                lit && canDim
+                  ? 'text-display text-[1.75rem] leading-none tabular-nums modern:text-2xl'
+                  : 'text-[0.8125rem] text-ink-muted',
+                on && 'text-on-ink modern:text-ink',
+              )}
+            >
+              {state}
+            </span>
+            <span
+              className={cn(
+                'line-clamp-2 text-[0.9375rem] leading-5 font-semibold text-ink transition-colors duration-slow ease-out',
+                on && 'text-on-ink modern:text-ink',
+              )}
+            >
+              {name}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -590,20 +619,17 @@ export const LightTile = memo(function LightTile({
               ) : null}
 
               {canColor ? (
-                <div className="grid gap-2.5">
-                  <span className="text-label">Colour</span>
-                  <ColorPicker
-                    value={light.rgbColor}
-                    disabled={!on}
-                    onChange={(rgb) =>
-                      void light
-                        .setRgbColor(rgb)
-                        .catch((e) =>
-                          notify('Colour failed', e instanceof Error ? e.message : 'Error'),
-                        )
-                    }
-                  />
-                </div>
+                <ColorPicker
+                  value={light.rgbColor}
+                  disabled={!on}
+                  onChange={(rgb) =>
+                    void light
+                      .setRgbColor(rgb)
+                      .catch((e) =>
+                        notify('Color failed', e instanceof Error ? e.message : 'Error'),
+                      )
+                  }
+                />
               ) : null}
             </div>
           </DrawerContent>

@@ -261,7 +261,7 @@ function SecurityPage() {
             )}
           </span>
           <div className="min-w-0">
-            <p className="text-display text-[1.75rem] leading-tight text-balance text-ink walnut:font-light @xl:text-[1.5rem]">
+            <p className="text-display text-[1.75rem] leading-tight text-balance text-ink @xl:text-[1.5rem]">
               {hasIssues ? (
                 <>
                   Check the house — <span className="text-danger">{issues.join(', and ')}</span>.

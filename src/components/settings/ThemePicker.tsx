@@ -13,7 +13,7 @@ const modes: { value: ModeSetting; label: string }[] = [
 const ModeIcon = { light: Sun, dark: Moon, system: Monitor }
 
 /**
- * Appearance: a Light / Dark / Auto switch above the four themes as small live
+ * Appearance: a Light / Dark / Auto switch above the two themes as small live
  * swatches in a single row — everything visible at once, no scrolling.
  */
 export function ThemePicker() {
@@ -33,7 +33,7 @@ export function ThemePicker() {
         />
       </div>
 
-      <div role="radiogroup" aria-label="Theme" className="grid grid-cols-4 gap-2 @lg:gap-3">
+      <div role="radiogroup" aria-label="Theme" className="grid max-w-64 grid-cols-2 gap-2 @lg:gap-3">
         {themes.map((t) => {
           const selected = theme === t.id
           return (
@@ -91,8 +91,7 @@ function Swatch({ id, mode }: { id: ThemeId; mode: Mode }) {
       data-mode={mode}
       aria-hidden
       className={cn(
-        'pointer-events-none flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[calc(var(--r-control)*0.8)] bg-canvas p-2 text-left [background-image:var(--grain)]',
-        id === 'glass' && 'bg-[var(--c-base)]',
+        'pointer-events-none flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[calc(var(--r-control)*0.8)] bg-canvas p-2 text-left',
         // Forest shows its photo, under the same veil the app uses.
         id === 'forest' &&
           'bg-[var(--c-base)] [background-image:var(--forest-veil),url(/backgrounds/forest-thumb.webp)] bg-cover bg-center',

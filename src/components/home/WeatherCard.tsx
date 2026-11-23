@@ -35,7 +35,7 @@ export function WeatherCard() {
         weather.isUnavailable && 'opacity-50',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium capitalize text-ink">
             {String(weather.condition ?? weather.state).replace(/-/g, ' ')}
@@ -45,7 +45,7 @@ export function WeatherCard() {
             <span className="text-lg text-ink-muted sm:text-xl">°F</span>
           </p>
           {today ? (
-            <p className="mt-1 text-xs text-ink-muted tabular-nums">
+            <p className="mt-1 text-[0.8125rem] text-ink-muted tabular-nums">
               H {Math.round(today.temperature)}° · L{' '}
               {Math.round(today.templow ?? today.temperature)}°
             </p>
@@ -54,7 +54,7 @@ export function WeatherCard() {
         <Icon className="size-11 shrink-0 text-light sm:size-14" strokeWidth={1.35} aria-hidden />
       </div>
 
-      <div className="mt-auto grid grid-cols-5 gap-1 border-t border-border-subtle pt-3 sm:mt-4 sm:gap-1.5">
+      <div className="mt-auto grid grid-cols-5 gap-1 border-t border-border-subtle pt-3 sm:gap-1.5">
         {loading && forecast.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-14 animate-pulse rounded-control bg-canvas sm:h-16" />

@@ -10,8 +10,8 @@ export function PerformancePicker() {
       <Segmented label="Performance" options={perfOptions} value={setting} onChange={setPerf} />
       <p className="text-[0.8125rem] text-ink-muted">
         {smooth
-          ? 'Smooth: no blur, a still background, lighter shadows and less motion.'
-          : 'Full: frosted glass, a living background and all animation.'}{' '}
+          ? 'Smooth: no blur, lighter shadows and less motion.'
+          : 'Full: frosted glass, soft shadows and all animation.'}{' '}
         {setting === 'auto' ? 'Auto chose this for this device.' : null}
       </p>
     </div>

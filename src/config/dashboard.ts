@@ -70,7 +70,6 @@ export const areas: AreaConfig[] = [
       'light.living_room_led',
     ],
     fans: [],
-    // The AC fan (fan.mts300) lives on the thermostat card on the Climate page.
     fanDevices: [],
     media: ['media_player.living_room', 'media_player.living_room_tv'],
     sensors: [],
@@ -215,8 +214,8 @@ export const areas: AreaConfig[] = [
 export const houseClimateReadings: ClimateReading[] = [
   {
     label: 'Living room',
-    tempId: 'sensor.mts300_temperature',
-    humidityId: 'sensor.mts300_humidity',
+    tempId: 'sensor.living_room_aqara_thermostat_hub_w200_temperature',
+    humidityId: 'sensor.living_room_aqara_thermostat_hub_w200_humidity',
   },
   {
     label: 'Bedroom',
@@ -255,7 +254,7 @@ export const climateFans: FanDevice[] = [
 ]
 
 export const entities = {
-  climate: 'climate.mts300',
+  climate: 'climate.living_room_aqara_thermostat_hub_w200',
   weather: 'weather.forecast_home',
   outdoorTemp: 'sensor.outdoor_temperature',
   lock: 'lock.level_lock_pro',
@@ -279,16 +278,7 @@ export const entities = {
      * client session (Wholphin, Jellyfin Android TV, ...), so the ID changes with
      * the app; missing IDs are ignored. Whichever is playing/paused wins over Cast.
      */
-    jellyfinIds: [
-      'media_player.living_room_tv_2',
-      'media_player.living_room_tv_3',
-      'media_player.living_room_tv_4',
-      'media_player.living_room_tv_5',
-      'media_player.living_room_tv_6',
-      'media_player.65s451_p000x',
-      'media_player.65s451_p000x_2',
-      'media_player.65s451_p000x_3',
-    ],
+    jellyfinIds: ['media_player.65s451_p000x'],
     label: 'Living Room TV',
   },
   musicAssistantEntryId: '01M0JXBK1DAXVW3PR27P1TQDJZ',
@@ -356,7 +346,7 @@ export const entities = {
   houseMode: 'input_select.house_mode',
   houseModeAuto: 'input_boolean.house_mode_auto',
   occupancyAny: 'binary_sensor.any_room_occupied',
-  livingTemp: 'sensor.mts300_temperature',
+  livingTemp: 'sensor.living_room_aqara_thermostat_hub_w200_temperature',
 
   /** Lighting scenes shown on Home (matches the polished HA dashboard pattern). */
   lightScenes: [
@@ -538,19 +528,9 @@ export const entities = {
   ],
 } as const
 
-/** light.* entities that are not room lighting loads. */
-export const nonLightingLightEntities = new Set([
-  'light.living_room_living_room_controller_light_1',
-  'light.living_room_living_room_controller_light_2',
-  'light.living_room_living_room_controller_light_3',
-  'light.bedroom_bedroom_switch_light_1',
-  'light.bedroom_bedroom_switch_light_2',
-])
-
 /** True only for curated room lighting loads in the light domain. */
 export function isRoomLight(entityId: string): boolean {
   if (!entityId.startsWith('light.')) return false
-  if (nonLightingLightEntities.has(entityId)) return false
   if (entityId.includes('browser_mod')) return false
   if (/fan.?speed/i.test(entityId)) return false
   return (entities.allLightsOff as readonly string[]).includes(entityId)

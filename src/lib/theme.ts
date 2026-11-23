@@ -1,27 +1,15 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Four themes, each with a light and a dark mode. `chrome` is the browser /
+ * Two themes, each with a light and a dark mode. `chrome` is the browser /
  * status-bar colour per mode.
  */
 export const themes = [
-  {
-    id: 'walnut',
-    name: 'Walnut',
-    description: 'Wood, cream and honey light',
-    chrome: { light: '#f5efe4', dark: '#17110d' },
-  },
   {
     id: 'modern',
     name: 'Modern',
     description: 'Flat, precise, amber light',
     chrome: { light: '#f3f3ef', dark: '#111111' },
-  },
-  {
-    id: 'glass',
-    name: 'Glass',
-    description: 'Frosted glass over soft light',
-    chrome: { light: '#e4e5ec', dark: '#0c0f22' },
   },
   {
     id: 'forest',
@@ -35,7 +23,7 @@ export type ThemeId = (typeof themes)[number]['id']
 export type ModeSetting = 'light' | 'dark' | 'system'
 export type Mode = 'light' | 'dark'
 
-export const defaultTheme: ThemeId = 'glass'
+export const defaultTheme: ThemeId = 'forest'
 export const defaultMode: ModeSetting = 'system'
 const THEME_KEY = 'casa.theme'
 const MODE_KEY = 'casa.mode'
@@ -50,7 +38,11 @@ function isModeSetting(value: unknown): value is ModeSetting {
 }
 
 /** Themes that were renamed or replaced, so a saved choice still lands somewhere sensible. */
-const replaced: Record<string, string> = { brutalist: 'forest' }
+const replaced: Record<string, string> = {
+  brutalist: 'forest',
+  walnut: 'modern',
+  glass: 'forest',
+}
 
 function read<T>(key: string, check: (v: unknown) => v is T, fallback: T): T {
   try {

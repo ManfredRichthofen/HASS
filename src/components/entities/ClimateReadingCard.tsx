@@ -23,7 +23,7 @@ function OccupancyBadge({ entityId }: { entityId: string }) {
   return (
     <span
       className={cn(
-        'shrink-0 rounded-control px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide',
+        'shrink-0 rounded-control px-1.5 py-0.5 text-[0.8125rem] font-semibold',
         occupancy.isOn ? 'bg-accent-soft text-accent' : 'bg-canvas text-ink-faint',
       )}
     >

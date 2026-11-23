@@ -4,7 +4,6 @@ import { cn } from '#/lib/cn'
 
 /**
  * Everything that isn't a light, as one grouped list with hairline dividers.
- * Brutalist numbers the rows 01, 02, 03.
  */
 export function DeviceList({ children, className }: { children: ReactNode; className?: string }) {
   return (

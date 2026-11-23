@@ -59,7 +59,7 @@ Content max width is `80rem`. Page horizontal padding steps `px-page` → `sm:px
 |-------|----------------|--------------|
 | **Home** `/` | Stacked: summary, scenes (edge-bleed strip), favourites, around the house | `@xl` two columns `1.35fr \| 1fr`; scenes become a 2×2 grid |
 | **Rooms** `/rooms`, `/rooms/$areaId` | Room card grid `2 → @lg:3 → @3xl:4`; a room opens as a full page with a back control | Viewport `1200px+`: sticky `16rem` room list beside the detail; the index redirects to the first room. Room detail is two columns at `@xl` (lights and fans, then climate, media and TV, appliances, irrigation) |
-| **Climate** `/climate` | Stacked: thermostat, outside, room readings (2 columns), fans | `@xl`: thermostat beside outside; readings 3 columns |
+| **Climate** `/climate` | Stacked: thermostat, outside, room readings (2 columns), fans | `@xl`: thermostat beside outside (weather stretches to match), readings `@2xl:4`, fans full width below. `@3xl`: `5fr \| 6fr`, thermostat sticky on the left with a larger dial; outside, readings (2×2) and fans stack on the right |
 | **Security** `/security` | Stacked: cameras, front door, house mode, water and presence | `@xl` 2×2 mosaic; cameras capped at 2 columns |
 | **Music** `/media` | Fixed-height column: compact player and speaker chips, then Up next / Search fills the rest | `@xl` side by side `1fr \| 1.1fr`; left rail scrolls when short |
 | **Settings** `/settings` | Stacked; reached from the sidebar only | `@2xl` two columns under the theme picker |

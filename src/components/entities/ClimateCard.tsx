@@ -61,7 +61,7 @@ function RangeStepper({
   return (
     <div className="grid min-w-0 justify-items-center gap-2 rounded-control bg-canvas px-3 py-4">
       <span className="text-label">{label}</span>
-      <span className="text-[3rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em]">
+      <span className="text-[3rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] modern:font-medium modern:tracking-[-0.05em]">
         {Math.round(value)}°
       </span>
       <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export function ClimateCard({ entityId }: { entityId: string }) {
   return (
     <div
       className={cn(
-        'grid h-full justify-items-center gap-3 rounded-card border-ui border-border-subtle bg-surface px-3.5 pt-4 pb-3.5 shadow-card',
+        'flex h-full flex-col items-center gap-3 rounded-card border-ui border-border-subtle bg-surface px-3.5 pt-4 pb-3.5 shadow-card',
         '@md:gap-4 @md:px-5 @md:pt-5 @md:pb-4',
         'modern:border-transparent',
         unavailable && 'opacity-45',
@@ -212,6 +212,8 @@ export function ClimateCard({ entityId }: { entityId: string }) {
         <span className="shrink-0 text-[0.8125rem] text-ink-muted">{statusLine}</span>
       </div>
 
+      {/* The dial takes whatever height the column gives it; header and modes stay at the edges. */}
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-3 @md:gap-4">
       {dual ? (
         <div className="grid w-full grid-cols-2 gap-3">
           <RangeStepper
@@ -233,7 +235,7 @@ export function ClimateCard({ entityId }: { entityId: string }) {
         </div>
       ) : (
         <>
-      <div className="relative h-[220px] w-[248px]">
+      <div className="relative aspect-[248/220] w-full max-w-[248px] @xl:max-w-[18rem] @3xl:max-w-[21rem]">
         <svg
           viewBox="0 0 248 220"
           className={cn(
@@ -321,13 +323,13 @@ export function ClimateCard({ entityId }: { entityId: string }) {
           <span className="text-label">
             {mode === 'off' ? 'Off' : `${modeLabel[mode] ?? mode} to`}
           </span>
-          <span className="text-[4rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] walnut:font-light modern:font-medium modern:tracking-[-0.05em]">
+          <span className="text-[4rem] leading-none text-ink tabular-nums [font-family:var(--ui-display)] modern:font-medium modern:tracking-[-0.05em] @3xl:text-[4.75rem]">
             {Math.round(target)}°
           </span>
         </div>
       </div>
 
-      <div className="flex w-full max-w-[19rem] items-center justify-between">
+      <div className="flex w-full max-w-[19rem] items-center justify-between @3xl:max-w-[22rem]">
         <Button
           size="icon"
           variant="secondary"
@@ -352,6 +354,7 @@ export function ClimateCard({ entityId }: { entityId: string }) {
       </div>
         </>
       )}
+      </div>
 
       <Segmented
         className="w-full"

@@ -173,9 +173,7 @@ export function HouseSummary() {
           aria-live="polite"
           className={cn(
             'text-display text-[2.125rem] leading-[1.1] text-balance text-ink',
-            'walnut:text-[2.25rem] walnut:font-light',
             '@xl:max-w-[26ch] @xl:text-[1.75rem] @xl:leading-[1.15] @xl:text-pretty',
-            'walnut:@xl:text-[1.875rem]',
           )}
         >
           {greetingFor(now.getHours())}

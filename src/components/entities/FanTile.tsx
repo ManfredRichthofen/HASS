@@ -310,7 +310,12 @@ export const FanTile = memo(function FanTile({
             disabled={unavailable}
             aria-label={`Fan controls for ${name}`}
             onClick={() => setOpen(true)}
-            className="grid size-11 shrink-0 place-items-center rounded-control text-ink-muted transition-ui hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+            className={cn(
+              'grid size-11 shrink-0 place-items-center rounded-control transition-ui disabled:opacity-40',
+              isOn
+                ? 'text-on-ink-muted hover:bg-on-ink/10 hover:text-on-ink'
+                : 'text-ink-muted hover:bg-surface-hover hover:text-ink',
+            )}
           >
             <SlidersHorizontal className="size-4" />
           </button>

@@ -3,8 +3,8 @@ import { cn } from '#/lib/cn'
 import { m, staggerItem } from '#/lib/motion'
 
 /**
- * A titled block on a page. Walnut: italic serif title. Modern: small
- * semibold label. Brutalist: a 2px rule and a mono uppercase label.
+ * A titled block on a page. Modern: a small, muted semibold label.
+ * Forest: a larger semibold title in ink.
  *
  * When nested under a staggerContainer parent, sections rise in sequence.
  */
@@ -27,7 +27,6 @@ export function Section({
             <h2
               className={cn(
                 'text-ink',
-                'walnut:font-serif walnut:text-xl walnut:italic',
                 'modern:text-[0.8125rem] modern:font-semibold modern:text-ink-muted',
                 'glass:text-base glass:font-semibold glass:text-ink',
               )}

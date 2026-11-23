@@ -23,6 +23,8 @@ import { entities } from '#/config/dashboard'
 import { haUrl } from '#/config/ha'
 import type { MusicSession } from '#/hooks/useMusicSessions'
 import { cn } from '#/lib/cn'
+import { DEMO_MODE } from '#/lib/demoMode'
+import { noteDemoMedia } from '#/lib/demoMusic'
 import { getMassBaseUrl } from '#/lib/massConfig'
 import {
   type EnqueueMode,
@@ -468,6 +470,13 @@ export function MusicSearch({
     if (stale) return
     if (!item.can_play && !item.media_content_id) return
     setPlayingId(item.media_content_id)
+    if (DEMO_MODE) {
+      noteDemoMedia(item.media_content_id, {
+        title: item.title,
+        artist: item.subtitle?.split(' · ')[0] ?? null,
+        image: resolveMediaThumbnail(item.thumbnail, haUrl, getMassBaseUrl()),
+      })
+    }
     try {
       await callService('music_assistant', 'play_media', {
         entity_id: target,

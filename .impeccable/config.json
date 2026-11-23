@@ -4,10 +4,16 @@
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "design-system-font",
-        "value": "fraunces",
-        "createdAt": "2026-11-20T21:07:25.514Z",
-        "reason": "Claude: pre-existing Walnut theme display face (already in styles.css --ui-display and the prior Google Fonts URL); only moved to self-hosted @font-face"
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "createdAt": "2026-11-21T18:59:13.076Z",
+        "reason": "DESIGN.md pins Plus Jakarta Sans as the Casa type system (Typography section)"
+      },
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-11-21T18:59:13.236Z",
+        "reason": "DESIGN.md pins Geist as the first fallback in the Casa font stack"
       }
     ]
   }

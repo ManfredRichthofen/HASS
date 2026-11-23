@@ -7,9 +7,9 @@ import { fluid, LayoutGroup, m } from '#/lib/motion'
 export type SegmentOption<T extends string> = { value: T; label: string; disabled?: boolean }
 
 /**
- * One choice from two to five, side by side. Walnut: the chosen segment fills
- * cream. Modern: it lifts as a white chip. Brutalist: a ruled bar with the
- * chosen cell inverted. The active pill slides with a shared layout spring.
+ * One choice from two to five, side by side. Modern: the chosen segment lifts
+ * as a white chip. Forest: a raised glass chip. The active pill slides with a
+ * shared layout spring.
  */
 export function Segmented<T extends string>({
   options,
