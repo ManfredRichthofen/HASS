@@ -1,9 +1,8 @@
 import { Slider as BaseSlider } from '@base-ui/react/slider'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { asNumber } from '#/components/ui/slider'
 import { useMediaQuery } from '#/hooks/useMediaQuery'
 import { cn } from '#/lib/cn'
-import { useAppearance } from '#/lib/theme'
 
 /*
  * One UI-style seek bar: a solid played bar with soft, translucent hills of
@@ -12,9 +11,9 @@ import { useAppearance } from '#/lib/theme'
  */
 
 /** Tallest the hills rise above the bar while playing, in CSS px. */
-const HILL_HEIGHT = 30
+const HILL_HEIGHT = 18
 /** Room drawn above the bar for the hills (crest stroke included), in CSS px. */
-const CANVAS_HEIGHT = HILL_HEIGHT + 6
+const CANVAS_HEIGHT = HILL_HEIGHT + 4
 /** Time constant for the hills to rise or sink, in seconds. */
 const RISE_TAU = 0.28
 /** Sample spacing along the hills, in CSS px. */
@@ -25,14 +24,22 @@ const THUMB = 18
 const GAP = 5
 
 /**
- * Three overlapping layers. Each is a smooth, always-positive swell; their
- * different wavelengths and speeds keep the shape from ever visibly repeating.
+ * Four overlapping translucent layers, each a long swell times a shorter ripple, so
+ * the band has uneven bumps along its whole length. Different wavelengths and speeds
+ * keep the shape from ever visibly repeating; overlaps read brighter.
  */
 const LAYERS = [
-  { wavelength: 150, speed: 0.09, scale: 1, alpha: 0.6 },
-  { wavelength: 95, speed: -0.13, scale: 0.78, alpha: 0.5 },
-  { wavelength: 62, speed: 0.2, scale: 0.55, alpha: 0.42 },
+  { long: 190, short: 70, speed: 0.07, scale: 1, alpha: 0.46 },
+  { long: 130, short: 52, speed: -0.1, scale: 0.85, alpha: 0.4 },
+  { long: 95, short: 38, speed: 0.14, scale: 0.65, alpha: 0.4 },
+  { long: 240, short: 88, speed: -0.05, scale: 0.9, alpha: 0.3 },
 ] as const
+
+/** `rgb(…)`/`rgba(…)` from getComputedStyle, at the given opacity. */
+const withAlpha = (color: string, alpha: number) => {
+  const [r = 0, g = 0, b = 0] = color.match(/[\d.]+/g)?.map(Number) ?? []
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 
 /** Smooth 0→1 ramp, so the envelope has no visible corners. */
 const ease = (t: number) => {
@@ -62,24 +69,41 @@ type HillsProps = {
   max: number
 }
 
+/** The bar pieces the frame loop moves between the caller's once-a-second updates. */
+type BarRefs = {
+  played: RefObject<HTMLSpanElement | null>
+  remaining: RefObject<HTMLSpanElement | null>
+  head: RefObject<HTMLSpanElement | null>
+}
+
+const remainingLeft = (pct: number) => `min(100%, calc(${pct}% + ${THUMB / 2 + GAP}px))`
+
 /**
  * The hills, drawn on a canvas imperatively so playback never re-renders React
  * at 60fps. The frame loop runs only while the hills drift or rise/sink; when
  * settled it repaints once per position, size or theme change.
  */
-function Hills({ playing, dragging, value, max }: HillsProps) {
+function Hills({ playing, dragging, value, max, bars }: HillsProps & { bars: BarRefs }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  // Theme switches change the CSS color the hills are painted in.
-  const { theme, resolved: mode } = useAppearance()
-  const anim = useRef({
-    phases: LAYERS.map(() => Math.random() * 10),
-    height: 0,
-    frame: 0,
-    color: '',
-  })
+  const anim = useRef({ phases: LAYERS.map(() => Math.random() * 10), height: 0, frame: 0 })
   const live = useRef({ playing, dragging, value, max, reduceMotion })
   live.current = { playing, dragging, value, max, reduceMotion }
+  // When `value` last changed, so the frame loop can glide on to the next whole second.
+  const anchor = useRef({ value, at: 0 })
+  if (anchor.current.value !== value) anchor.current = { value, at: performance.now() }
+
+  /**
+   * Position to draw: the caller's value, carried forward while playing. Steady progress
+   * isn't decorative motion, so this runs with reduced motion too. Capped a little past
+   * 1 s so a late tick holds briefly instead of running ahead.
+   */
+  const shownValue = useCallback(() => {
+    const { playing: isPlaying, dragging: scrubbing, value: v, max: m } = live.current
+    if (!isPlaying || scrubbing || !anchor.current.at) return v
+    const ahead = Math.min(1.25, (performance.now() - anchor.current.at) / 1000)
+    return Math.min(m, v + ahead)
+  }, [])
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current
@@ -96,55 +120,64 @@ function Hills({ playing, dragging, value, max }: HillsProps) {
     ctx.clearRect(0, 0, width, CANVAS_HEIGHT)
 
     const { height, phases } = anim.current
-    const { value: v, max: m } = live.current
+    const { max: m } = live.current
+    const v = shownValue()
+    // Move the bar with the hills, so neither steps once a second.
+    const pct = (v / m) * 100
+    if (bars.played.current) bars.played.current.style.width = `${pct}%`
+    if (bars.remaining.current) bars.remaining.current.style.left = remainingLeft(pct)
+    if (bars.head.current) bars.head.current.style.left = `${pct}%`
     // The hills sit on the played bar and fade out just before the playhead.
     const span = (v / m) * width - THUMB / 2
     if (height < 0.2 || span < 8) return
 
     // Theme color, read from CSS so light, dark and every theme just work.
-    // Cached: reading computed style every frame can force a style recalc.
-    if (!anim.current.color) anim.current.color = getComputedStyle(canvas).color
-    const { color } = anim.current
-    // Short tracks get lower hills; the shape rises from the start and fades at the playhead.
-    const peak = height * ease(span / 60)
-    const riseIn = Math.max(24, span * 0.4)
-    const fadeOut = Math.max(16, Math.min(70, span * 0.3))
+    const color = getComputedStyle(canvas).color
+    const base = CANVAS_HEIGHT
+    // A low band along the whole played bar: it reaches full height within the first
+    // stretch, eases in from the start and tapers off just before the playhead.
+    const peak = height * ease(span / 50)
+    const riseIn = Math.min(60, span * 0.3)
+    const fadeOut = Math.min(28, span * 0.25)
 
     LAYERS.forEach((layer, i) => {
       const phase = phases[i] ?? 0
       const top: Array<[number, number]> = []
       for (let x = 0; x <= span; x += SAMPLE_STEP) {
         const envelope = ease(x / riseIn) * ease((span - x) / fadeOut)
-        const swell = 0.5 + 0.5 * Math.sin((x / layer.wavelength) * Math.PI * 2 - phase)
-        top.push([x, CANVAS_HEIGHT - peak * layer.scale * envelope * swell])
+        const swell =
+          (0.5 + 0.5 * Math.sin((x / layer.long) * Math.PI * 2 - phase)) *
+          (0.55 + 0.45 * Math.sin((x / layer.short) * Math.PI * 2 + phase * 1.7))
+        top.push([x, base - peak * layer.scale * envelope * swell])
       }
-      top.push([span, CANVAS_HEIGHT])
+      top.push([span, base])
 
-      // Body: bright at the crest, clear where it meets the bar.
-      // The gradient ends below the bar so the hills stay lit right down to where they meet it.
-      const fill = ctx.createLinearGradient(0, CANVAS_HEIGHT - peak * layer.scale, 0, CANVAS_HEIGHT + peak * 0.8)
+      // Body: a soft translucent sheet, strongest at the crest and still lit where it meets the bar.
+      const fill = ctx.createLinearGradient(0, base - peak * layer.scale, 0, base)
       fill.addColorStop(0, color)
-      fill.addColorStop(1, 'transparent')
+      fill.addColorStop(1, withAlpha(color, 0.45))
       ctx.globalAlpha = layer.alpha
       ctx.fillStyle = fill
       ctx.beginPath()
-      ctx.moveTo(0, CANVAS_HEIGHT)
+      ctx.moveTo(0, base)
       for (const [x, y] of top) ctx.lineTo(x, y)
       ctx.closePath()
       ctx.fill()
 
-      // A thin crest line catches the light along the top of each hill.
-      ctx.globalAlpha = Math.min(1, layer.alpha * 1.7)
+      // A fine, brighter crest line along the top of each layer.
+      ctx.globalAlpha = Math.min(1, layer.alpha * 2.2)
       ctx.strokeStyle = color
-      ctx.lineWidth = 1.5
+      ctx.lineWidth = 1
       ctx.lineJoin = 'round'
       ctx.beginPath()
-      ctx.moveTo(...top[0])
-      for (const [x, y] of top.slice(1, -1)) ctx.lineTo(x, y)
+      for (const [j, [x, y]] of top.slice(0, -1).entries()) {
+        if (j === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
       ctx.stroke()
     })
     ctx.globalAlpha = 1
-  }, [])
+  }, [bars, shownValue])
 
   const startLoop = useCallback(() => {
     const a = anim.current
@@ -166,11 +199,13 @@ function Hills({ playing, dragging, value, max }: HillsProps) {
 
       const drifting = !still && a.height > 0
       if (drifting) {
-        for (const [i, layer] of LAYERS.entries()) a.phases[i] += dt * layer.speed * Math.PI * 2
+        a.phases = a.phases.map((p, i) => p + dt * (LAYERS[i]?.speed ?? 0) * Math.PI * 2)
       }
 
       paint()
-      a.frame = drifting || a.height !== target ? requestAnimationFrame(tick) : 0
+      // Keep going while playing even with the hills still, so the bar glides.
+      const gliding = isPlaying && !scrubbing
+      a.frame = drifting || gliding || a.height !== target ? requestAnimationFrame(tick) : 0
     }
     a.frame = requestAnimationFrame(tick)
   }, [paint])
@@ -180,8 +215,12 @@ function Hills({ playing, dragging, value, max }: HillsProps) {
     if (!canvas) return
     const observer = new ResizeObserver(() => paint())
     observer.observe(canvas)
+    // Theme switches change the CSS color; repaint when the page's theme attributes change.
+    const themeObserver = new MutationObserver(() => paint())
+    themeObserver.observe(document.documentElement, { attributes: true })
     return () => {
       observer.disconnect()
+      themeObserver.disconnect()
       cancelAnimationFrame(anim.current.frame)
       anim.current.frame = 0
     }
@@ -194,12 +233,6 @@ function Hills({ playing, dragging, value, max }: HillsProps) {
   useEffect(() => {
     if (!anim.current.frame) paint()
   }, [paint, value, max])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: theme/mode change the CSS color; they are the repaint triggers
-  useEffect(() => {
-    anim.current.color = ''
-    if (!anim.current.frame) paint()
-  }, [paint, theme, mode])
 
   return (
     <canvas
@@ -214,24 +247,31 @@ function Hills({ playing, dragging, value, max }: HillsProps) {
 /** Bars, hills and playhead. The slider's own thumb stays invisible on top for focus and drag. */
 function SeekVisual({ playing, dragging, value, max }: HillsProps) {
   const pct = (value / max) * 100
+  const played = useRef<HTMLSpanElement>(null)
+  const remaining = useRef<HTMLSpanElement>(null)
+  const head = useRef<HTMLSpanElement>(null)
+  const bars = useRef<BarRefs>({ played, remaining, head }).current
   return (
     <div
       className="pointer-events-none absolute inset-x-0 top-1/2 h-7 -translate-y-1/2"
       aria-hidden
     >
-      <Hills playing={playing} dragging={dragging} value={value} max={max} />
+      <Hills playing={playing} dragging={dragging} value={value} max={max} bars={bars} />
       {/* Played: solid, running into the playhead. */}
       <span
-        className="absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-pill bg-ink glass:bg-on-raised"
+        ref={played}
+        className="absolute top-1/2 left-0 h-1.5 -translate-y-1/2 rounded-pill bg-ink glass:bg-on-raised"
         style={{ width: `${pct}%` }}
       />
       {/* Remaining: a slim pill that starts just past the playhead. */}
       <span
-        className="absolute top-1/2 right-0 h-1 -translate-y-1/2 rounded-pill bg-ink/30 glass:bg-on-raised/35"
-        style={{ left: `min(100%, calc(${pct}% + ${THUMB / 2 + GAP}px))` }}
+        ref={remaining}
+        className="absolute top-1/2 right-0 h-1.5 -translate-y-1/2 rounded-pill bg-ink/30 glass:bg-on-raised/35"
+        style={{ left: remainingLeft(pct) }}
       />
       {/* Ringed playhead; grows a little while scrubbing. */}
       <span
+        ref={head}
         className={cn(
           'absolute top-1/2 size-[18px] -translate-x-1/2 -translate-y-1/2 rounded-pill border-[3px] border-ink bg-on-ink shadow-card',
           'glass:border-on-raised',

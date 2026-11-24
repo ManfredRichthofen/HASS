@@ -53,6 +53,17 @@ const ROW_PAGE = 30
 
 type Player = ReturnType<typeof useMusicQueue>['player']
 
+/**
+ * HA's `media_position` is where the track was at `media_position_updated_at`, and HA
+ * only re-reports it on play, pause or seek. Anchor at that time, not when we received
+ * it, so a reload or reconnect mid-track lands on the real position instead of the last
+ * report. A timestamp ahead of this device's clock is treated as now.
+ */
+function reportAnchor(position: number | null, reportedAt: unknown) {
+  const at = Date.parse(String(reportedAt ?? ''))
+  return { position: position ?? 0, at: Number.isFinite(at) ? Math.min(at, Date.now()) : Date.now() }
+}
+
 function useLivePosition(
   position: number | null,
   /** HA's `media_position_updated_at`: a new report can repeat the same position (a track starting at 0). */
@@ -61,12 +72,32 @@ function useLivePosition(
   playing: boolean,
 ) {
   const [now, setNow] = useState(() => Date.now())
-  const [base, setBase] = useState({ position: position ?? 0, at: Date.now() })
+  const [base, setBase] = useState(() => reportAnchor(position, reportedAt))
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reportedAt re-anchors on a repeated position
+  const liveAt = (anchor: typeof base, at: number, isPlaying: boolean) => {
+    const live = isPlaying ? anchor.position + (at - anchor.at) / 1000 : anchor.position
+    return duration != null ? Math.min(Math.max(live, 0), duration) : Math.max(live, 0)
+  }
+
+  // A new HA report always wins. Otherwise only a play/pause edge re-anchors (`playing` is
+  // optimistic, so it flips before HA reports): hold where playback had got to, and on
+  // resume run on from there rather than from the old report. Re-renders and re-sent
+  // identical states leave the clock alone.
+  const seen = useRef({ position, reportedAt, playing })
+  // biome-ignore lint/correctness/useExhaustiveDependencies: liveAt only reads duration, which never changes an anchor
   useEffect(() => {
-    setBase({ position: position ?? 0, at: Date.now() })
-  }, [position, reportedAt])
+    const prev = seen.current
+    seen.current = { position, reportedAt, playing }
+    const at = Date.now()
+    if (prev.position !== position || prev.reportedAt !== reportedAt) {
+      setBase(reportAnchor(position, reportedAt))
+    } else if (prev.playing !== playing) {
+      setBase((b) => ({ position: liveAt(b, at, prev.playing), at }))
+    } else {
+      return
+    }
+    setNow(at)
+  }, [position, reportedAt, playing])
 
   useEffect(() => {
     if (!playing) return
@@ -74,13 +105,11 @@ function useLivePosition(
     return () => window.clearInterval(id)
   }, [playing])
 
-  const live = playing ? base.position + (now - base.at) / 1000 : base.position
-  const clamped = duration != null ? Math.min(Math.max(live, 0), duration) : Math.max(live, 0)
   const jumpTo = useCallback((seconds: number) => {
     setBase({ position: seconds, at: Date.now() })
     setNow(Date.now())
   }, [])
-  return { position: clamped, jumpTo }
+  return { position: liveAt(base, now, playing), jumpTo }
 }
 
 /**
@@ -116,8 +145,12 @@ function PlaybackProgress({
     })
   }
 
+  // Until HA has reported a position (just after a reload), keep the row's space but don't
+  // draw a 0:00 bar that then jumps to the real position.
+  const known = player.mediaPosition != null
+
   return (
-    <div className="grid gap-1">
+    <div className={cn('grid gap-1', !known && 'invisible')}>
       <WaveformSeek
         className="-my-1"
         aria-label="Seek"
