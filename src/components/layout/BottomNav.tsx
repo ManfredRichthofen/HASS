@@ -12,62 +12,72 @@ export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
-    <nav
-      aria-label="Main"
-      className={cn(
-        'fixed inset-x-3.5 bottom-[var(--nav-offset)] z-40 rounded-pill p-1.5 md:hidden',
-        'modern:bg-surface/88 modern:shadow-[0_10px_30px_-12px_#14141340] modern:backdrop-blur-xl',
-        'glass:border-ui glass:border-border-subtle glass:bg-canvas-elevated glass:shadow-sheet',
-      )}
-    >
-      <LayoutGroup id="bottom-nav">
-        <div className="flex w-full items-stretch justify-between">
-          {navItems.map(({ to, label, icon: Icon, match }) => {
-            const active = isNavActive(pathname, to, match)
-            return (
-              <m.div
-                key={to}
-                layout
-                transition={indicator}
-                className="relative h-12 min-w-0"
-              >
-                <Link
-                  to={to}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'relative block size-full rounded-pill transition-[color] duration-normal ease-out',
-                    active ? 'text-on-accent' : 'text-ink-faint hover:text-ink-muted',
-                  )}
+    <>
+      {/* Tap shield: the bar floats, so a slightly-off tap beside or below it used to land
+          on whatever had scrolled underneath. This invisible strip spans the full width from
+          the bottom edge to halfway into the gap above the bar (clear of the now-playing bar)
+          and swallows those taps. */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 bottom-0 z-30 h-[calc(var(--nav-clearance)+var(--nav-gap)/2)] md:hidden"
+      />
+      <nav
+        aria-label="Main"
+        className={cn(
+          'fixed inset-x-3.5 bottom-[var(--nav-offset)] z-40 rounded-pill p-1.5 md:hidden',
+          'modern:bg-surface/88 modern:shadow-[0_10px_30px_-12px_#14141340] modern:backdrop-blur-xl',
+          'glass:border-ui glass:border-border-subtle glass:bg-canvas-elevated glass:shadow-sheet',
+        )}
+      >
+        <LayoutGroup id="bottom-nav">
+          <div className="flex w-full items-stretch justify-between">
+            {navItems.map(({ to, label, icon: Icon, match }) => {
+              const active = isNavActive(pathname, to, match)
+              return (
+                <m.div
+                  key={to}
+                  layout
+                  transition={indicator}
+                  className="relative h-12 min-w-0"
                 >
-                  {/* Sliding active fill */}
-                  {active ? (
-                    <m.span
-                      layoutId="bottom-nav-pill"
-                      transition={indicator}
-                      aria-hidden
-                      className="absolute inset-0 rounded-pill bg-accent"
-                    />
-                  ) : null}
-
-                  {/* Press scale lives here, not on the indicator's parent, so the
-                      indicator never measures a mid-press (scaled) box. */}
-                  <m.span
-                    layout
-                    whileTap={tap.medium}
-                    transition={snappy}
-                    className="relative z-[1] flex size-full min-w-0 items-center justify-center gap-2 px-3.5 font-label text-sm font-semibold"
+                  <Link
+                    to={to}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'relative block size-full rounded-pill transition-[color] duration-normal ease-out',
+                      active ? 'text-on-accent' : 'text-ink-faint hover:text-ink-muted',
+                    )}
                   >
-                    <Icon className="size-[22px] shrink-0" />
-                    <span className={active ? 'animate-label-in truncate' : 'sr-only'}>
-                      {label}
-                    </span>
-                  </m.span>
-                </Link>
-              </m.div>
-            )
-          })}
-        </div>
-      </LayoutGroup>
-    </nav>
+                    {/* Sliding active fill */}
+                    {active ? (
+                      <m.span
+                        layoutId="bottom-nav-pill"
+                        transition={indicator}
+                        aria-hidden
+                        className="absolute inset-0 rounded-pill bg-accent"
+                      />
+                    ) : null}
+
+                    {/* Press scale lives here, not on the indicator's parent, so the
+                        indicator never measures a mid-press (scaled) box. */}
+                    <m.span
+                      layout
+                      whileTap={tap.medium}
+                      transition={snappy}
+                      className="relative z-[1] flex size-full min-w-0 items-center justify-center gap-2 px-3.5 font-label text-sm font-semibold"
+                    >
+                      <Icon className="size-[22px] shrink-0" />
+                      <span className={active ? 'animate-label-in truncate' : 'sr-only'}>
+                        {label}
+                      </span>
+                    </m.span>
+                  </Link>
+                </m.div>
+              )
+            })}
+          </div>
+        </LayoutGroup>
+      </nav>
+    </>
   )
 }

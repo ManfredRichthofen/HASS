@@ -24,15 +24,16 @@ const THUMB = 18
 const GAP = 5
 
 /**
- * Four overlapping translucent layers, each a long swell times a shorter ripple, so
- * the band has uneven bumps along its whole length. Different wavelengths and speeds
- * keep the shape from ever visibly repeating; overlaps read brighter.
+ * Four overlapping translucent humps, each with a single peak near the middle of the
+ * played bar. `width` is the hump's spread as a share of the played length; `sway` is
+ * how far its peak drifts either side of the centre. Different widths, sways and speeds
+ * keep the layers shifting against each other; overlaps read brighter.
  */
 const LAYERS = [
-  { long: 190, short: 70, speed: 0.07, scale: 1, alpha: 0.46 },
-  { long: 130, short: 52, speed: -0.1, scale: 0.85, alpha: 0.4 },
-  { long: 95, short: 38, speed: 0.14, scale: 0.65, alpha: 0.4 },
-  { long: 240, short: 88, speed: -0.05, scale: 0.9, alpha: 0.3 },
+  { width: 0.32, sway: 0.06, speed: 0.07, scale: 1, alpha: 0.46 },
+  { width: 0.25, sway: 0.08, speed: -0.1, scale: 0.85, alpha: 0.4 },
+  { width: 0.19, sway: 0.1, speed: 0.14, scale: 0.65, alpha: 0.4 },
+  { width: 0.4, sway: 0.05, speed: -0.05, scale: 0.9, alpha: 0.3 },
 ] as const
 
 /** `rgb(…)`/`rgba(…)` from getComputedStyle, at the given opacity. */
@@ -134,21 +135,22 @@ function Hills({ playing, dragging, value, max, bars }: HillsProps & { bars: Bar
     // Theme color, read from CSS so light, dark and every theme just work.
     const color = getComputedStyle(canvas).color
     const base = CANVAS_HEIGHT
-    // A low band along the whole played bar: it reaches full height within the first
-    // stretch, eases in from the start and tapers off just before the playhead.
+    // One hump over the played bar, peaking near its middle and meeting the bar at both
+    // ends. Short spans get a lower hump.
     const peak = height * ease(span / 50)
-    const riseIn = Math.min(60, span * 0.3)
-    const fadeOut = Math.min(28, span * 0.25)
 
     LAYERS.forEach((layer, i) => {
       const phase = phases[i] ?? 0
+      // The peak sways gently around the centre and the hump breathes a little.
+      const centre = 0.5 + layer.sway * Math.sin(phase)
+      const breath = 0.85 + 0.15 * Math.sin(phase * 0.7 + i)
       const top: Array<[number, number]> = []
       for (let x = 0; x <= span; x += SAMPLE_STEP) {
-        const envelope = ease(x / riseIn) * ease((span - x) / fadeOut)
-        const swell =
-          (0.5 + 0.5 * Math.sin((x / layer.long) * Math.PI * 2 - phase)) *
-          (0.55 + 0.45 * Math.sin((x / layer.short) * Math.PI * 2 + phase * 1.7))
-        top.push([x, base - peak * layer.scale * envelope * swell])
+        const u = x / span
+        const bell = Math.exp(-(((u - centre) / layer.width) ** 2))
+        // sin(πu) pins both ends to the bar; the product keeps a single peak.
+        const hump = bell * Math.sin(Math.PI * u)
+        top.push([x, base - peak * layer.scale * breath * hump])
       }
       top.push([span, base])
 
